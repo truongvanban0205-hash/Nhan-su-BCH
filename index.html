@@ -574,13 +574,11 @@ function doAddCol(){
 function doDelCol(){
   askP(function(){
     if(!COLS.length){alert('Chưa có chức danh!');return;}
-    var list=COLS.map(function(c,i){return (i+1)+'. '+c.n;}).join('
-');
-    var idx=parseInt(prompt('Chọn số thứ tự chức danh cần xoá:
-'+list))-1;
+    var list=COLS.map(function(c,i){return (i+1)+'. '+c.n;}).join('\n');
+    var idx=parseInt(prompt('Chọn số thứ tự chức danh cần xoá:\n'+list))-1;
     if(isNaN(idx)||idx<0||idx>=COLS.length)return;
     var col=COLS[idx];
-    if(!confirm('Xoá chức danh +col.n+?'))return;
+    if(!confirm('Xoá chức danh "'+col.n+'"?'))return;
     COLS.splice(idx,1);
     projects.forEach(function(p){
       TYPES.forEach(function(t){
