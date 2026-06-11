@@ -295,7 +295,17 @@ async function loadData(){
       projects.forEach(function(p){ensureProj(p);});
       setSS('✅ Đã cập nhật');
       renderTable();renderLog();return;
-
+    }
+    var yd=await sLoad(ykey());
+    if(yd){
+      projects=yd.projects||['CL-CR'];
+      COLS=mergeCols(yd.cols);
+      data=copyFromYest(yd.data||{},projects);
+      logItems=[];
+      setSS('📋 Copy từ hôm qua');
+      toast('📋 Đã copy dữ liệu hôm qua — kiểm tra trước khi lưu!');
+      renderTable();renderLog();return;
+    }
   }catch(e){console.error(e);}
   COLS=DEF_COLS.map(function(c){return {k:c.k,n:c.n};});
   projects=['CL-CR'];
