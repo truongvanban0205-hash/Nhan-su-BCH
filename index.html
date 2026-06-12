@@ -71,10 +71,10 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 .row-ca1 td{background:#e3f2fd;} .row-ca1 td.stk{background:#e3f2fd;}
 .row-ca2 td{background:#e3f2fd;} .row-ca2 td.stk{background:#e3f2fd;}
 .row-tong td{background:#fff9c4;font-weight:700;padding:1px 2px;font-size:11px;line-height:1.2;} .row-tong td.stk{background:#fff9c4;padding:1px 2px;font-size:11px;line-height:1.2;}
-.row-bca1 td{background:#f5f5f5;font-weight:400;padding:1px 2px;font-size:11px;line-height:1.2;border-top:2px solid #546e7a;border-left:none;border-right:none;}
-.row-bca2 td{background:#f5f5f5;font-weight:400;padding:1px 2px;font-size:11px;line-height:1.2;border-left:none;border-right:none;}
-.row-bng td{background:#f5f5f5;font-weight:400;padding:1px 2px;font-size:11px;line-height:1.2;border-left:none;border-right:none;}
-.row-bt td{background:#ffeb3b;font-weight:800;padding:1px 2px;font-size:11px;line-height:1.2;border-bottom:2px solid #546e7a;border-left:none;border-right:none;}
+.row-bca1 td{background:#f5f5f5;font-weight:400;padding:1px 2px;font-size:11px;line-height:1.2;border-top:2px solid #546e7a;border-left:none;border-right:none;border-right:1px solid #ccc;}
+.row-bca2 td{background:#f5f5f5;font-weight:400;padding:1px 2px;font-size:11px;line-height:1.2;border-left:none;border-right:1px solid #ccc;}
+.row-bng td{background:#f5f5f5;font-weight:400;padding:1px 2px;font-size:11px;line-height:1.2;border-left:none;border-right:1px solid #ccc;}
+.row-bt td{background:#ffeb3b;font-weight:800;padding:1px 2px;font-size:11px;line-height:1.2;border-bottom:2px solid #546e7a;border-left:none;border-right:1px solid #ccc;}
 .row-bca1 td:first-child,.row-bca2 td:first-child,.row-bng td:first-child,.row-bt td:first-child{border-left:2px solid #546e7a !important;}
 .row-bca1 td:last-child,.row-bca2 td:last-child,.row-bng td:last-child,.row-bt td:last-child{border-right:2px solid #546e7a !important;}
 .row-bca1 td.stk{background:#f5f5f5;padding:1px 2px;font-size:11px;line-height:1.2;border-top:2px solid #546e7a;border-left:2px solid #546e7a;}
@@ -99,19 +99,12 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 </head>
 <body>
 
+
 <div class="login-box">
   <label>👤 Người nhập:</label>
   <input type="text" id="uname" placeholder="Nhập tên rồi Enter..." autofocus onkeydown="if(event.key==='Enter')setUser()" />
   <button class="btn btn-sm" style="background:#fff;color:#1565c0;font-weight:800" onclick="setUser()">Xác nhận</button>
   <span id="ust" style="font-size:11px;color:#fff;font-weight:700"></span>
-</div>
-
-<div class="topbar">
-  <h1>Báo cáo nhân sự: BCH CL-CR/<span style="color:#f9a825;font-weight:900">VAL</span></h1>
-  <div class="tsub">
-    <span id="dp" class="dpill"></span>
-    <span id="ss">Đang tải...</span>
-  </div>
 </div>
 
 <div class="rotate-banner">📱 Xoay ngang điện thoại để xem bảng tốt hơn!</div>
@@ -120,6 +113,14 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   🔒 Đã qua 08:30 — Nhập mật khẩu để chỉnh sửa:
   <input type="password" id="lock-pass" placeholder="Mật khẩu..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')unlockEdit()">
   <button class="btn btn-sm btn-or" onclick="unlockEdit()">Mở khoá</button>
+</div>
+
+<div class="topbar">
+  <h1>Báo cáo nhân sự: BCH CL-CR/<span style="color:#f9a825;font-weight:900">VAL</span></h1>
+  <div class="tsub">
+    <span id="dp" class="dpill"></span>
+    <span id="ss">Đang tải...</span>
+  </div>
 </div>
 
 <div id="nb" class="nbar" style="display:none">
@@ -135,10 +136,12 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <button onclick="backToday()" class="btn btn-bl btn-sm">← Về hôm nay</button>
 </div>
 
-<div class="tbl-wrap"><div class="tbl-outer"><table id="mt"></table></div></div>
+<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;">
+  <div class="tbl-wrap" style="flex:1;min-width:0;margin-bottom:0;"><div class="tbl-outer"><table id="mt"></table></div></div>
+  <div id="chart-panel" style="min-width:150px;max-width:170px;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px;font-size:10px;flex-shrink:0;"></div>
+</div>
 
 <div class="action-bar">
-  <button class="btn btn-gr" onclick="saveData()">💾 Lưu & Đồng bộ</button>
   <button class="btn btn-pu btn-sm" onclick="exportXL()">📊 Xuất Excel</button>
   <div class="admin-bar">
     <span class="admin-lbl">🔒 Quản lý:</span>
@@ -148,6 +151,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <button class="btn btn-sm btn-or" onclick="doAddCol()">＋ Chức danh</button>
     <button class="btn btn-sm btn-re" onclick="doDelCol()">✕ Xoá chức danh</button>
     <button class="btn btn-sm btn-pu" onclick="exportXLRange()">📦 Xuất Excel theo ngày</button>
+    <button class="btn btn-sm btn-gr" onclick="saveData()">💾 Lưu ngay</button>
     <button class="btn btn-sm btn-or" onclick="doReset()">🔄 Reset</button>
     <button class="btn btn-sm btn-re" onclick="doDelAll()">🗑️ Xoá lịch sử</button>
   </div>
@@ -214,10 +218,10 @@ var DEF_COLS=[
   {k:'ThuKho',n:'Thủ kho'},
   {k:'DoiTruong',n:'Đội trưởng'},
   {k:'CBKT',n:'CBKT'},
-  {k:'TNTracDac',n:'TN trắc đặc'},
-  {k:'CVTracDac',n:'CV Trắc đặc'},
-  {k:'NVTracDac',n:'NV trắc đặc'},
-  {k:'ATLD',n:'ATLD'},
+  {k:'TNTracDac',n:'TN trắc đạc'},
+  {k:'CVTracDac',n:'CV Trắc đạc'},
+  {k:'NVTracDac',n:'NV trắc đạc'},
+  {k:'ATLĐ',n:'ATLĐ'},
   {k:'QLTB',n:'QLTB'},
   {k:'TruongCa',n:'Trưởng ca'},
   {k:'LXLM',n:'LXLM'},
@@ -336,14 +340,21 @@ async function loadData(){
       setSS('✅ Đã cập nhật');
       renderTable();renderLog();return;
     }
-    var yd=await sLoad(ykey());
-    if(yd){
+    // Lấy ngày gần nhất có lịch sử
+    var hist=await sHist();
+    var prev=null;
+    for(var i=0;i<hist.length;i++){
+      if(hist[i].ngay<tkey()){prev=hist[i];break;}
+    }
+    if(prev){
+      var yd=prev.data||{};
       projects=yd.projects||['CL-CR'];
       COLS=mergeCols(yd.cols);
       data=copyFromYest(yd.data||{},projects);
       logItems=[];
-      setSS('📋 Copy từ hôm qua');
-      toast('📋 Đã copy dữ liệu hôm qua — kiểm tra trước khi lưu!');
+      var pts=prev.ngay.split('-');
+      setSS('📋 Copy từ '+pts[2]+'/'+pts[1]+'/'+pts[0]);
+      toast('📋 Đã copy từ ngày '+pts[2]+'/'+pts[1]+'/'+pts[0]+' — kiểm tra trước khi lưu!');
       renderTable();renderLog();return;
     }
   }catch(e){console.error(e);}
@@ -367,6 +378,15 @@ function setUser(){
     isEdit=!vDate;
     document.getElementById('ust').textContent='✅ '+n;
   }
+  // Ghi log đăng nhập
+  if(!vDate){
+    var now=new Date();
+    var time=p2(now.getHours())+':'+p2(now.getMinutes());
+    logItems.unshift({time:time,u:curUser,p:'— đăng nhập —',ts:now.toISOString(),login:true});
+    if(logItems.length>100)logItems.pop();
+    renderLog();
+    schSave();
+  }
   renderTable();
 }
 
@@ -387,6 +407,7 @@ function updVal(p,type,k,val){
   ensureProj(p);
   data[p][type][k]=Math.max(0,parseInt(val)||0);
   calcTotals();
+  renderCharts();
   addLog(p);
   schSave();
 }
@@ -424,9 +445,11 @@ function renderLog(){
     return;
   }
   el.innerHTML=logItems.map(function(l){
+    var color=l.login?'#e65100':'#2e7d32';
+    var icon=l.login?'🔑':'✏️';
     return '<div class="hlog-item">'
       +'<span style="font-weight:800;color:#1565c0">'+l.time+'</span>'
-      +' &nbsp;—&nbsp; <span style="font-weight:700;color:#2e7d32">'+l.u+'</span>'
+      +' &nbsp;—&nbsp; <span style="font-weight:700;color:'+color+'">'+icon+' '+l.u+'</span>'
       +' &nbsp;—&nbsp; <span style="color:#666">'+l.p+'</span>'
       +'</div>';
   }).join('');
@@ -493,6 +516,7 @@ function renderTable(){
   h+='</tbody>';
   document.getElementById('mt').innerHTML=h;
   calcTotals();
+  renderCharts();
 }
 
 function calcTotals(){
@@ -549,6 +573,140 @@ function calcTotals(){
   });
   var bgte=document.getElementById('b_bt_t');
   if(bgte)bgte.textContent=fmtN(bgt);
+}
+
+function renderCharts(){
+  // Nhóm chức danh
+  var groups=[
+    {k:'CHT',keys:['CHT'],color:'#378ADD'},
+    {k:'DoiTruong',keys:['DoiTruong'],color:'#1D9E75'},
+    {k:'CBKT',keys:['CBKT'],color:'#EF9F27'},
+    {k:'ATLĐ',keys:['ATLĐ'],color:'#E24B4A'},
+    {k:'QLTB',keys:['QLTB'],color:'#534AB7'},
+    {k:'TruongCa',keys:['TruongCa'],color:'#0F6E56'},
+    {k:'LXLM',keys:['LXLM'],color:'#D4537E'},
+    {k:'CNCH',keys:['CNCH'],color:'#BA7517'},
+    {k:'BPTracDac',keys:['TNTracDac','CVTracDac','NVTracDac'],color:'#185FA5'},
+    {k:'BPKho',keys:['TNKho','CVkho','ThuKho'],color:'#639922'},
+  ];
+  var otherKeys=['NoiNghiep','QC','QS','Shop','HCNS','LMTN'];
+  var groupLabels={
+    CHT:'CHT',DoiTruong:'Đội trưởng',CBKT:'CBKT','ATLĐ':'ATLĐ',
+    QLTB:'QLTB',TruongCa:'Trưởng ca',LXLM:'LXLM',CNCH:'CNCH',
+    BPTracDac:'BP. Trắc đạc',BPKho:'BP. Kho'
+  };
+
+  function calcGroup(proj,grp){
+    var total=0;
+    TYPES.forEach(function(t){
+      if(t==='nghi')return;
+      grp.keys.forEach(function(k){
+        total+=(data[proj]&&data[proj][t]?data[proj][t][k]||0:0);
+      });
+    });
+    return total;
+  }
+
+  function calcOther(proj){
+    var total=0;
+    TYPES.forEach(function(t){
+      if(t==='nghi')return;
+      otherKeys.forEach(function(k){
+        total+=(data[proj]&&data[proj][t]?data[proj][t][k]||0:0);
+      });
+      // Custom cols
+      COLS.forEach(function(c){
+        var isKnown=groups.some(function(g){return g.keys.indexOf(c.k)>=0;})||otherKeys.indexOf(c.k)>=0;
+        if(!isKnown)total+=(data[proj]&&data[proj][t]?data[proj][t][c.k]||0:0);
+      });
+    });
+    return total;
+  }
+
+  function makeChartHTML(proj){
+    var rows=[];
+    var grandTotal=0;
+    groups.forEach(function(g){
+      var v=calcGroup(proj,g);
+      grandTotal+=v;
+      rows.push({label:groupLabels[g.k]||g.k,value:v,color:g.color});
+    });
+    var other=calcOther(proj);
+    grandTotal+=other;
+    rows.push({label:'Các chức danh khác',value:other,color:'#888'});
+
+    var html='<div style="font-size:10px;line-height:1.6;">';
+    rows.forEach(function(r){
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:1px 0;">'
+        +'<span style="display:flex;align-items:center;gap:4px;">'
+        +'<span style="width:7px;height:7px;border-radius:50%;background:'+r.color+';flex-shrink:0"></span>'
+        +'<span style="color:#1a1a1a">'+r.label+'</span></span>'
+        +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+r.value+'</span>'
+        +'</div>';
+    });
+    html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;">'
+      +'<span style="color:#555;font-size:10px">Tổng</span>'
+      +'<span style="font-weight:700;font-size:10px;color:#1a1a1a">'+grandTotal+'</span>'
+      +'</div>';
+    html+='</div>';
+    return html;
+  }
+
+  // Tính tổng toàn BCH
+  function calcGroupBCH(grp){
+    var total=0;
+    projects.forEach(function(proj){
+      TYPES.forEach(function(t){
+        grp.keys.forEach(function(k){
+          total+=(data[proj]&&data[proj][t]?data[proj][t][k]||0:0);
+        });
+      });
+    });
+    return total;
+  }
+  function calcOtherBCH(){
+    var total=0;
+    projects.forEach(function(proj){
+      TYPES.forEach(function(t){
+        otherKeys.forEach(function(k){
+          total+=(data[proj]&&data[proj][t]?data[proj][t][k]||0:0);
+        });
+        COLS.forEach(function(c){
+          var isKnown=groups.some(function(g){return g.keys.indexOf(c.k)>=0;})||otherKeys.indexOf(c.k)>=0;
+          if(!isKnown)total+=(data[proj]&&data[proj][t]?data[proj][t][c.k]||0:0);
+        });
+      });
+    });
+    return total;
+  }
+
+  var el=document.getElementById('chart-panel');
+  if(!el)return;
+  var rows=[];
+  var grandTotal=0;
+  groups.forEach(function(g){
+    var v=calcGroupBCH(g);
+    grandTotal+=v;
+    rows.push({label:groupLabels[g.k]||g.k,value:v,color:g.color});
+  });
+  var other=calcOtherBCH();
+  grandTotal+=other;
+  rows.push({label:'Các chức danh khác',value:other,color:'#888'});
+
+  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">Nhân sự BCH CL-CR</div>';
+  rows.forEach(function(r){
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;">'
+      +'<span style="display:flex;align-items:center;gap:4px;">'
+      +'<span style="width:7px;height:7px;border-radius:50%;background:'+r.color+';flex-shrink:0"></span>'
+      +'<span style="color:#1a1a1a">'+r.label+'</span></span>'
+      +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+r.value+'</span>'
+      +'</div>';
+  });
+  html+='<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;">'
+    +'<span style="color:#555;">Tổng</span>'
+    +'<span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span>'
+    +'</div>';
+  el.innerHTML=html;
 }
 
 // ADMIN
@@ -775,6 +933,24 @@ function exportXL(){
     tr.push(s);gt+=s;
   });
   tr.push(gt);rows.push(tr);
+  // TỔNG BCH
+  var bTypes2=['ca1','ca2','nghi'];
+  bTypes2.forEach(function(type,ti){
+    var r=[ti===0?'TỔNG BCH':'',TLABELS[ti]];var rt=0;
+    COLS.forEach(function(c){
+      var v=projects.reduce(function(s,p){return s+(data[p]&&data[p][type]?data[p][type][c.k]||0:0);},0);
+      r.push(v);rt+=v;
+    });
+    r.push(rt);rows.push(r);
+  });
+  var trb=['','Tổng'];var gtb=0;
+  COLS.forEach(function(c){
+    var s=TYPES.reduce(function(acc,t){
+      return acc+projects.reduce(function(s2,p){return s2+(data[p]&&data[p][t]?data[p][t][c.k]||0:0);},0);
+    },0);
+    trb.push(s);gtb+=s;
+  });
+  trb.push(gtb);rows.push(trb);
   var ws=XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb,ws,'NS_'+p2(now.getDate())+p2(now.getMonth()+1)+now.getFullYear());
   XLSX.writeFile(wb,'NhanSu_BCH_'+now.getFullYear()+p2(now.getMonth()+1)+p2(now.getDate())+'.xlsx');
@@ -823,6 +999,24 @@ async function exportXLRange(){
         });
         tr.push(gt);sheetRows.push(tr);sheetRows.push([]);
       });
+      // TỔNG BCH cho range
+      var bTypes3=['ca1','ca2','nghi'];
+      bTypes3.forEach(function(type,ti){
+        var r=[ti===0?'TỔNG BCH':'',TLABELS[ti]];var rt=0;
+        cls.forEach(function(c){
+          var v=pjs.reduce(function(s,p){return s+(dt[p]&&dt[p][type]?dt[p][type][c.k]||0:0);},0);
+          r.push(v);rt+=v;
+        });
+        r.push(rt);sheetRows.push(r);
+      });
+      var trbr=['','Tổng'];var gtbr=0;
+      cls.forEach(function(c){
+        var s=TYPES.reduce(function(acc,t){
+          return acc+pjs.reduce(function(s2,p){return s2+(dt[p]&&dt[p][t]?dt[p][t][c.k]||0:0);},0);
+        },0);
+        trbr.push(s);gtbr+=s;
+      });
+      trbr.push(gtbr);sheetRows.push(trbr);
       var ws=XLSX.utils.aoa_to_sheet(sheetRows);
       var sname='NS_'+pts[2]+pts[1]+pts[0].slice(2);
       XLSX.utils.book_append_sheet(wb,ws,sname);
@@ -865,8 +1059,8 @@ function toast(msg){
 
 function setDate(){
   var n=new Date();
-  var days=['CN','T2','T3','T4','T5','T6','T7'];
-  document.getElementById('dp').textContent=days[n.getDay()]+', '+p2(n.getDate())+'/'+(n.getMonth()+1)+'/'+n.getFullYear();
+  var days=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+  document.getElementById('dp').textContent=days[n.getDay()]+', ngày '+p2(n.getDate())+' tháng '+p2(n.getMonth()+1)+' năm '+n.getFullYear();
 }
 
 async function init(){
