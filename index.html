@@ -112,7 +112,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 <div class="rotate-banner">📱 Xoay ngang điện thoại để xem bảng tốt hơn!</div>
 
 <div id="lock-banner" class="lock-banner">
-  🔒 Đã qua 08:30 — Nhập mật khẩu để chỉnh sửa:
+  🔒 Đã qua 08:00 — Nhập mật khẩu để chỉnh sửa:
   <input type="password" id="lock-pass" placeholder="Mật khẩu..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')unlockEdit()">
   <button class="btn btn-sm btn-or" onclick="unlockEdit()">Mở khoá</button>
 </div>
@@ -181,15 +181,16 @@ var SKEY='sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv';
 var sc=supabase.createClient(SURL,SKEY);
 var PASS='Daika';
 var timeLocked=false;
+var unlockedThisSession=false;
 var prevDayData=null;
 
 function isAfterCutoff(){
   var n=new Date();
-  return n.getHours()>8||(n.getHours()===8&&n.getMinutes()>=30);
+  return n.getHours()>=8;
 }
 
 function checkTimeLock(){
-  if(isAfterCutoff()&&!timeLocked){
+  if(isAfterCutoff()&&!timeLocked&&!unlockedThisSession){
     timeLocked=true;
     if(isEdit){isEdit=false;renderTable();}
     document.getElementById('lock-banner').style.display='flex';
@@ -200,11 +201,12 @@ function unlockEdit(){
   var p=document.getElementById('lock-pass').value;
   if(p!==PASS){alert('❌ Sai mật khẩu!');return;}
   timeLocked=false;
+  unlockedThisSession=true;
   if(curUser&&!vDate)isEdit=true;
   document.getElementById('lock-banner').style.display='none';
   document.getElementById('lock-pass').value='';
   renderTable();
-  toast('🔓 Đã mở khoá!');
+  toast('🔓 Đã mở khoá cả phiên!');
 }
 
 // Danh sách cột chuẩn - luôn dùng cái này làm gốc
@@ -334,12 +336,19 @@ async function loadData(){
     var td=await sLoad(tkey());
     if(td){
       projects=td.projects||['CL-CR'];
-      // Luôn merge DEF_COLS + custom cols từ saved
       COLS=mergeCols(td.cols);
       data=td.data||{};
       logItems=td.log||[];
-      // Đảm bảo tất cả proj có đủ cột
       projects.forEach(function(p){ensureProj(p);});
+      // Load ngày trước để so sánh mũi tên
+      var hist2=await sHist();
+      for(var i=0;i<hist2.length;i++){
+        if(hist2[i].ngay<tkey()){
+          var pd=hist2[i].data||{};
+          prevDayData=pd.data||pd||null;
+          break;
+        }
+      }
       setSS('✅ Đã cập nhật');
       renderTable();renderLog();return;
     }
@@ -706,7 +715,10 @@ function renderCharts(){
   grandTotal+=other;
   rows.push({label:'Các chức danh khác',value:other,prev:prevOther,color:'#888'});
 
-  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">Nhân sự BCH CL-CR</div>';
+  var now2=new Date();
+  var dateStr=p2(now2.getDate())+'/'+p2(now2.getMonth()+1)+'/'+now2.getFullYear();
+  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;">Nhân sự BCH CL-CR</div>'
+    +'<div style="font-size:9px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+dateStr+'</div>';
   rows.forEach(function(r){
     var arrow2='';
     if(prevDayData&&r.prev!==undefined){
@@ -720,9 +732,25 @@ function renderCharts(){
       +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+arrow2+r.value+'</span>'
       +'</div>';
   });
+  // Tính đi làm và nghỉ
+  var tongNghi=0;
+  projects.forEach(function(proj){
+    COLS.forEach(function(c){
+      tongNghi+=(data[proj]&&data[proj]['nghi']?data[proj]['nghi'][c.k]||0:0);
+    });
+  });
+  var tongDiLam=grandTotal-tongNghi;
   html+='<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;">'
     +'<span style="color:#555;">Tổng</span>'
     +'<span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span>'
+    +'</div>';
+  html+='<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+    +'<span style="color:#333;font-size:10px;">Đi làm</span>'
+    +'<span style="font-weight:600;color:#1a1a1a;font-size:10px;">'+tongDiLam+'</span>'
+    +'</div>';
+  html+='<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+    +'<span style="color:#e53935;font-size:10px;">Nghỉ</span>'
+    +'<span style="font-weight:600;color:#e53935;font-size:10px;">'+tongNghi+'</span>'
     +'</div>';
   el.innerHTML=html;
 }
