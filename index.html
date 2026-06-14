@@ -651,15 +651,16 @@ function renderCharts(){
     var html='<div style="font-size:10px;line-height:1.6;">';
     rows.forEach(function(r){
       var arrow='';
+      var numColor='#1a1a1a';
       if(prevDayData&&r.prev!==undefined){
-        if(r.value>r.prev)arrow='<span style="color:#1565c0;font-size:10px">&uarr;</span> ';
-        else if(r.value<r.prev)arrow='<span style="color:#e53935;font-size:10px">&darr;</span> ';
+        if(r.value>r.prev){arrow='<span style="color:#1565c0;font-size:13px;font-weight:900">↑</span>';numColor='#1565c0';}
+        else if(r.value<r.prev){arrow='<span style="color:#e53935;font-size:13px;font-weight:900">↓</span>';numColor='#e53935';}
       }
       html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:1px 0;">'
         +'<span style="display:flex;align-items:center;gap:4px;">'
         +'<span style="width:7px;height:7px;border-radius:50%;background:'+r.color+';flex-shrink:0"></span>'
         +'<span style="color:#1a1a1a">'+r.label+'</span></span>'
-        +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+arrow+r.value+'</span>'
+        +'<span style="font-weight:700;color:'+numColor+';min-width:20px;text-align:right">'+arrow+r.value+'</span>'
         +'</div>';
     });
     html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;">'
@@ -721,15 +722,16 @@ function renderCharts(){
     +'<div style="font-size:9px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+dateStr+'</div>';
   rows.forEach(function(r){
     var arrow2='';
+    var numColor2='#1a1a1a';
     if(prevDayData&&r.prev!==undefined){
-      if(r.value>r.prev)arrow2='<span style="color:#1565c0;font-size:10px">&uarr;</span> ';
-      else if(r.value<r.prev)arrow2='<span style="color:#e53935;font-size:10px">&darr;</span> ';
+      if(r.value>r.prev){arrow2='<span style="color:#1565c0;font-size:13px;font-weight:900">↑</span>';numColor2='#1565c0';}
+      else if(r.value<r.prev){arrow2='<span style="color:#e53935;font-size:13px;font-weight:900">↓</span>';numColor2='#e53935';}
     }
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;">'
       +'<span style="display:flex;align-items:center;gap:4px;">'
       +'<span style="width:7px;height:7px;border-radius:50%;background:'+r.color+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a">'+r.label+'</span></span>'
-      +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+arrow2+r.value+'</span>'
+      +'<span style="font-weight:700;color:'+numColor2+';min-width:20px;text-align:right">'+arrow2+r.value+'</span>'
       +'</div>';
   });
   // Tính đi làm và nghỉ
