@@ -46,8 +46,8 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:1;}
 .home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.25;}
 .home-header .sub{font-size:12px;color:var(--accent-blue);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:5px;}
-.home-avatar{width:46px;height:46px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 14px rgba(124,77,255,0.4);padding:4px;overflow:hidden;}
-.home-avatar img{width:100%;height:100%;object-fit:contain;}
+.home-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(124,77,255,0.5);overflow:hidden;background:#0a0e1a;border:2px solid rgba(124,77,255,0.3);}
+.home-avatar img{width:100%;height:100%;object-fit:cover;object-position:center;}
 .home-cards{display:flex;flex-direction:column;gap:16px;width:100%;max-width:420px;position:relative;z-index:1;}
 .mod-card{position:relative;background:linear-gradient(145deg,var(--bg-card),var(--bg-card2));border-radius:16px;padding:18px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;box-shadow:0 4px 20px rgba(0,0,0,0.4);border:1px solid var(--border-soft);transition:transform 0.15s;overflow:hidden;}
 .mod-card:active{transform:scale(0.98);}
@@ -120,6 +120,17 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 @media (orientation:portrait) and (max-width:768px){.rotate-banner{display:block;}}
 .unsaved-dot{display:inline-block;width:7px;height:7px;background:#ff7043;border-radius:50%;margin-right:4px;vertical-align:middle;animation:blink 1s infinite;}
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+.qs-alert-blink{animation:qsAlertPulse 1.6s infinite;}
+@keyframes qsAlertPulse{0%,100%{box-shadow:0 3px 10px rgba(229,57,53,0.35);}50%{box-shadow:0 3px 22px rgba(229,57,53,0.85);}}
+.qs-clickable{cursor:pointer;}
+.qs-clickable:active{transform:scale(0.96);}
+.qs-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;align-items:center;justify-content:center;padding:16px;}
+.qs-modal-box{background:#fff;border-radius:14px;max-width:380px;width:100%;max-height:70vh;overflow:hidden;display:flex;flex-direction:column;}
+.qs-modal-head{padding:14px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;}
+.qs-modal-head .ttl{font-weight:800;font-size:14px;color:#1a1a1a;}
+.qs-modal-close{cursor:pointer;font-size:18px;color:#888;padding:2px 8px;}
+.qs-modal-body{overflow-y:auto;padding:4px 0;color:#1a1a1a;font-size:13px;}
+.qs-countdown-bar{width:100%;max-width:420px;position:relative;z-index:1;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:9px 14px;margin-bottom:14px;font-size:12px;font-weight:700;text-align:center;}
 .lock-banner{display:none;background:#fff3e0;border:1.5px solid #fb8c00;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12px;font-weight:700;color:#e65100;align-items:center;gap:10px;flex-wrap:wrap;}
 .nbar{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;color:#1b5e20;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
 .vbanner{background:#fff9c4;border:1.5px solid #f9a825;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;color:#e65100;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
@@ -266,7 +277,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
           <div class="qstat-val" id="qs-ns-ca2">-</div><div class="qstat-lbl">Ca 2</div>
           <svg class="qstat-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="0,19 20,17 35,12 50,14 65,8 80,10 100,4" fill="none" stroke="#a5d6a7" stroke-width="2"/></svg>
         </div>
-        <div class="qstat-card q-red">
+        <div class="qstat-card q-red qs-clickable" id="qs-ns-nghi-card" onclick="qsShowDetail('ns-nghi')">
           <div class="qstat-icon-circle">⏰</div>
           <div class="qstat-val" id="qs-ns-nghi">-</div><div class="qstat-lbl">Nghỉ</div>
           <svg class="qstat-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><circle cx="5" cy="14" r="2.2" fill="#ef9a9a"/><circle cx="35" cy="14" r="2.2" fill="#ef9a9a"/><circle cx="65" cy="14" r="2.2" fill="#ef9a9a"/><circle cx="95" cy="14" r="2.2" fill="#ef9a9a"/><line x1="5" y1="14" x2="95" y2="14" stroke="#ef9a9a" stroke-width="1.5" stroke-dasharray="3,3"/></svg>
@@ -287,7 +298,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
           <div class="qstat-val" id="qs-mmtb-hd">-</div><div class="qstat-lbl">Hoạt động</div>
           <svg class="qstat-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="0,20 20,16 35,18 50,9 65,11 80,4 100,2" fill="none" stroke="#a5d6a7" stroke-width="2"/></svg>
         </div>
-        <div class="qstat-card q-red">
+        <div class="qstat-card q-red qs-clickable" id="qs-mmtb-hh-card" onclick="qsShowDetail('mmtb-hh')">
           <div class="qstat-icon-circle">⚠️</div>
           <div class="qstat-val" id="qs-mmtb-hh">-</div><div class="qstat-lbl">Hư hỏng</div>
           <svg class="qstat-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><circle cx="5" cy="14" r="2.2" fill="#ef9a9a"/><circle cx="35" cy="14" r="2.2" fill="#ef9a9a"/><circle cx="65" cy="14" r="2.2" fill="#ef9a9a"/><circle cx="95" cy="14" r="2.2" fill="#ef9a9a"/><line x1="5" y1="14" x2="95" y2="14" stroke="#ef9a9a" stroke-width="1.5" stroke-dasharray="3,3"/></svg>
@@ -308,17 +319,29 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <div class="qs-group">
       <div class="qs-group-title">📅 Lịch nghiệm thu</div>
       <div class="quickstats-grid cols3" style="grid-template-columns:1fr;">
-        <div class="qstat-card" style="display:flex;align-items:center;gap:12px;background:var(--bg-card);border:1px solid var(--border-soft);">
+        <div class="qstat-card qs-clickable" style="display:flex;align-items:center;gap:12px;background:var(--bg-card);border:1px solid var(--border-soft);" onclick="qsShowDetail('ldt')">
           <div class="qstat-icon-circle" style="background:rgba(76,175,80,0.18);margin-bottom:0;width:42px;height:42px;font-size:18px;flex-shrink:0;">📅</div>
           <div><div class="qstat-val c-gr" id="qs-ldt" style="color:#66bb6a">-</div><div class="qstat-lbl" style="color:var(--txt-dim)">Lịch nghiệm thu hôm nay</div></div>
         </div>
       </div>
     </div>
 
+    <div class="qs-countdown-bar" id="qs-countdown">⏰ Đang tính...</div>
+
     <div style="width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:10px;border-top:1px solid var(--border-soft);position:relative;z-index:1;font-size:10px;color:var(--txt-faint);">
       <span>🕐 Cập nhật: <span id="qs-update-time">--:--</span> • <span id="qs-update-date">--/--/----</span></span>
       <span style="cursor:pointer;color:var(--accent-blue);font-weight:700;display:flex;align-items:center;gap:4px;" onclick="loadQuickStats()">🔄 Làm mới</span>
     </div>
+  </div>
+</div>
+
+<div class="qs-modal-overlay" id="qs-modal-overlay" onclick="if(event.target===this)qsCloseModal()">
+  <div class="qs-modal-box">
+    <div class="qs-modal-head">
+      <span class="ttl" id="qs-modal-title">Chi tiết</span>
+      <span class="qs-modal-close" onclick="qsCloseModal()">✕</span>
+    </div>
+    <div class="qs-modal-body" id="qs-modal-body"></div>
   </div>
 </div>
 
@@ -589,55 +612,172 @@ function showScreen(name){
   if(name==='ldt'&&!ldtInited){ldtInited=true;ldtInit();}
 }
 
+var qsDetailData={ns:{},mmtb:{},ldt:{}};
+
+function qsArrow(cur,prev){
+  if(prev===undefined||prev===null)return '';
+  if(cur>prev)return '<span style="color:#81c784;font-size:10px;margin-left:3px">▲</span>';
+  if(cur<prev)return '<span style="color:#ff8a80;font-size:10px;margin-left:3px">▼</span>';
+  return '<span style="color:rgba(255,255,255,0.4);font-size:10px;margin-left:3px">―</span>';
+}
+
 async function loadQuickStats(){
   var nowT=new Date();
   document.getElementById('qs-update-time').textContent=p2(nowT.getHours())+':'+p2(nowT.getMinutes());
   document.getElementById('qs-update-date').textContent=p2(nowT.getDate())+'/'+p2(nowT.getMonth()+1)+'/'+nowT.getFullYear();
+
+  function ykeyOf(d){var y=new Date(d);y.setDate(y.getDate()-1);return y.getFullYear()+'-'+p2(y.getMonth()+1)+'-'+p2(y.getDate());}
+
   try{
     var n=new Date();
     var tk=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());
     var nsR=await sc.from('nhansu').select('data').eq('ngay',tk).single();
+    var nsY=await sc.from('nhansu').select('data').eq('ngay',ykeyOf(n)).single();
+    var prevTotal=null;
+    if(nsY.data){
+      var ydt=nsY.data.data.data||{},yprojs=nsY.data.data.projects||[];
+      var yc1=0,yc2=0,yng=0;
+      yprojs.forEach(function(p){
+        if(ydt[p]&&ydt[p].ca1)Object.values(ydt[p].ca1).forEach(function(v){yc1+=v||0;});
+        if(ydt[p]&&ydt[p].ca2)Object.values(ydt[p].ca2).forEach(function(v){yc2+=v||0;});
+        if(ydt[p]&&ydt[p].nghi)Object.values(ydt[p].nghi).forEach(function(v){yng+=v||0;});
+      });
+      prevTotal={dilam:yc1+yc2,ca1:yc1,ca2:yc2,nghi:yng,tong:yc1+yc2+yng};
+    }
     if(nsR.data){
       var nd=nsR.data.data,projs=nd.projects||[],dt=nd.data||{};
       var c1=0,c2=0,ng=0;
+      var nghiList=[];
       projs.forEach(function(p){
         if(dt[p]&&dt[p].ca1)Object.values(dt[p].ca1).forEach(function(v){c1+=v||0;});
         if(dt[p]&&dt[p].ca2)Object.values(dt[p].ca2).forEach(function(v){c2+=v||0;});
-        if(dt[p]&&dt[p].nghi)Object.values(dt[p].nghi).forEach(function(v){ng+=v||0;});
+        if(dt[p]&&dt[p].nghi){
+          var pn=0;
+          Object.entries(dt[p].nghi).forEach(function(en){pn+=en[1]||0;});
+          Object.values(dt[p].nghi).forEach(function(v){ng+=v||0;});
+          if(pn>0)nghiList.push({proj:p,n:pn});
+        }
       });
       var tongAll=c1+c2+ng;
-      document.getElementById('qs-ns-dilam').textContent=c1+c2;
-      document.getElementById('qs-ns-ca1').textContent=c1;
-      document.getElementById('qs-ns-ca2').textContent=c2;
-      document.getElementById('qs-ns-nghi').textContent=ng;
-      document.getElementById('qs-ns-tong').textContent=tongAll;
+      qsDetailData.ns={dilam:c1+c2,ca1:c1,ca2:c2,nghi:ng,tong:tongAll,nghiList:nghiList,projects:projs};
+      document.getElementById('qs-ns-dilam').innerHTML=(c1+c2)+qsArrow(c1+c2,prevTotal&&prevTotal.dilam);
+      document.getElementById('qs-ns-ca1').innerHTML=c1+qsArrow(c1,prevTotal&&prevTotal.ca1);
+      document.getElementById('qs-ns-ca2').innerHTML=c2+qsArrow(c2,prevTotal&&prevTotal.ca2);
+      document.getElementById('qs-ns-nghi').innerHTML=ng+qsArrow(ng,prevTotal&&prevTotal.nghi);
+      document.getElementById('qs-ns-tong').innerHTML=tongAll+qsArrow(tongAll,prevTotal&&prevTotal.tong);
+      qsCheckAlert('qs-ns-nghi-card',ng>0&&tongAll>0&&(ng/tongAll)>0.15);
     }
   }catch(e){}
+
   try{
     var n2=new Date();
     var tk2=n2.getFullYear()+'-'+p2(n2.getMonth()+1)+'-'+p2(n2.getDate());
     var mR=await sc.from('mmtb').select('data').eq('ngay',tk2).single();
+    var mY=await sc.from('mmtb').select('data').eq('ngay',ykeyOf(n2)).single();
+    var prevM=null;
+    if(mY.data){
+      var ymd=mY.data.data.data||{};
+      var yhd=0,yhh=0,ylk=0;
+      if(ymd.hoatdong)Object.values(ymd.hoatdong).forEach(function(v){yhd+=v||0;});
+      if(ymd.huhong)Object.values(ymd.huhong).forEach(function(v){yhh+=v||0;});
+      if(ymd.luukho)Object.values(ymd.luukho).forEach(function(v){ylk+=v||0;});
+      prevM={hd:yhd,hh:yhh,lk:ylk,tong:yhd+yhh+ylk};
+    }
     if(mR.data){
-      var md=mR.data.data,dt2=md.data||{};
+      var md=mR.data.data,dt2=md.data||{},machs=md.machines||[];
       var hd=0,hh=0,lk=0;
+      var hhList=[];
       if(dt2.hoatdong)Object.values(dt2.hoatdong).forEach(function(v){hd+=v||0;});
-      if(dt2.huhong)Object.values(dt2.huhong).forEach(function(v){hh+=v||0;});
+      if(dt2.huhong){
+        Object.entries(dt2.huhong).forEach(function(en){
+          if(en[1]>0){
+            var m=machs.find(function(x){return x.k===en[0];});
+            hhList.push({name:m?m.n:en[0],n:en[1]});
+          }
+          hh+=en[1]||0;
+        });
+      }
       if(dt2.luukho)Object.values(dt2.luukho).forEach(function(v){lk+=v||0;});
-      document.getElementById('qs-mmtb-hd').textContent=hd;
-      document.getElementById('qs-mmtb-hh').textContent=hh;
-      document.getElementById('qs-mmtb-lk').textContent=lk;
-      document.getElementById('qs-mmtb-tong').textContent=hd+hh+lk;
+      qsDetailData.mmtb={hd:hd,hh:hh,lk:lk,tong:hd+hh+lk,hhList:hhList};
+      document.getElementById('qs-mmtb-hd').innerHTML=hd+qsArrow(hd,prevM&&prevM.hd);
+      document.getElementById('qs-mmtb-hh').innerHTML=hh+qsArrow(hh,prevM&&prevM.hh);
+      document.getElementById('qs-mmtb-lk').innerHTML=lk+qsArrow(lk,prevM&&prevM.lk);
+      document.getElementById('qs-mmtb-tong').innerHTML=(hd+hh+lk)+qsArrow(hd+hh+lk,prevM&&prevM.tong);
+      qsCheckAlert('qs-mmtb-hh-card',hh>0);
     }
   }catch(e){}
+
   try{
     var n3=new Date();
     var tk3=n3.getFullYear()+'-'+p2(n3.getMonth()+1)+'-'+p2(n3.getDate());
     var lR=await sc.from('ldt').select('data').eq('ngay',tk3).single();
     if(lR.data){
       var schs=(lR.data.data&&lR.data.data.schedules)||[];
+      qsDetailData.ldt={schedules:schs};
       document.getElementById('qs-ldt').textContent=schs.length;
     }
   }catch(e){}
+
+  qsStartCountdown();
+}
+
+function qsCheckAlert(cardId,shouldBlink){
+  var el=document.getElementById(cardId);
+  if(!el)return;
+  if(shouldBlink)el.classList.add('qs-alert-blink');
+  else el.classList.remove('qs-alert-blink');
+}
+
+var qsCountdownTimer=null;
+function qsStartCountdown(){
+  if(qsCountdownTimer)clearInterval(qsCountdownTimer);
+  function update(){
+    var now=new Date();
+    var deadline=new Date();
+    deadline.setHours(16,0,0,0);
+    var el=document.getElementById('qs-countdown');
+    if(!el)return;
+    if(now>=deadline){
+      el.textContent='⏰ Đã qua hạn báo lịch nghiệm thu hôm nay';
+      el.style.color='#ef5350';
+    }else{
+      var diff=deadline-now;
+      var h=Math.floor(diff/3600000);
+      var m=Math.floor((diff%3600000)/60000);
+      el.textContent='⏰ Còn '+h+'h'+p2(m)+'p để báo lịch nghiệm thu ngày mai';
+      el.style.color='#ffb74d';
+    }
+  }
+  update();
+  qsCountdownTimer=setInterval(update,30000);
+}
+
+// ============ MODAL CHI TIẾT THỐNG KÊ NHANH ============
+function qsShowDetail(type){
+  var title='',body='';
+  if(type==='ns-nghi'){
+    title='🔴 Danh sách nghỉ hôm nay';
+    var list=qsDetailData.ns.nghiList||[];
+    if(!list.length)body='<div style="color:#888;padding:10px;text-align:center">Không có ai nghỉ hôm nay 🎉</div>';
+    else body=list.map(function(x){return '<div style="display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #eee"><span>'+x.proj+'</span><span style="font-weight:700;color:#e53935">'+x.n+' người</span></div>';}).join('');
+  }else if(type==='mmtb-hh'){
+    title='⚠️ Máy móc đang hư hỏng';
+    var list2=qsDetailData.mmtb.hhList||[];
+    if(!list2.length)body='<div style="color:#888;padding:10px;text-align:center">Không có máy nào hư hỏng 🎉</div>';
+    else body=list2.map(function(x){return '<div style="display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #eee"><span>'+x.name+'</span><span style="font-weight:700;color:#e53935">'+x.n+'</span></div>';}).join('');
+  }else if(type==='ldt'){
+    title='📅 Lịch nghiệm thu hôm nay';
+    var schs=(qsDetailData.ldt&&qsDetailData.ldt.schedules)||[];
+    if(!schs.length)body='<div style="color:#888;padding:10px;text-align:center">Chưa có lịch nghiệm thu nào</div>';
+    else body=schs.map(function(s){return '<div style="padding:8px 10px;border-bottom:1px solid #eee"><div style="font-weight:700">'+s.gio+' - '+s.noidung+'</div><div style="font-size:11px;color:#888">'+s.project+' • '+s.khuvuc+' • '+s.nguoi+'</div></div>';}).join('');
+  }else return;
+
+  document.getElementById('qs-modal-title').textContent=title;
+  document.getElementById('qs-modal-body').innerHTML=body;
+  document.getElementById('qs-modal-overlay').style.display='flex';
+}
+function qsCloseModal(){
+  document.getElementById('qs-modal-overlay').style.display='none';
 }
 
 var nsInited=false, mmtbInited=false, ldtInited=false;
