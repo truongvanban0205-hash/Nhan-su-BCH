@@ -74,9 +74,19 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .quickstats-head .when{font-size:11px;color:var(--txt-faint);font-weight:600;}
 .qs-group{width:100%;max-width:420px;position:relative;z-index:1;margin-bottom:14px;}
 .qs-group-title{font-size:11px;font-weight:800;color:var(--txt-dim);margin-bottom:6px;display:flex;align-items:center;gap:5px;}
-.quickstats-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
+.quickstats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.quickstats-grid.cols4{grid-template-columns:repeat(4,1fr);}
 .quickstats-grid.cols3{grid-template-columns:1fr 1fr 1fr;}
-.qstat-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;padding:10px 6px;text-align:center;}
+.qstat-card{border-radius:12px;padding:10px 4px;text-align:center;}
+.qstat-card.q-green{background:linear-gradient(145deg,#4caf50,#81c784);box-shadow:0 3px 10px rgba(76,175,80,0.35);}
+.qstat-card.q-red{background:linear-gradient(145deg,#e53935,#ef5350);box-shadow:0 3px 10px rgba(229,57,53,0.35);}
+.qstat-card.q-orange{background:linear-gradient(145deg,#fb8c00,#ffb74d);box-shadow:0 3px 10px rgba(251,140,0,0.35);}
+.qstat-card.q-blue{background:linear-gradient(145deg,#1565c0,#42a5f5);box-shadow:0 3px 10px rgba(21,101,192,0.35);}
+.qstat-card.q-white{background:#fff;box-shadow:0 3px 10px rgba(0,0,0,0.15);}
+.qstat-card .qstat-val{color:#fff;}
+.qstat-card.q-white .qstat-val{color:#1565c0;}
+.qstat-card .qstat-lbl{color:rgba(255,255,255,0.9);}
+.qstat-card.q-white .qstat-lbl{color:#555;}
 .qstat-val{font-size:18px;font-weight:800;margin-bottom:3px;}
 .qstat-val.c-bl{color:#42a5f5;}
 .qstat-val.c-or{color:#ffb74d;}
@@ -233,19 +243,21 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <div class="qs-group">
       <div class="qs-group-title">👥 Nhân sự</div>
       <div class="quickstats-grid">
-        <div class="qstat-card"><div class="qstat-val c-bl" id="qs-ns-dilam">-</div><div class="qstat-lbl">Đi làm</div></div>
-        <div class="qstat-card"><div class="qstat-val c-bl" id="qs-ns-ca1">-</div><div class="qstat-lbl">Ca 1</div></div>
-        <div class="qstat-card"><div class="qstat-val c-bl" id="qs-ns-ca2">-</div><div class="qstat-lbl">Ca 2</div></div>
-        <div class="qstat-card"><div class="qstat-val c-bl" id="qs-ns-tong">-</div><div class="qstat-lbl">Tổng</div></div>
+        <div class="qstat-card q-green"><div class="qstat-val" id="qs-ns-dilam">-</div><div class="qstat-lbl">Đi làm</div></div>
+        <div class="qstat-card q-green"><div class="qstat-val" id="qs-ns-ca1">-</div><div class="qstat-lbl">Ca 1</div></div>
+        <div class="qstat-card q-green"><div class="qstat-val" id="qs-ns-ca2">-</div><div class="qstat-lbl">Ca 2</div></div>
+        <div class="qstat-card q-red"><div class="qstat-val" id="qs-ns-nghi">-</div><div class="qstat-lbl">Nghỉ</div></div>
+        <div class="qstat-card q-white"><div class="qstat-val" id="qs-ns-tong">-</div><div class="qstat-lbl">Tổng</div></div>
       </div>
     </div>
 
     <div class="qs-group">
       <div class="qs-group-title">🚜 Máy móc thiết bị</div>
-      <div class="quickstats-grid cols3">
-        <div class="qstat-card"><div class="qstat-val c-or" id="qs-mmtb-hd">-</div><div class="qstat-lbl">Hoạt động</div></div>
-        <div class="qstat-card"><div class="qstat-val c-re" id="qs-mmtb-hh">-</div><div class="qstat-lbl">Hư hỏng</div></div>
-        <div class="qstat-card"><div class="qstat-val c-gr" id="qs-mmtb-tong">-</div><div class="qstat-lbl">Tổng</div></div>
+      <div class="quickstats-grid cols4">
+        <div class="qstat-card q-green"><div class="qstat-val" id="qs-mmtb-hd">-</div><div class="qstat-lbl">Hoạt động</div></div>
+        <div class="qstat-card q-red"><div class="qstat-val" id="qs-mmtb-hh">-</div><div class="qstat-lbl">Hư hỏng</div></div>
+        <div class="qstat-card q-orange"><div class="qstat-val" id="qs-mmtb-lk">-</div><div class="qstat-lbl">Lưu kho</div></div>
+        <div class="qstat-card q-white"><div class="qstat-val" id="qs-mmtb-tong">-</div><div class="qstat-lbl">Tổng</div></div>
       </div>
     </div>
 
@@ -385,6 +397,8 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <button class="admin-toggle-btn" onclick="mmtbToggleAdmin()" id="mmtb-admin-toggle">🔒 Quản lý</button>
     <div class="admin-bar admin-hidden" id="mmtb-admin-bar">
       <span class="admin-lbl">🔒 Quản lý:</span>
+      <button class="btn btn-sm btn-or" onclick="mmtbRenameMachine()">✏️ Đổi tên máy</button>
+      <button class="btn btn-sm btn-re" onclick="mmtbDelMachine()">✕ Xoá loại máy</button>
       <button class="btn btn-sm btn-pu" onclick="mmtbExportXLRange()">📦 Xuất Excel theo ngày</button>
       <button class="btn btn-sm btn-gr" onclick="mmtbSaveData()">💾 Lưu ngay</button>
       <button class="btn btn-sm btn-or" onclick="mmtbReset()">🔄 Reset</button>
@@ -540,6 +554,7 @@ async function loadQuickStats(){
       document.getElementById('qs-ns-dilam').textContent=c1+c2;
       document.getElementById('qs-ns-ca1').textContent=c1;
       document.getElementById('qs-ns-ca2').textContent=c2;
+      document.getElementById('qs-ns-nghi').textContent=ng;
       document.getElementById('qs-ns-tong').textContent=tongAll;
     }
   }catch(e){}
@@ -555,6 +570,7 @@ async function loadQuickStats(){
       if(dt2.luukho)Object.values(dt2.luukho).forEach(function(v){lk+=v||0;});
       document.getElementById('qs-mmtb-hd').textContent=hd;
       document.getElementById('qs-mmtb-hh').textContent=hh;
+      document.getElementById('qs-mmtb-lk').textContent=lk;
       document.getElementById('qs-mmtb-tong').textContent=hd+hh+lk;
     }
   }catch(e){}
@@ -1878,6 +1894,37 @@ function mmtbAddMachine(){
     mmtbRenderTable();mmtbRenderCharts();mmtbSchSave();
     toast('✅ Đã thêm: '+n);
   },'thêm loại máy');
+}
+
+function mmtbRenameMachine(){
+  askP(function(){
+    if(!mmtbMachines.length){alert('Chưa có loại máy nào!');return;}
+    var list=mmtbMachines.map(function(m,i){return (i+1)+'. '+m.n;}).join('\n');
+    var idx=parseInt(prompt('Chọn số thứ tự loại máy cần đổi tên:\n'+list))-1;
+    if(isNaN(idx)||idx<0||idx>=mmtbMachines.length)return;
+    var oldName=mmtbMachines[idx].n;
+    var newName=prompt('Tên mới cho "'+oldName+'":');
+    if(!newName||!newName.trim())return;
+    mmtbMachines[idx].n=newName.trim();
+    mmtbRenderTable();mmtbRenderCharts();mmtbSchSave();
+    toast('✅ Đã đổi: '+oldName+' → '+newName.trim());
+  },'đổi tên loại máy');
+}
+
+function mmtbDelMachine(){
+  askP(function(){
+    if(!mmtbMachines.length){alert('Chưa có loại máy nào!');return;}
+    var list=mmtbMachines.map(function(m,i){return (i+1)+'. '+m.n;}).join('\n');
+    var idx=parseInt(prompt('Chọn số thứ tự loại máy cần xoá:\n'+list))-1;
+    if(isNaN(idx)||idx<0||idx>=mmtbMachines.length)return;
+    var m=mmtbMachines[idx];
+    if(!confirm('Xoá loại máy "'+m.n+'"?'))return;
+    mmtbMachines.splice(idx,1);
+    MMTB_STATUS.forEach(function(s){delete mmtbData[s][m.k];});
+    if(mmtbData.note)delete mmtbData.note[m.k];
+    mmtbRenderTable();mmtbRenderCharts();mmtbSchSave();
+    toast('🗑️ Đã xoá: '+m.n);
+  },'xoá loại máy');
 }
 
 function mmtbReset(){
