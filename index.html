@@ -396,6 +396,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 </div>
 
 <div class="action-bar">
+  <button class="btn btn-gr" onclick="saveData()">💾 Lưu ngay</button>
   <button class="btn btn-pu btn-sm" onclick="exportXL()">📊 Xuất Excel</button>
   <button class="admin-toggle-btn" onclick="nsToggleAdmin()" id="ns-admin-toggle">🔒 Quản lý</button>
   <div class="admin-bar admin-hidden" id="ns-admin-bar">
@@ -406,7 +407,6 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <button class="btn btn-sm btn-or" onclick="doAddCol()">＋ Chức danh</button>
     <button class="btn btn-sm btn-re" onclick="doDelCol()">✕ Xoá chức danh</button>
     <button class="btn btn-sm btn-pu" onclick="exportXLRange()">📦 Xuất Excel theo ngày</button>
-    <button class="btn btn-sm btn-gr" onclick="saveData()">💾 Lưu ngay</button>
     <button class="btn btn-sm btn-or" onclick="doReset()">🔄 Reset</button>
     <button class="btn btn-sm btn-re" onclick="doDelAll()">🗑️ Xoá lịch sử</button>
   </div>
@@ -467,6 +467,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <div class="tbl-wrap"><div class="tbl-outer"><table id="mmtb-mt"></table></div></div>
 
   <div class="action-bar">
+    <button class="btn btn-gr" onclick="mmtbSaveData()">💾 Lưu ngay</button>
     <button class="btn btn-sm btn-or" onclick="mmtbAddMachine()">＋ Thêm loại máy</button>
     <button class="btn btn-pu btn-sm" onclick="mmtbExportXL()">📊 Xuất Excel</button>
     <button class="admin-toggle-btn" onclick="mmtbToggleAdmin()" id="mmtb-admin-toggle">🔒 Quản lý</button>
@@ -475,7 +476,6 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       <button class="btn btn-sm btn-or" onclick="mmtbRenameMachine()">✏️ Đổi tên máy</button>
       <button class="btn btn-sm btn-re" onclick="mmtbDelMachine()">✕ Xoá loại máy</button>
       <button class="btn btn-sm btn-pu" onclick="mmtbExportXLRange()">📦 Xuất Excel theo ngày</button>
-      <button class="btn btn-sm btn-gr" onclick="mmtbSaveData()">💾 Lưu ngay</button>
       <button class="btn btn-sm btn-or" onclick="mmtbReset()">🔄 Reset</button>
       <button class="btn btn-sm btn-re" onclick="mmtbDelAll()">🗑️ Xoá lịch sử</button>
     </div>
@@ -1070,10 +1070,16 @@ function niBlur(el){
   el.value=n===0?'-':(n<10?'0'+n:String(n));
 }
 
+var pendingChanges={}; // {proj: {type: {col: value}}}
+
 function updVal(p,type,k,val){
   if(!isEdit||vDate)return;
   ensureProj(p);
-  data[p][type][k]=Math.max(0,parseInt(val)||0);
+  var v=Math.max(0,parseInt(val)||0);
+  data[p][type][k]=v;
+  if(!pendingChanges[p])pendingChanges[p]={};
+  if(!pendingChanges[p][type])pendingChanges[p][type]={};
+  pendingChanges[p][type][k]=v;
   calcTotals();
   renderCharts();
   addLog(p);
@@ -1084,13 +1090,57 @@ function schSave(){
   if(ast)clearTimeout(ast);
   document.getElementById('ss').innerHTML='<span class="unsaved-dot"></span>Chưa lưu...';
   ast=setTimeout(function(){
-    if(!vDate)sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    if(!vDate)mergeSave();
   },3000);
+}
+
+async function mergeSave(){
+  setSS('⏳ Đang lưu...');
+  try{
+    // Lấy bản mới nhất từ server
+    var ex=await sc.from('nhansu').select('id,data').eq('ngay',tkey()).single();
+    var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
+    var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems;
+    if(serverData){
+      mergedProjects=serverData.projects||projects;
+      mergedCols=serverData.cols||COLS;
+      mergedData=serverData.data||{};
+      mergedLog=serverData.log||[];
+      // Ghi đè CHỈ những ô mình vừa sửa lên bản server mới nhất
+      Object.keys(pendingChanges).forEach(function(p){
+        if(!mergedData[p])mergedData[p]={};
+        Object.keys(pendingChanges[p]).forEach(function(type){
+          if(!mergedData[p][type])mergedData[p][type]={};
+          Object.keys(pendingChanges[p][type]).forEach(function(k){
+            mergedData[p][type][k]=pendingChanges[p][type][k];
+          });
+        });
+      });
+      // Đảm bảo dự án/cột mới (nếu mình vừa thêm) cũng có trong merged
+      projects.forEach(function(p){if(mergedProjects.indexOf(p)<0)mergedProjects.push(p);});
+      COLS.forEach(function(c){if(!mergedCols.find(function(mc){return mc.k===c.k;}))mergedCols.push(c);});
+      // Merge log: giữ log mới nhất từ cả 2 bên, không trùng
+      var existingTs=mergedLog.map(function(l){return l.ts;});
+      logItems.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
+      mergedLog=mergedLog.slice(0,50);
+    }
+    var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog};
+    if(ex.data){
+      await sc.from('nhansu').update({data:payload}).eq('ngay',tkey());
+    }else{
+      await sc.from('nhansu').insert({ngay:tkey(),data:payload});
+    }
+    // Cập nhật lại biến cục bộ theo bản đã merge (để không bị lệch UI)
+    projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;
+    pendingChanges={};
+    setSS('✅ Đã cập nhật');
+    renderTable();renderLog();
+  }catch(e){setSS('⚠️ Lỗi: '+e.message);}
 }
 
 async function saveData(){
   if(!curUser&&!vDate){alert('Nhập tên trước khi lưu!');return;}
-  await sSave({projects:projects,cols:COLS,data:data,log:logItems});
+  await mergeSave();
   toast('💾 Đã lưu & đồng bộ!');
   if(curTab===2)await renderDayList();
 }
@@ -1783,8 +1833,8 @@ async function init(){
   checkNotif();
   checkTimeLock();
   setInterval(function(){
-    if(!vDate&&isEdit){
-      sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    if(!vDate&&isEdit&&Object.keys(pendingChanges).length>0){
+      mergeSave();
     }
   },15000);
   setInterval(function(){
@@ -1979,9 +2029,14 @@ function mmtbNiBlur(el){
 }
 function mmtbFmtN(v){return v===0?'-':(v<10?'0'+v:String(v));}
 
+var mmtbPendingChanges={}; // {status: {k: value}} hoặc {note: {k: value}}
+
 function mmtbUpdVal(status,k,val){
   if(!mmtbEdit||mmtbVDate)return;
-  mmtbData[status][k]=Math.max(0,parseInt(val)||0);
+  var v=Math.max(0,parseInt(val)||0);
+  mmtbData[status][k]=v;
+  if(!mmtbPendingChanges[status])mmtbPendingChanges[status]={};
+  mmtbPendingChanges[status][k]=v;
   mmtbCalcTotals();
   mmtbAddLog(mmtbMachines.find(function(m){return m.k===k;}).n);
   mmtbRenderCharts();
@@ -1990,6 +2045,8 @@ function mmtbUpdVal(status,k,val){
 function mmtbUpdNote(k,val){
   if(!mmtbEdit||mmtbVDate)return;
   mmtbData.note[k]=val;
+  if(!mmtbPendingChanges.note)mmtbPendingChanges.note={};
+  mmtbPendingChanges.note[k]=val;
   mmtbSchSave();
 }
 
@@ -1997,12 +2054,47 @@ function mmtbSchSave(){
   if(mmtbAst)clearTimeout(mmtbAst);
   document.getElementById('mmtb-ss').innerHTML='<span class="unsaved-dot"></span>Chưa lưu...';
   mmtbAst=setTimeout(function(){
-    if(!mmtbVDate)mmtbSSave({machines:mmtbMachines,data:mmtbData,log:mmtbLog});
+    if(!mmtbVDate)mmtbMergeSave();
   },3000);
 }
+
+async function mmtbMergeSave(){
+  mmtbSetSS('⏳ Đang lưu...');
+  try{
+    var ex=await sc.from('mmtb').select('id,data').eq('ngay',mmtbTkey()).single();
+    var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
+    var mergedMachines=mmtbMachines, mergedData=mmtbData, mergedLog=mmtbLog;
+    if(serverData){
+      mergedMachines=serverData.machines||mmtbMachines;
+      mergedData=serverData.data||{};
+      mergedLog=serverData.log||[];
+      Object.keys(mmtbPendingChanges).forEach(function(status){
+        if(!mergedData[status])mergedData[status]={};
+        Object.keys(mmtbPendingChanges[status]).forEach(function(k){
+          mergedData[status][k]=mmtbPendingChanges[status][k];
+        });
+      });
+      mmtbMachines.forEach(function(m){if(!mergedMachines.find(function(mm){return mm.k===m.k;}))mergedMachines.push(m);});
+      var existingTs=mergedLog.map(function(l){return l.ts;});
+      mmtbLog.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
+      mergedLog=mergedLog.slice(0,50);
+    }
+    var payload={machines:mergedMachines,data:mergedData,log:mergedLog};
+    if(ex.data){
+      await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey());
+    }else{
+      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:payload});
+    }
+    mmtbMachines=mergedMachines;mmtbData=mergedData;mmtbLog=mergedLog;
+    mmtbPendingChanges={};
+    mmtbSetSS('✅ Đã cập nhật');
+    mmtbRenderTable();mmtbRenderLog();
+  }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);}
+}
+
 async function mmtbSaveData(){
   if(!mmtbUser&&!mmtbVDate){alert('Nhập tên trước khi lưu!');return;}
-  await mmtbSSave({machines:mmtbMachines,data:mmtbData,log:mmtbLog});
+  await mmtbMergeSave();
   toast('💾 MMTB: Đã lưu!');
   if(mmtbCurTab===2)await mmtbRenderDayList();
 }
@@ -2308,7 +2400,7 @@ async function mmtbInit(){
   document.getElementById('mmtb-dp').textContent=days[n.getDay()]+', ngày '+p2(n.getDate())+' tháng '+p2(n.getMonth()+1)+' năm '+n.getFullYear();
   await mmtbLoadData();
   mmtbCheckTimeLock();
-  setInterval(function(){if(!mmtbVDate&&mmtbEdit){mmtbSSave({machines:mmtbMachines,data:mmtbData,log:mmtbLog});}},15000);
+  setInterval(function(){if(!mmtbVDate&&mmtbEdit&&Object.keys(mmtbPendingChanges).length>0){mmtbMergeSave();}},15000);
   setInterval(function(){if(!mmtbVDate)mmtbCheckTimeLock();},30000);
 }
 
@@ -2363,8 +2455,34 @@ async function ldtLoadData(){
   ldtRenderTable();ldtRenderLog();
 }
 
-function ldtSchSave(){
-  ldtSSave({schedules:ldtSchedules,log:ldtLog});
+async function ldtSchSave(){
+  ldtSetSS('⏳ Đang lưu...');
+  try{
+    var ex=await sc.from('ldt').select('id,data').eq('ngay',ldtTkey()).single();
+    var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
+    var mergedSchedules=ldtSchedules, mergedLog=ldtLog;
+    if(serverData){
+      var serverSchedules=serverData.schedules||[];
+      var serverLog=serverData.log||[];
+      // Merge theo id: giữ tất cả lịch của server + áp các lịch mình thêm/sửa
+      var myIds=ldtSchedules.map(function(s){return s.id;});
+      var mergedMap={};
+      serverSchedules.forEach(function(s){mergedMap[s.id]=s;});
+      ldtSchedules.forEach(function(s){mergedMap[s.id]=s;}); // thay đổi của mình ưu tiên
+      mergedSchedules=Object.values(mergedMap).sort(function(a,b){
+        return (b.tgNhap||'').localeCompare(a.tgNhap||'');
+      });
+      var existingTs=serverLog.map(function(l){return l.ts;});
+      var newLogs=ldtLog.filter(function(l){return existingTs.indexOf(l.ts)<0;});
+      mergedLog=newLogs.concat(serverLog).slice(0,100);
+    }
+    var payload={schedules:mergedSchedules,log:mergedLog};
+    if(ex.data){await sc.from('ldt').update({data:payload}).eq('ngay',ldtTkey());}
+    else{await sc.from('ldt').insert({ngay:ldtTkey(),data:payload});}
+    ldtSchedules=mergedSchedules;ldtLog=mergedLog;
+    ldtSetSS('✅ Đã cập nhật');
+    ldtRenderTable();ldtRenderLog();
+  }catch(e){ldtSetSS('⚠️ Lỗi: '+e.message);}
 }
 
 function ldtSearchPerson(query){
@@ -2638,7 +2756,7 @@ async function ldtInit(){
   tomorrow.setDate(tomorrow.getDate()+1);
   document.getElementById('ldt-f-ngay').value=tomorrow.getFullYear()+'-'+p2(tomorrow.getMonth()+1)+'-'+p2(tomorrow.getDate());
   await ldtLoadData();
-  setInterval(function(){if(!ldtVDate)ldtSSave({schedules:ldtSchedules,log:ldtLog});},15000);
+  setInterval(function(){if(!ldtVDate)ldtSetSS('✅ Đã cập nhật');},15000);
 }
 
 
