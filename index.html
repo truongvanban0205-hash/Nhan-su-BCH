@@ -849,7 +849,7 @@ async function exportFullReport(){
   // ===== Build HTML báo cáo trong container ẩn =====
   var container=document.createElement('div');
   container.style.position='fixed';container.style.left='-9999px';container.style.top='0';
-  container.style.width='1000px';container.style.background='#f0f4ff';container.style.padding='16px';
+  container.style.display='inline-block';container.style.background='#f0f4ff';container.style.padding='16px';
   container.style.fontFamily="'Be Vietnam Pro',sans-serif";
   document.body.appendChild(container);
 
@@ -894,8 +894,6 @@ async function exportFullReport(){
   var nsCols=(nsToday&&nsToday.cols)||[];
   var nsData=(nsToday&&nsToday.data)||{};
   var nsRows='';
-  var totalNsRows=nsProjs.length*4+4;
-  var nsRowCounter=0;
   var bchTot={ca1:{},ca2:{},nghi:{}};
   nsCols.forEach(function(c){bchTot.ca1[c.k]=0;bchTot.ca2[c.k]=0;bchTot.nghi[c.k]=0;});
   function fN(v){return v===0?'-':(v<10?'0'+v:v);}
@@ -916,8 +914,6 @@ async function exportFullReport(){
         nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+rc[1]+';font-size:11px;color:'+clr+'">'+fN(v)+'</td>';
       });
       nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+rc[1]+';font-weight:700;font-size:11px">'+fN(rowT)+'</td>';
-      if(nsRowCounter===0)nsRows+='<td rowspan="'+totalNsRows+'" class="chart-cell" id="reportNsChartPanel" style="border:1px solid #ccc;background:#fafafa;vertical-align:top;text-align:left;padding:8px 10px;min-width:170px;font-size:10px;"></td>';
-      nsRowCounter++;
       nsRows+='</tr>';
     });
     var totRowT=0;
@@ -928,7 +924,6 @@ async function exportFullReport(){
       nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#fff9c4;font-weight:700;font-size:11px">'+fN(s)+'</td>';
     });
     nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#ffeb3b;font-weight:800;font-size:11px">'+fN(totRowT)+'</td></tr>';
-    nsRowCounter++;
   });
   // TỔNG BCH
   var bchLbls=[['Ca 1','#f5f5f5'],['Ca 2','#f5f5f5'],['Nghỉ','#f5f5f5']];
@@ -980,11 +975,13 @@ async function exportFullReport(){
     +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);">'
     +'<div style="font-size:16px;font-weight:800;color:#1a1a1a;margin-bottom:2px;">📋 Báo cáo nhân sự: BCH CL-CR/<span style="color:#f9a825">VAL</span></div>'
     +'<div style="font-size:12px;color:#555;margin-bottom:10px;">'+dayName+', ngày '+dateStr+' ✅ Đã cập nhật</div>'
-    +'<table style="border-collapse:collapse;width:100%;">'
-    +'<tr><th style="border:1px solid #cfd5dd;padding:4px;background:#dfe4ea">Dự án</th><th style="border:1px solid #cfd5dd;padding:4px;background:#e8ebef">Ca làm việc</th>'+nsHeaderCols+'<th style="border:1px solid #cfd5dd;padding:4px;background:#ffeb3b">Tổng</th><th style="border:1px solid #cfd5dd;padding:4px;background:#1565c0;color:#fff">Biểu đồ Nhân sự</th></tr>'
+    +'<div style="display:flex;gap:12px;align-items:flex-start;">'
+    +'<table style="border-collapse:collapse;flex:1;">'
+    +'<tr><th style="border:1px solid #cfd5dd;padding:4px;background:#dfe4ea">Dự án</th><th style="border:1px solid #cfd5dd;padding:4px;background:#e8ebef">Ca làm việc</th>'+nsHeaderCols+'<th style="border:1px solid #cfd5dd;padding:4px;background:#ffeb3b">Tổng</th></tr>'
     +nsRows
     +'</table>'
-    +'</div>';
+    +'<div id="reportNsChartPanel" style="min-width:170px;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px;font-size:10px;flex-shrink:0;"></div>'
+    +'</div></div>';
 
   document.body.appendChild(container);
   await new Promise(function(res){requestAnimationFrame(function(){requestAnimationFrame(res);});});
