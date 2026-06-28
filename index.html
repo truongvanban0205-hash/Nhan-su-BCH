@@ -864,7 +864,7 @@ async function exportFullReport(){
 
   // --- Bảng MMTB (nhiều dự án nằm ngang) ---
   var mProjs=(mmtbToday&&mmtbToday.projects)||mmtbProjects||['CL-CR'];
-  var mList=mergedMmtbMachines();
+  var mList=mmtbMergeMachines(mmtbToday&&mmtbToday.machines);
   var mmtbHeaderProjCols=mProjs.map(function(p){return '<th colspan="3" style="border:1px solid #cfd5dd;padding:4px;background:#e65100;color:#fff;font-size:10px">'+p+'</th>';}).join('');
   var mmtbHeaderStatusCols=mProjs.map(function(){return '<th style="border:1px solid #cfd5dd;padding:3px;font-size:9px">Hoạt động</th><th style="border:1px solid #cfd5dd;padding:3px;font-size:9px">Hư hỏng</th><th style="border:1px solid #cfd5dd;padding:3px;font-size:9px">Lưu kho</th>';}).join('');
   var mTotal={hd:0,hh:0,lk:0};
