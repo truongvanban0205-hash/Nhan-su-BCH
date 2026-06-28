@@ -1399,10 +1399,13 @@ async function authSignUp(){
       options:{data:{ten:ten,msnv:msnv}}
     });
     if(res.error){
-      if(res.error.message&&res.error.message.toLowerCase().indexOf('already')>=0){
+      var em=res.error.message||res.error.error_description||res.error.msg||'';
+      if(em.toLowerCase().indexOf('already')>=0){
         authShowErr('MSNV này đã có tài khoản. Vui lòng đăng nhập.');
+      }else if(!em||em==='{}'){
+        authShowErr('Đăng ký lỗi (mã: '+(res.error.status||res.error.code||'không rõ')+'). Có thể do giới hạn số lần thử của Supabase — vui lòng đợi khoảng 1 giờ rồi thử lại.');
       }else{
-        authShowErr('Đăng ký lỗi: '+res.error.message);
+        authShowErr('Đăng ký lỗi: '+em);
       }
       return;
     }
@@ -1432,7 +1435,12 @@ async function authSignIn(){
     var email=authEmailFromMsnv(msnv);
     var res=await sc.auth.signInWithPassword({email:email,password:pass});
     if(res.error){
-      authShowErr('Sai MSNV hoặc mật khẩu.');
+      var sc2=res.error.status;
+      if(sc2===429){
+        authShowErr('Bị giới hạn số lần thử của Supabase. Vui lòng đợi khoảng 1 giờ rồi thử lại.');
+      }else{
+        authShowErr('Sai MSNV hoặc mật khẩu.');
+      }
       return;
     }
     try{localStorage.setItem('lastMsnv',msnv);}catch(e){}
