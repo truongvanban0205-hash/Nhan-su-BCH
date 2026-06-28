@@ -1363,10 +1363,13 @@ var SURL='https://jqwjzvucwvlwbcgxhath.supabase.co';
 var SKEY='sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv';
 var sc=supabase.createClient(SURL,SKEY);
 var PASS='Daika';
-var EMAIL_DOMAIN='@bchcamlam-noreply.com'; // email giả lập cho Supabase Auth, nhân viên không cần email thật
+var BASE_GMAIL='truongvanban0205@gmail.com'; // dùng Gmail thật + mẹo dấu "+" để Supabase chắc chắn chấp nhận
 var curProfile=null;
 
-function authEmailFromMsnv(msnv){return msnv.trim().toLowerCase()+EMAIL_DOMAIN;}
+function authEmailFromMsnv(msnv){
+  var parts=BASE_GMAIL.split('@');
+  return parts[0]+'+'+msnv.trim().toLowerCase()+'@'+parts[1];
+}
 
 function authSwitchTab(tab){
   document.getElementById('auth-tab-in').classList.toggle('active',tab==='in');
@@ -1403,7 +1406,7 @@ async function authSignUp(){
       if(em.toLowerCase().indexOf('already')>=0){
         authShowErr('MSNV này đã có tài khoản. Vui lòng đăng nhập.');
       }else if(!em||em==='{}'){
-        authShowErr('Đăng ký lỗi (mã: '+(res.error.status||res.error.code||'không rõ')+'). Có thể do giới hạn số lần thử của Supabase — vui lòng đợi khoảng 1 giờ rồi thử lại.');
+        authShowErr('Đăng ký lỗi (mã: '+(res.error.status||res.error.code||'không rõ')+'). Vui lòng chụp màn hình gửi lại để kiểm tra.');
       }else{
         authShowErr('Đăng ký lỗi: '+em);
       }
