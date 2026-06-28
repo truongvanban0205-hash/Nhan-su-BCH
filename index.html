@@ -1020,6 +1020,9 @@ async function exportFullReport(){
   if(mmtbPanelEl)renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterday);
 
   await new Promise(function(res){setTimeout(res,300);});
+  // Đảm bảo đã paint xong trước khi chụp (khắc phục hiện tượng panel lúc có lúc không)
+  await new Promise(function(res){requestAnimationFrame(function(){requestAnimationFrame(res);});});
+  await new Promise(function(res){setTimeout(res,200);});
 
   try{
     var canvas=await html2canvas(container,{backgroundColor:'#f0f4ff',scale:2});
@@ -1261,7 +1264,7 @@ function unlockEdit(){
   if(p!==PASS){alert('❌ Sai mật khẩu!');return;}
   timeLocked=false;
   unlockedThisSession=true;
-  if(curUser&&!vDate)isEdit=true;
+  if(!vDate)isEdit=true;
   document.getElementById('lock-banner').style.display='none';
   document.getElementById('lock-pass').value='';
   renderTable();
@@ -2452,7 +2455,7 @@ function mmtbUnlockEdit(){
   if(p!==PASS){alert('❌ Sai mật khẩu!');return;}
   mmtbTimeLocked=false;
   mmtbUnlockedSession=true;
-  if(mmtbUser&&!mmtbVDate)mmtbEdit=true;
+  if(!mmtbVDate)mmtbEdit=true;
   document.getElementById('mmtb-lock-banner').style.display='none';
   document.getElementById('mmtb-lock-pass').value='';
   mmtbRenderTable();
