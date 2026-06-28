@@ -682,28 +682,33 @@ async function loadQuickStats(){
     var mY=await sc.from('mmtb').select('data').eq('ngay',ykeyOf(n2)).single();
     var prevM=null;
     if(mY.data){
-      var ymd=mY.data.data.data||{};
+      var ymd=mY.data.data.data||{},yprojs=mY.data.data.projects||['CL-CR'];
       var yhd=0,yhh=0,ylk=0;
-      if(ymd.hoatdong)Object.values(ymd.hoatdong).forEach(function(v){yhd+=v||0;});
-      if(ymd.huhong)Object.values(ymd.huhong).forEach(function(v){yhh+=v||0;});
-      if(ymd.luukho)Object.values(ymd.luukho).forEach(function(v){ylk+=v||0;});
+      yprojs.forEach(function(p){
+        if(ymd[p]&&ymd[p].hoatdong)Object.values(ymd[p].hoatdong).forEach(function(v){yhd+=v||0;});
+        if(ymd[p]&&ymd[p].huhong)Object.values(ymd[p].huhong).forEach(function(v){yhh+=v||0;});
+        if(ymd[p]&&ymd[p].luukho)Object.values(ymd[p].luukho).forEach(function(v){ylk+=v||0;});
+      });
       prevM={hd:yhd,hh:yhh,lk:ylk,tong:yhd+yhh+ylk};
     }
     if(mR.data){
-      var md=mR.data.data,dt2=md.data||{},machs=md.machines||[];
+      var md=mR.data.data,dt2=md.data||{},machs=md.machines||[],mprojs=md.projects||['CL-CR'];
       var hd=0,hh=0,lk=0;
       var hhList=[];
-      if(dt2.hoatdong)Object.values(dt2.hoatdong).forEach(function(v){hd+=v||0;});
-      if(dt2.huhong){
-        Object.entries(dt2.huhong).forEach(function(en){
-          if(en[1]>0){
-            var m=machs.find(function(x){return x.k===en[0];});
-            hhList.push({name:m?m.n:en[0],n:en[1]});
-          }
-          hh+=en[1]||0;
-        });
-      }
-      if(dt2.luukho)Object.values(dt2.luukho).forEach(function(v){lk+=v||0;});
+      mprojs.forEach(function(proj){
+        var pdata=dt2[proj]||{};
+        if(pdata.hoatdong)Object.values(pdata.hoatdong).forEach(function(v){hd+=v||0;});
+        if(pdata.huhong){
+          Object.entries(pdata.huhong).forEach(function(en){
+            if(en[1]>0){
+              var m=machs.find(function(x){return x.k===en[0];});
+              hhList.push({name:(m?m.n:en[0])+' ('+proj+')',n:en[1]});
+            }
+            hh+=en[1]||0;
+          });
+        }
+        if(pdata.luukho)Object.values(pdata.luukho).forEach(function(v){lk+=v||0;});
+      });
       qsDetailData.mmtb={hd:hd,hh:hh,lk:lk,tong:hd+hh+lk,hhList:hhList};
       document.getElementById('qs-mmtb-hd').innerHTML=hd+qsArrow(hd,prevM&&prevM.hd);
       document.getElementById('qs-mmtb-hh').innerHTML=hh+qsArrow(hh,prevM&&prevM.hh);
@@ -1006,11 +1011,13 @@ async function exportFullReport(){
 
   // Render panel chi tiết Nhân sự
   var nsPanelEl=document.getElementById('reportNsChartPanel');
-  if(nsPanelEl)renderReportNsPanel(nsProjs,nsCols,nsData);
+  var nsYesterday=nsMap[days7[5]]||null;
+  if(nsPanelEl)renderReportNsPanel(nsProjs,nsCols,nsData,nsYesterday);
 
   // Render panel chi tiết MMTB
   var mmtbPanelEl=document.getElementById('reportMmtbChartPanel');
-  if(mmtbPanelEl)renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal);
+  var mmtbYesterday=mmtbMap[days7[5]]||null;
+  if(mmtbPanelEl)renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterday);
 
   await new Promise(function(res){setTimeout(res,300);});
 
@@ -1049,7 +1056,7 @@ function mergedMmtbMachines(){
   return mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES;
 }
 
-function renderReportNsPanel(nsProjs,nsCols,nsData){
+function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
   var el=document.getElementById('reportNsChartPanel');
   if(!el)return;
   var groups=[
@@ -1066,37 +1073,52 @@ function renderReportNsPanel(nsProjs,nsCols,nsData){
   ];
   var otherKeys=['NoiNghiep','QC','QS','Shop','HCNS','LMTN'];
   var groupLabels={CHT:'CHT',DoiTruong:'Đội trưởng',CBKT:'CBKT','ATLĐ':'ATLĐ',QLTB:'QLTB',TruongCa:'Trưởng ca',LXLM:'LXLM',CNCH:'CNCH',BPTracDac:'BP. Trắc đạc',BPKho:'BP. Kho'};
-  function calcGroup(grp){
+  function calcGroup(grp,projs,dt){
     var total=0;
-    nsProjs.forEach(function(p){
+    (projs||[]).forEach(function(p){
       ['ca1','ca2','nghi'].forEach(function(t){
-        grp.keys.forEach(function(k){total+=(nsData[p]&&nsData[p][t]?nsData[p][t][k]||0:0);});
+        grp.keys.forEach(function(k){total+=(dt[p]&&dt[p][t]?dt[p][t][k]||0:0);});
       });
     });
     return total;
   }
-  function calcOther(){
+  function calcOther(projs,cols,dt){
     var total=0;
-    nsProjs.forEach(function(p){
+    (projs||[]).forEach(function(p){
       ['ca1','ca2','nghi'].forEach(function(t){
-        otherKeys.forEach(function(k){total+=(nsData[p]&&nsData[p][t]?nsData[p][t][k]||0:0);});
-        nsCols.forEach(function(c){
+        otherKeys.forEach(function(k){total+=(dt[p]&&dt[p][t]?dt[p][t][k]||0:0);});
+        (cols||[]).forEach(function(c){
           var isKnown=groups.some(function(g){return g.keys.indexOf(c.k)>=0;})||otherKeys.indexOf(c.k)>=0;
-          if(!isKnown)total+=(nsData[p]&&nsData[p][t]?nsData[p][t][c.k]||0:0);
+          if(!isKnown)total+=(dt[p]&&dt[p][t]?dt[p][t][c.k]||0:0);
         });
       });
     });
     return total;
   }
+  var prevProjs=prevDayFull?(prevDayFull.projects||[]):null;
+  var prevCols=prevDayFull?(prevDayFull.cols||[]):null;
+  var prevData=prevDayFull?(prevDayFull.data||{}):null;
   var rows=[],grandTotal=0;
-  groups.forEach(function(g){var v=calcGroup(g);grandTotal+=v;rows.push({label:groupLabels[g.k]||g.k,value:v,color:g.color});});
-  var other=calcOther();grandTotal+=other;rows.push({label:'Các chức danh khác',value:other,color:'#888'});
+  groups.forEach(function(g){
+    var v=calcGroup(g,nsProjs,nsData);
+    grandTotal+=v;
+    var pv=prevData?calcGroup(g,prevProjs,prevData):null;
+    rows.push({label:groupLabels[g.k]||g.k,value:v,prev:pv,color:g.color});
+  });
+  var other=calcOther(nsProjs,nsCols,nsData);grandTotal+=other;
+  var prevOther=prevData?calcOther(prevProjs,prevCols,prevData):null;
+  rows.push({label:'Các chức danh khác',value:other,prev:prevOther,color:'#888'});
   var html='<div style="font-weight:700;font-size:10px;color:#1565c0;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">Nhân sự BCH CL-CR</div>';
   rows.forEach(function(r){
+    var arrow='';
+    if(r.prev!==null&&r.prev!==undefined){
+      if(r.value>r.prev)arrow='<span style="color:#1565c0;font-size:11px;font-weight:900">↑</span> ';
+      else if(r.value<r.prev)arrow='<span style="color:#e53935;font-size:11px;font-weight:900">↓</span> ';
+    }
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:1px 0;">'
       +'<span style="display:flex;align-items:center;gap:4px;"><span style="width:7px;height:7px;border-radius:50%;background:'+r.color+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a">'+r.label+'</span></span>'
-      +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+r.value+'</span></div>';
+      +'<span style="font-weight:600;color:#1a1a1a;min-width:30px;text-align:right">'+arrow+r.value+'</span></div>';
   });
   html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;"><span style="color:#555;">Tổng</span><span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span></div>';
   var nghiTotal=0;
@@ -1109,31 +1131,58 @@ function renderReportNsPanel(nsProjs,nsCols,nsData){
   el.innerHTML=html;
 }
 
-function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal){
+function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterday){
   var el=document.getElementById('reportMmtbChartPanel');
   if(!el)return;
   var palette=['#42a5f5','#66bb6a','#ffb74d','#ce93d8','#ef5350','#4dd0e1','#d4e157','#9575cd'];
   var dt=(mmtbToday&&mmtbToday.data)||{};
+  var ydt=(mmtbYesterday&&mmtbYesterday.data)||null;
+  var yProjs=(mmtbYesterday&&mmtbYesterday.projects)||null;
+  function calcMachTotal(machKey,projsList,dataObj){
+    var v=0;
+    (projsList||[]).forEach(function(proj){
+      var pdata=dataObj[proj]||{};
+      v+=(pdata.hoatdong&&pdata.hoatdong[machKey]||0)+(pdata.huhong&&pdata.huhong[machKey]||0)+(pdata.luukho&&pdata.luukho[machKey]||0);
+    });
+    return v;
+  }
   var html='<div style="font-weight:700;font-size:10px;color:#e65100;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">Biểu đồ MMTB</div>';
   html+='<div style="font-size:9px;color:#888;margin-bottom:6px;">'+dateStr+'</div>';
   html+='<div style="font-weight:700;font-size:9px;color:#e65100;margin-bottom:4px;">MMTB BCH CL-CR</div>';
-  mList.forEach(function(m,i){
-    var v=0;
-    mProjs.forEach(function(proj){
-      var pdata=dt[proj]||{};
-      v+=(pdata.hoatdong&&pdata.hoatdong[m.k]||0)+(pdata.huhong&&pdata.huhong[m.k]||0)+(pdata.luukho&&pdata.luukho[m.k]||0);
+  var totalHDy=0,totalHHy=0,totalLKy=0;
+  if(ydt&&yProjs){
+    yProjs.forEach(function(proj){
+      var pdata=ydt[proj]||{};
+      if(pdata.hoatdong)Object.values(pdata.hoatdong).forEach(function(v){totalHDy+=v||0;});
+      if(pdata.huhong)Object.values(pdata.huhong).forEach(function(v){totalHHy+=v||0;});
+      if(pdata.luukho)Object.values(pdata.luukho).forEach(function(v){totalLKy+=v||0;});
     });
+  }
+  mList.forEach(function(m,i){
+    var v=calcMachTotal(m.k,mProjs,dt);
+    var arrow='';
+    if(ydt){
+      var pv=calcMachTotal(m.k,yProjs,ydt);
+      if(v>pv)arrow='<span style="color:#1565c0;font-size:11px;font-weight:900">↑</span> ';
+      else if(v<pv)arrow='<span style="color:#e53935;font-size:11px;font-weight:900">↓</span> ';
+    }
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:1px 0;">'
       +'<span style="display:flex;align-items:center;gap:4px;"><span style="width:7px;height:7px;border-radius:50%;background:'+palette[i%palette.length]+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a">'+m.n+'</span></span>'
-      +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+v+'</span></div>';
+      +'<span style="font-weight:600;color:#1a1a1a;min-width:30px;text-align:right">'+arrow+v+'</span></div>';
   });
+  function totArrow(cur,prev){
+    if(!ydt)return '';
+    if(cur>prev)return '<span style="color:#1565c0;font-size:11px;font-weight:900">↑</span> ';
+    if(cur<prev)return '<span style="color:#e53935;font-size:11px;font-weight:900">↓</span> ';
+    return '';
+  }
   html+='<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;">'
-    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#2e7d32;font-size:10px;">Hoạt động</span><span style="font-weight:600;font-size:10px;">'+mTotal.hd+'</span></div>'
-    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#e53935;font-size:10px;">Hư hỏng</span><span style="font-weight:600;font-size:10px;color:#e53935;">'+mTotal.hh+'</span></div>'
-    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#888;font-size:10px;">Lưu kho</span><span style="font-weight:600;font-size:10px;">'+mTotal.lk+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#2e7d32;font-size:10px;">Hoạt động</span><span style="font-weight:600;font-size:10px;">'+totArrow(mTotal.hd,totalHDy)+mTotal.hd+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#e53935;font-size:10px;">Hư hỏng</span><span style="font-weight:600;font-size:10px;color:#e53935;">'+totArrow(mTotal.hh,totalHHy)+mTotal.hh+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#888;font-size:10px;">Lưu kho</span><span style="font-weight:600;font-size:10px;">'+totArrow(mTotal.lk,totalLKy)+mTotal.lk+'</span></div>'
     +'</div>';
-  html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;"><span style="color:#555;">Tổng</span><span style="font-weight:700;color:#1a1a1a">'+(mTotal.hd+mTotal.hh+mTotal.lk)+'</span></div>';
+  html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;"><span style="color:#555;">Tổng</span><span style="font-weight:700;color:#1a1a1a">'+totArrow(mTotal.hd+mTotal.hh+mTotal.lk,totalHDy+totalHHy+totalLKy)+(mTotal.hd+mTotal.hh+mTotal.lk)+'</span></div>';
   el.innerHTML=html;
 }
 
@@ -2182,11 +2231,28 @@ function setDate(){
   document.getElementById('dp').textContent=days[n.getDay()]+', ngày '+p2(n.getDate())+' tháng '+p2(n.getMonth()+1)+' năm '+n.getFullYear();
 }
 
+var autoSavedToday=false;
+
+async function checkAutoSaveAt8(){
+  if(autoSavedToday||vDate)return;
+  var now=new Date();
+  if(now.getHours()<8)return;
+  try{
+    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).single();
+    if(ex.data){autoSavedToday=true;return;} // đã có data hôm nay rồi, không cần làm gì
+    // Chưa có data hôm nay và đã qua 8:00 -> tự lưu bản hiện tại (copy từ hôm qua) lên server
+    await sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    autoSavedToday=true;
+    toast('⏰ Đã tự động lưu dữ liệu (copy từ hôm qua) lúc 8:00!');
+  }catch(e){}
+}
+
 async function init(){
   setDate();
   await loadData();
   checkNotif();
   checkTimeLock();
+  await checkAutoSaveAt8();
   setInterval(function(){
     if(!vDate&&isEdit&&Object.keys(pendingChanges).length>0){
       mergeSave();
@@ -2195,6 +2261,9 @@ async function init(){
   setInterval(function(){
     if(!vDate)checkTimeLock();
   },30000);
+  setInterval(function(){
+    if(!vDate)checkAutoSaveAt8();
+  },60000);
 }
 // ============ MODULE MMTB ============
 var DEF_MACHINES=[
@@ -2859,14 +2928,31 @@ async function mmtbExportXLRange(){
   },'xuất Excel MMTB theo ngày');
 }
 
+var mmtbAutoSavedToday=false;
+
+async function mmtbCheckAutoSaveAt8(){
+  if(mmtbAutoSavedToday||mmtbVDate)return;
+  var now=new Date();
+  if(now.getHours()<8)return;
+  try{
+    var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).single();
+    if(ex.data){mmtbAutoSavedToday=true;return;}
+    await mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
+    mmtbAutoSavedToday=true;
+    toast('⏰ MMTB: Đã tự động lưu dữ liệu (copy từ hôm qua) lúc 8:00!');
+  }catch(e){}
+}
+
 async function mmtbInit(){
   var n=new Date();
   var days=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
   document.getElementById('mmtb-dp').textContent=days[n.getDay()]+', ngày '+p2(n.getDate())+' tháng '+p2(n.getMonth()+1)+' năm '+n.getFullYear();
   await mmtbLoadData();
   mmtbCheckTimeLock();
+  await mmtbCheckAutoSaveAt8();
   setInterval(function(){if(!mmtbVDate&&mmtbEdit&&Object.keys(mmtbPendingChanges).length>0){mmtbMergeSave();}},15000);
   setInterval(function(){if(!mmtbVDate)mmtbCheckTimeLock();},30000);
+  setInterval(function(){if(!mmtbVDate)mmtbCheckAutoSaveAt8();},60000);
 }
 
 // ============ MODULE LỊCH NGHIỆM THU ============
