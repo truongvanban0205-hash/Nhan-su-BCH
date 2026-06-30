@@ -229,6 +229,15 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       </div>
     </div>
     <div class="home-cards">
+      <!-- Banner bật thông báo (ẩn nếu đã cho phép) -->
+      <div id="home-notif-banner" style="display:none;background:linear-gradient(135deg,#1565c0,#1976d2);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(21,101,192,0.35);">
+        <span style="font-size:26px;">🔔</span>
+        <div style="flex:1;">
+          <div style="font-weight:800;color:#fff;font-size:13px;">Bật thông báo nhắc nhở</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;">Nhắc 7:30 (NS/MMTB) và 15:30 (Nghiệm thu)</div>
+        </div>
+        <button onclick="bchRequestNotif();document.getElementById('home-notif-banner').style.display='none';" style="background:#fff;color:#1565c0;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">Bật ngay</button>
+      </div>
       <div class="mod-card c-ns" onclick="showScreen('ns')">
         <div class="mod-icon i-ns">📋</div>
         <div class="mod-body">
@@ -253,6 +262,14 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         </div>
         <div class="mod-arrow">›</div>
       </div>
+    </div>
+
+    <!-- Thanh cập nhật + làm mới (đưa lên trên) -->
+    <div style="width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;position:relative;z-index:1;">
+      <span style="font-size:11px;color:var(--txt-dim);">🕐 Cập nhật: <span id="qs-update-time">--:--</span> • <span id="qs-update-date">--/--/----</span></span>
+      <span id="home-refresh-btn" style="cursor:pointer;color:var(--accent-blue);font-weight:700;font-size:12px;display:flex;align-items:center;gap:5px;" onclick="homeRefresh()">
+        <span id="home-refresh-icon" style="display:inline-block;transition:transform 0.5s;">🔄</span> Làm mới
+      </span>
     </div>
 
     <div class="quickstats-head">
@@ -331,10 +348,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
     <button class="btn" style="width:100%;max-width:420px;background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff;justify-content:center;padding:12px;font-size:13px;margin-bottom:6px;position:relative;z-index:1;" onclick="exportFullReport()">📄 Xuất báo cáo tổng hợp (ảnh)</button>
 
-    <div style="width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:10px;border-top:1px solid var(--border-soft);position:relative;z-index:1;font-size:10px;color:var(--txt-faint);">
-      <span>🕐 Cập nhật: <span id="qs-update-time">--:--</span> • <span id="qs-update-date">--/--/----</span></span>
-      <span style="cursor:pointer;color:var(--accent-blue);font-weight:700;display:flex;align-items:center;gap:4px;" onclick="loadQuickStats()">🔄 Làm mới</span>
-    </div>
+
   </div>
 </div>
 
@@ -1498,7 +1512,7 @@ function schSave(){
   document.getElementById('ss').innerHTML='<span class="unsaved-dot"></span>Chưa lưu...';
   ast=setTimeout(function(){
     if(!vDate)mergeSave();
-  },3000);
+  },500);
 }
 
 async function mergeSave(){
@@ -1541,7 +1555,7 @@ async function mergeSave(){
     projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;
     pendingChanges={};
     setSS('✅ Đã cập nhật');
-    renderTable();renderLog();
+    renderLog();
   }catch(e){setSS('⚠️ Lỗi: '+e.message);}
 }
 
@@ -1896,7 +1910,7 @@ function doAddProj(){
     if(projects.indexOf(n)>=0){alert('Đã có rồi!');return;}
     projects.push(n);
     ensureProj(n);
-    renderTable();sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    renderTable();mergeSave();
     toast('✅ Đã thêm: '+n);
   },'thêm dự án');
 }
@@ -1913,7 +1927,7 @@ function doRenameProj(){
     newName=newName.trim();
     projects[idx]=newName;
     if(data[oldName]){data[newName]=data[oldName];delete data[oldName];}
-    renderTable();sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    renderTable();mergeSave();
     toast('✅ Đã đổi: '+oldName+' → '+newName);
   },'đổi tên dự án');
 }
@@ -1928,7 +1942,7 @@ function doDelProj(){
     if(!confirm('Xoá dự án "'+name+'"?'))return;
     projects.splice(idx,1);
     delete data[name];
-    renderTable();sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    renderTable();mergeSave();
     toast('🗑️ Đã xoá: '+name);
   },'xoá dự án');
 }
@@ -1948,7 +1962,7 @@ function doAddCol(){
         data[p][t][k]=0;
       });
     });
-    renderTable();sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    renderTable();mergeSave();
     toast('✅ Đã thêm chức danh: '+n);
   },'thêm chức danh');
 }
@@ -1967,7 +1981,7 @@ function doDelCol(){
         if(data[p]&&data[p][t])delete data[p][t][col.k];
       });
     });
-    renderTable();sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    renderTable();mergeSave();
     toast('🗑️ Đã xoá chức danh: '+col.n);
   },'xoá chức danh');
 }
@@ -1977,7 +1991,7 @@ function doReset(){
     if(!confirm('Reset toàn bộ số liệu hôm nay?'))return;
     data=initData();logItems=[];
     renderTable();renderLog();
-    sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    mergeSave();
     toast('🔄 Đã reset!');
   },'reset');
 }
@@ -2473,8 +2487,6 @@ function mmtbNiBlur(el){
 }
 function mmtbFmtN(v){return v===0?'-':(v<10?'0'+v:String(v));}
 
-var mmtbPendingChanges={}; // {status: {k: value}} hoặc {note: {k: value}}
-
 function mmtbUpdVal(proj,status,k,val){
   if(!mmtbEdit||mmtbVDate)return;
   mmtbEnsureProj(proj);
@@ -2503,7 +2515,7 @@ function mmtbSchSave(){
   document.getElementById('mmtb-ss').innerHTML='<span class="unsaved-dot"></span>Chưa lưu...';
   mmtbAst=setTimeout(function(){
     if(!mmtbVDate)mmtbMergeSave();
-  },3000);
+  },500);
 }
 
 async function mmtbMergeSave(){
@@ -2541,7 +2553,7 @@ async function mmtbMergeSave(){
     mmtbMachines=mergedMachines;mmtbProjects=mergedProjects;mmtbData=mergedData;mmtbLog=mergedLog;
     mmtbPendingChanges={};
     mmtbSetSS('✅ Đã cập nhật');
-    mmtbRenderTable();mmtbRenderLog();
+    mmtbRenderLog();
   }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);}
 }
 
@@ -2651,7 +2663,7 @@ function mmtbAddMachine(){
       mmtbData[proj].note[k]='';
     });
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
+    mmtbMergeSave();
     toast('✅ Đã thêm: '+n);
   },'thêm loại máy');
 }
@@ -2667,7 +2679,7 @@ function mmtbRenameMachine(){
     if(!newName||!newName.trim())return;
     mmtbMachines[idx].n=newName.trim();
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
+    mmtbMergeSave();
     toast('✅ Đã đổi: '+oldName+' → '+newName.trim());
   },'đổi tên loại máy');
 }
@@ -2687,7 +2699,7 @@ function mmtbDelMachine(){
       if(mmtbData[proj].note)delete mmtbData[proj].note[m.k];
     });
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
+    mmtbMergeSave();
     toast('🗑️ Đã xoá: '+m.n);
   },'xoá loại máy');
 }
@@ -2701,7 +2713,7 @@ function mmtbAddProj(){
     mmtbProjects.push(n);
     mmtbEnsureProj(n);
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
+    mmtbMergeSave();
     toast('✅ Đã thêm dự án: '+n);
   },'thêm dự án MMTB');
 }
@@ -2719,7 +2731,7 @@ function mmtbRenameProj(){
     mmtbProjects[idx]=newName;
     if(mmtbData[oldName]){mmtbData[newName]=mmtbData[oldName];delete mmtbData[oldName];}
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
+    mmtbMergeSave();
     toast('✅ Đã đổi: '+oldName+' → '+newName);
   },'đổi tên dự án MMTB');
 }
@@ -2735,7 +2747,7 @@ function mmtbDelProj(){
     mmtbProjects.splice(idx,1);
     delete mmtbData[name];
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
+    mmtbMergeSave();
     toast('🗑️ Đã xoá dự án: '+name);
   },'xoá dự án MMTB');
 }
@@ -2745,7 +2757,7 @@ function mmtbReset(){
     if(!confirm('Reset toàn bộ số liệu MMTB hôm nay?'))return;
     mmtbData=mmtbInitData();mmtbLog=[];
     mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();
-    mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
+    mmtbMergeSave();
     toast('🔄 Đã reset MMTB!');
   },'reset MMTB');
 }
@@ -3313,6 +3325,82 @@ async function ldtInit(){
   setInterval(function(){if(!ldtVDate)ldtSetSS('✅ Đã cập nhật');},15000);
 }
 
+
+
+// ============ LÀM MỚI TRANG CHỦ ============
+async function homeRefresh(){
+  var icon=document.getElementById('home-refresh-icon');
+  var btn=document.getElementById('home-refresh-btn');
+  if(icon){icon.style.transition='transform 0.8s';icon.style.transform='rotate(360deg)';}
+  if(btn)btn.style.pointerEvents='none';
+  await loadQuickStats();
+  setTimeout(function(){
+    if(icon){icon.style.transition='none';icon.style.transform='rotate(0deg)';}
+    if(btn)btn.style.pointerEvents='';
+  },900);
+}
+
+// ============ HỆ THỐNG THÔNG BÁO PUSH ============
+var BCH_NOTIF_TIMES=[
+  {h:7, m:30, id:'ns_mmtb_730',  title:'⏰ Sắp hết giờ nhập liệu!',  body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline 8:00)'},
+  {h:15,m:30, id:'ldt_1530',     title:'📅 Sắp hết giờ báo lịch!',   body:'Còn 30 phút nữa là hết giờ báo Lịch nghiệm thu ngày mai (deadline 16:00)'}
+];
+
+function bchRequestNotif(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='granted'){bchScheduleAllNotifs();return;}
+  if(Notification.permission!=='denied'){
+    Notification.requestPermission().then(function(p){
+      if(p==='granted'){bchScheduleAllNotifs();toast('🔔 Đã bật thông báo nhắc nhở!');}
+    });
+  }
+}
+
+function bchScheduleAllNotifs(){
+  if(Notification.permission!=='granted')return;
+  BCH_NOTIF_TIMES.forEach(function(cfg){bchScheduleOne(cfg);});
+}
+
+function bchScheduleOne(cfg){
+  var now=new Date();
+  var target=new Date();
+  target.setHours(cfg.h,cfg.m,0,0);
+  // Nếu giờ đó đã qua hôm nay → lên lịch cho ngày mai
+  if(now>=target)target.setDate(target.getDate()+1);
+  var delay=target-now;
+  setTimeout(function(){
+    if(Notification.permission==='granted'){
+      var n=new Notification(cfg.title,{
+        body:cfg.body,
+        icon:'icon.png',
+        badge:'icon.png',
+        tag:cfg.id,
+        requireInteraction:true
+      });
+      n.onclick=function(){window.focus();n.close();};
+    }
+    // Lập lại mỗi 24h
+    setInterval(function(){
+      if(Notification.permission==='granted'){
+        new Notification(cfg.title,{body:cfg.body,icon:'icon.png',badge:'icon.png',tag:cfg.id,requireInteraction:true});
+      }
+    },86400000);
+  },delay);
+}
+
+// Khởi động thông báo khi tải trang
+(function(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='granted'){
+    bchScheduleAllNotifs();
+  } else if(Notification.permission!=='denied'){
+    // Hiện banner bật thông báo ở trang chủ
+    setTimeout(function(){
+      var nb=document.getElementById('home-notif-banner');
+      if(nb)nb.style.display='flex';
+    },800);
+  }
+})();
 
 // Khởi động: hiện trang chọn module trước
 showScreen('home');
