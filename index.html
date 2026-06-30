@@ -1515,6 +1515,21 @@ function schSave(){
   },500);
 }
 
+async function saveStructure(){
+  setSS('⏳ Đang lưu...');
+  try{
+    var payload={projects:projects,cols:COLS,data:data,log:logItems};
+    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).single();
+    if(ex.data){
+      await sc.from('nhansu').update({data:payload}).eq('ngay',tkey());
+    }else{
+      await sc.from('nhansu').insert({ngay:tkey(),data:payload});
+    }
+    setSS('✅ Đã cập nhật');
+    renderTable();renderLog();
+  }catch(e){setSS('⚠️ Lỗi: '+e.message);alert('Lỗi lưu: '+e.message);}
+}
+
 async function mergeSave(){
   setSS('⏳ Đang lưu...');
   try{
@@ -1910,7 +1925,7 @@ function doAddProj(){
     if(projects.indexOf(n)>=0){alert('Đã có rồi!');return;}
     projects.push(n);
     ensureProj(n);
-    renderTable();mergeSave();
+    renderTable();saveStructure();
     toast('✅ Đã thêm: '+n);
   },'thêm dự án');
 }
@@ -1927,7 +1942,7 @@ function doRenameProj(){
     newName=newName.trim();
     projects[idx]=newName;
     if(data[oldName]){data[newName]=data[oldName];delete data[oldName];}
-    renderTable();mergeSave();
+    renderTable();saveStructure();
     toast('✅ Đã đổi: '+oldName+' → '+newName);
   },'đổi tên dự án');
 }
@@ -1942,7 +1957,7 @@ function doDelProj(){
     if(!confirm('Xoá dự án "'+name+'"?'))return;
     projects.splice(idx,1);
     delete data[name];
-    renderTable();mergeSave();
+    renderTable();saveStructure();
     toast('🗑️ Đã xoá: '+name);
   },'xoá dự án');
 }
@@ -1962,7 +1977,7 @@ function doAddCol(){
         data[p][t][k]=0;
       });
     });
-    renderTable();mergeSave();
+    renderTable();saveStructure();
     toast('✅ Đã thêm chức danh: '+n);
   },'thêm chức danh');
 }
@@ -1981,7 +1996,7 @@ function doDelCol(){
         if(data[p]&&data[p][t])delete data[p][t][col.k];
       });
     });
-    renderTable();mergeSave();
+    renderTable();saveStructure();
     toast('🗑️ Đã xoá chức danh: '+col.n);
   },'xoá chức danh');
 }
@@ -1991,7 +2006,7 @@ function doReset(){
     if(!confirm('Reset toàn bộ số liệu hôm nay?'))return;
     data=initData();logItems=[];
     renderTable();renderLog();
-    mergeSave();
+    saveStructure();
     toast('🔄 Đã reset!');
   },'reset');
 }
@@ -2316,12 +2331,12 @@ function mmtbYkey(){var n=new Date();n.setDate(n.getDate()-1);return n.getFullYe
 function mmtbSetSS(m){document.getElementById('mmtb-ss').innerHTML=m;}
 
 function mmtbMergeMachines(saved){
-  var defKeys=DEF_MACHINES.map(function(c){return c.k;});
-  var result=DEF_MACHINES.map(function(c){return {k:c.k,n:c.n};});
   if(saved&&saved.length){
-    saved.forEach(function(c){if(defKeys.indexOf(c.k)<0)result.push({k:c.k,n:c.n});});
+    // Đã có dữ liệu máy được lưu trước đó -> dùng đúng y như đã lưu (giữ xoá/đổi tên của người dùng)
+    return saved.map(function(c){return {k:c.k,n:c.n};});
   }
-  return result;
+  // Chưa từng có dữ liệu máy nào được lưu -> khởi tạo lần đầu bằng danh sách mặc định
+  return DEF_MACHINES.map(function(c){return {k:c.k,n:c.n};});
 }
 
 function mmtbEnsureProj(proj){
@@ -2518,6 +2533,21 @@ function mmtbSchSave(){
   },500);
 }
 
+async function mmtbSaveStructure(){
+  mmtbSetSS('⏳ Đang lưu...');
+  try{
+    var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog};
+    var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).single();
+    if(ex.data){
+      await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey());
+    }else{
+      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:payload});
+    }
+    mmtbSetSS('✅ Đã cập nhật');
+    mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();
+  }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);alert('Lỗi lưu: '+e.message);}
+}
+
 async function mmtbMergeSave(){
   mmtbSetSS('⏳ Đang lưu...');
   try{
@@ -2624,9 +2654,22 @@ function mmtbRenderTable(){
     h+='<td id="mmtb-rt-'+m.k+'" style="background:#fff9c4;font-weight:800">'+mmtbFmtN(rowTotal)+'</td>';
     if(mmtbProjects.length===1){
       var p0=mmtbProjects[0];
-      h+='<td><input type="text" style="width:100%;border:none;background:transparent;font-size:11px;font-family:inherit;outline:none" value="'+((mmtbData[p0]&&mmtbData[p0].note&&mmtbData[p0].note[m.k])||'')+'" '+dis+' onchange="mmtbUpdNote(\''+p0+'\',\''+m.k+'\',this.value)" placeholder="..."></td>';
+      h+='<td><input type="text" style="width:100%;border:none;background:transparent;font-size:11px;font-family:inherit;outline:none" value="'+((mmtbData[p0]&&mmtbData[p0].note&&mmtbData[p0].note[m.k])||'')+'" '+dis+' onchange="mmtbUpdNote(\''+p0+'\',\''+m.k+'\',this.value)" placeholder=""></td>';
     }else{
-      h+='<td style="font-size:10px;text-align:left;color:#666">'+(noteParts.join(' | ')||'...')+'</td>';
+      var noteCellsHTML=mmtbProjects.map(function(proj,pi){
+        var nv=(mmtbData[proj]&&mmtbData[proj].note&&mmtbData[proj].note[m.k])||'';
+        var borderTop=pi>0?'border-top:1px dashed #e0c98a;':'';
+        return '<div style="display:flex;align-items:flex-start;gap:4px;'+borderTop+'padding:3px 2px;">'
+          +'<span style="font-size:9px;color:#b08900;font-weight:700;white-space:nowrap;padding-top:2px;">'+proj+':</span>'
+          +'<textarea rows="1" style="flex:1;min-width:0;border:none;background:transparent;font-size:11px;font-family:inherit;outline:none;resize:none;overflow:hidden;line-height:1.3;" '
+          +dis
+          +' onchange="mmtbUpdNote(\''+proj+'\',\''+m.k+'\',this.value)"'
+          +' oninput="this.style.height=\'auto\';this.style.height=this.scrollHeight+\'px\';"'
+          +' placeholder=""'
+          +'>'+nv+'</textarea>'
+          +'</div>';
+      }).join('');
+      h+='<td style="padding:0;vertical-align:top;background:#fffdf5;">'+noteCellsHTML+'</td>';
     }
     if(idx===0){
       h+='<td rowspan="'+mmtbMachines.length+'" class="chart-cell" id="mmtb-chart-panel"></td>';
@@ -2636,6 +2679,11 @@ function mmtbRenderTable(){
   h+='</tbody>';
   document.getElementById('mmtb-mt').innerHTML=h;
   mmtbCalcTotals();
+  // Tự giãn textarea ghi chú theo nội dung đã có
+  document.querySelectorAll('#mmtb-mt textarea').forEach(function(ta){
+    ta.style.height='auto';
+    ta.style.height=ta.scrollHeight+'px';
+  });
 }
 
 function mmtbCalcTotals(){
@@ -2663,7 +2711,7 @@ function mmtbAddMachine(){
       mmtbData[proj].note[k]='';
     });
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbMergeSave();
+    mmtbSaveStructure();
     toast('✅ Đã thêm: '+n);
   },'thêm loại máy');
 }
@@ -2679,7 +2727,7 @@ function mmtbRenameMachine(){
     if(!newName||!newName.trim())return;
     mmtbMachines[idx].n=newName.trim();
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbMergeSave();
+    mmtbSaveStructure();
     toast('✅ Đã đổi: '+oldName+' → '+newName.trim());
   },'đổi tên loại máy');
 }
@@ -2699,7 +2747,7 @@ function mmtbDelMachine(){
       if(mmtbData[proj].note)delete mmtbData[proj].note[m.k];
     });
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbMergeSave();
+    mmtbSaveStructure();
     toast('🗑️ Đã xoá: '+m.n);
   },'xoá loại máy');
 }
@@ -2713,7 +2761,7 @@ function mmtbAddProj(){
     mmtbProjects.push(n);
     mmtbEnsureProj(n);
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbMergeSave();
+    mmtbSaveStructure();
     toast('✅ Đã thêm dự án: '+n);
   },'thêm dự án MMTB');
 }
@@ -2731,7 +2779,7 @@ function mmtbRenameProj(){
     mmtbProjects[idx]=newName;
     if(mmtbData[oldName]){mmtbData[newName]=mmtbData[oldName];delete mmtbData[oldName];}
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbMergeSave();
+    mmtbSaveStructure();
     toast('✅ Đã đổi: '+oldName+' → '+newName);
   },'đổi tên dự án MMTB');
 }
@@ -2747,7 +2795,7 @@ function mmtbDelProj(){
     mmtbProjects.splice(idx,1);
     delete mmtbData[name];
     mmtbRenderTable();mmtbRenderCharts();
-    mmtbMergeSave();
+    mmtbSaveStructure();
     toast('🗑️ Đã xoá dự án: '+name);
   },'xoá dự án MMTB');
 }
@@ -2757,7 +2805,7 @@ function mmtbReset(){
     if(!confirm('Reset toàn bộ số liệu MMTB hôm nay?'))return;
     mmtbData=mmtbInitData();mmtbLog=[];
     mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();
-    mmtbMergeSave();
+    mmtbSaveStructure();
     toast('🔄 Đã reset MMTB!');
   },'reset MMTB');
 }
