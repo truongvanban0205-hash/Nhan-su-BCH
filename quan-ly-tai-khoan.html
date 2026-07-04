@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý tài khoản — BCH ĐA CAM LÂM - CAM RANH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg: #0d1117;
+    --panel: #151b23;
+    --panel2: #1c232d;
+    --border: #2a3340;
+    --text: #e6edf3;
+    --muted: #8b96a5;
+    --accent: #ff8a3d;
+    --accent-dim: #ff8a3d33;
+    --ok: #3fb950;
+    --ok-dim: #3fb95022;
+    --warn: #d29922;
+    --warn-dim: #d2992222;
+    --bad: #f85149;
+    --bad-dim: #f8514922;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+    font-family:'Be Vietnam Pro',system-ui,sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
+  }
+  .topbar{
+    width:100%; max-width:640px; display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:20px;
+  }
+  .brand{font-size:14px; color:var(--muted); font-weight:600; letter-spacing:.02em;}
+  .brand b{color:var(--accent);}
+  .linkbtn{
+    background:none; border:1px solid var(--border); color:var(--muted);
+    padding:7px 14px; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  .linkbtn:hover{border-color:var(--accent); color:var(--accent);}
+  .card{
+    width:100%; max-width:440px; background:var(--panel); border:1px solid var(--border);
+    border-radius:16px; padding:32px 28px; box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  .card.wide{max-width:1100px;}
+  h1{font-size:20px; margin:0 0 4px; font-weight:800;}
+  .sub{color:var(--muted); font-size:13px; margin:0 0 24px; line-height:1.5;}
+  label{display:block; font-size:13px; color:var(--muted); margin:0 0 6px; font-weight:500;}
+  input[type=text], input[type=password], input[type=tel]{
+    width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--panel2); color:var(--text); font-size:15px; font-family:inherit; margin-bottom:16px;
+  }
+  input:focus{outline:none; border-color:var(--accent);}
+  .btn{
+    width:100%; padding:13px; border-radius:10px; border:none; background:var(--accent);
+    color:#1a1005; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit;
+    transition:filter .15s;
+  }
+  .btn:hover{filter:brightness(1.08);}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+  .btn.secondary{background:var(--panel2); color:var(--text); border:1px solid var(--border);}
+  .btn.small{width:auto; padding:8px 14px; font-size:13px;}
+  .btn.danger{background:var(--bad-dim); color:var(--bad); border:1px solid var(--bad);}
+  .msg{padding:14px 16px; border-radius:10px; font-size:14px; margin-bottom:16px; line-height:1.5; display:none;}
+  .msg.show{display:block;}
+  .msg.ok{background:var(--ok-dim); color:var(--ok); border:1px solid var(--ok);}
+  .msg.warn{background:var(--warn-dim); color:var(--warn); border:1px solid var(--warn);}
+  .msg.bad{background:var(--bad-dim); color:var(--bad); border:1px solid var(--bad);}
+  .info-row{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); font-size:14px;}
+  .info-row:last-child{border-bottom:none;}
+  .info-row span:first-child{color:var(--muted);}
+  .info-row span:last-child{font-weight:600;}
+  .badges{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
+  .badge{font-size:11px; padding:3px 9px; border-radius:20px; background:var(--accent-dim); color:var(--accent); font-weight:600;}
+  .toast{
+    position:fixed; top:20px; left:50%; transform:translateX(-50%);
+    background:var(--ok-dim); border:1px solid var(--ok); color:var(--ok);
+    padding:14px 22px; border-radius:12px; font-weight:600; font-size:14px;
+    z-index:999; box-shadow:0 10px 30px rgba(0,0,0,.4); animation:slidein .3s ease;
+  }
+  @keyframes slidein{from{opacity:0; transform:translate(-50%,-20px);} to{opacity:1; transform:translate(-50%,0);}}
+  a.reset{color:var(--muted); font-size:12px; text-align:center; display:block; margin-top:14px; cursor:pointer; text-decoration:underline;}
+
+  /* Admin */
+  .admin-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;}
+  .admin-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{padding:9px 10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap;}
+  th{color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0; background:var(--panel);}
+  tr.pending{background:var(--warn-dim);}
+  .status-pill{font-size:11px; padding:3px 10px; border-radius:20px; font-weight:700;}
+  .status-pill.da_duyet{background:var(--ok-dim); color:var(--ok);}
+  .status-pill.cho_duyet{background:var(--warn-dim); color:var(--warn);}
+  .status-pill.tu_choi{background:var(--bad-dim); color:var(--bad);}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:12px;}
+  .icon-btn{background:none; border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 9px; cursor:pointer; font-size:12px; margin-right:4px; font-family:inherit;}
+  .icon-btn:hover{border-color:var(--accent); color:var(--accent);}
+  .icon-btn.approve{border-color:var(--ok); color:var(--ok);}
+  .icon-btn.reject{border-color:var(--bad); color:var(--bad);}
+  input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent); cursor:pointer;}
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
+    align-items:center; justify-content:center; z-index:1000; padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:26px; width:100%; max-width:420px;}
+  .modal h3{margin:0 0 18px; font-size:17px;}
+  .modal-actions{display:flex; gap:10px; margin-top:6px;}
+  .modal-actions .btn{width:auto; flex:1;}
+  .loading{text-align:center; color:var(--muted); padding:30px; font-size:14px;}
+  footer{margin-top:20px; color:var(--muted); font-size:11px; text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">BCH ĐA CAM LÂM — <b>CAM RANH</b></div>
+  <button class="linkbtn" id="btnToggleAdmin">Quản lý chung</button>
+</div>
+
+<!-- ============ TRANG NHÂN VIÊN ============ -->
+<div class="card" id="viewNhanVien">
+  <h1>Đăng ký / Đăng nhập</h1>
+  <p class="sub">Nhập đúng Họ tên và MSNV để vào hệ thống. Nếu chưa có trong danh sách, tài khoản sẽ chờ được phê duyệt.</p>
+
+  <div class="msg" id="nvMsg"></div>
+
+  <div id="nvForm">
+    <label>Họ và tên</label>
+    <input type="text" id="nvTen" placeholder="Ví dụ: Nguyễn Văn A">
+    <label>Mã số nhân viên (MSNV)</label>
+    <input type="text" id="nvMsnv" placeholder="Ví dụ: 3719358" inputmode="numeric">
+    <button class="btn" id="btnNv">Vào hệ thống</button>
+  </div>
+
+  <div id="nvInfo" style="display:none; margin-top:6px;">
+    <div class="info-row"><span>Họ và tên</span><span id="infoTen">—</span></div>
+    <div class="info-row"><span>MSNV</span><span id="infoMsnv">—</span></div>
+    <div class="info-row"><span>Chức vụ</span><span id="infoChucVu">—</span></div>
+    <div class="info-row"><span>SĐT</span><span id="infoSdt">—</span></div>
+    <div class="info-row"><span>Quyền truy cập</span><span class="badges" id="infoQuyen">—</span></div>
+    <a class="reset" id="btnDangXuat">Đăng xuất / dùng tài khoản khác</a>
+  </div>
+</div>
+
+<!-- ============ MODAL MẬT KHẨU ADMIN ============ -->
+<div class="modal-overlay" id="modalPass">
+  <div class="modal">
+    <h3>Nhập mật khẩu quản lý chung</h3>
+    <input type="password" id="adminPassInput" placeholder="Mật khẩu">
+    <div class="msg bad" id="adminPassErr"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCancelPass">Huỷ</button>
+      <button class="btn" id="btnSubmitPass">Vào</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TRANG QUẢN LÝ CHUNG ============ -->
+<div class="card wide" id="viewAdmin" style="display:none;">
+  <div class="admin-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Quản lý chung</h1>
+      <p class="sub" style="margin:0;">Danh sách nhân viên &amp; phê duyệt tài khoản</p>
+    </div>
+    <div class="admin-actions">
+      <button class="linkbtn" id="btnAddModule">+ Thêm quyền</button>
+      <button class="linkbtn" id="btnAddEmp">+ Thêm nhân viên</button>
+      <button class="linkbtn" id="btnExport">Xuất Excel</button>
+      <button class="linkbtn" id="btnChangePass">Đổi mật khẩu</button>
+      <button class="linkbtn" id="btnCloseAdmin">Đóng</button>
+    </div>
+  </div>
+  <div class="loading" id="adminLoading">Đang tải danh sách...</div>
+  <div class="table-wrap" id="tableWrap" style="display:none;">
+    <table>
+      <thead>
+        <tr id="tableHeadRow"></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============ MODAL SỬA / THÊM NHÂN VIÊN ============ -->
+<div class="modal-overlay" id="modalEmp">
+  <div class="modal">
+    <h3 id="modalEmpTitle">Sửa thông tin nhân viên</h3>
+    <input type="hidden" id="empId">
+    <label>Họ và tên</label>
+    <input type="text" id="empTen">
+    <label>MSNV</label>
+    <input type="text" id="empMsnv">
+    <label>Chức vụ</label>
+    <input type="text" id="empChucVu">
+    <label>SĐT</label>
+    <input type="text" id="empSdt">
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCancelEmp">Huỷ</button>
+      <button class="btn" id="btnSaveEmp">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL THÊM QUYỀN MỚI ============ -->
+<div class="modal-overlay" id="modalModule">
+  <div class="modal">
+    <h3>Thêm mục quyền truy cập mới</h3>
+    <label>Tên hiển thị (ví dụ: Báo lịch nghiệm thu)</label>
+    <input type="text" id="moduleNhan">
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCancelModule">Huỷ</button>
+      <button class="btn" id="btnSaveModule">Thêm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL ĐỔI MẬT KHẨU ============ -->
+<div class="modal-overlay" id="modalChangePass">
+  <div class="modal">
+    <h3>Đổi mật khẩu quản lý chung</h3>
+    <label>Mật khẩu cũ</label>
+    <input type="password" id="oldPass">
+    <label>Mật khẩu mới</label>
+    <input type="password" id="newPass">
+    <div class="msg bad" id="changePassErr"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCancelChangePass">Huỷ</button>
+      <button class="btn" id="btnSaveChangePass">Đổi</button>
+    </div>
+  </div>
+</div>
+
+<footer>BCH ĐA CAM LÂM — CAM RANH · Hệ thống quản lý tài khoản nội bộ</footer>
+
+<script>
+const SUPABASE_URL = "https://jqwjzvucwvlwbcgxhath.supabase.co";
+const SUPABASE_KEY = "sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const LS_KEY = "bch_nv_login";
+let currentAdminPass = null;
+let modulesCache = [];
+let employeesCache = [];
+
+function showMsg(el, type, text){
+  el.className = "msg show " + type;
+  el.textContent = text;
+}
+function hideMsg(el){ el.className = "msg"; el.textContent = ""; }
+function showToast(text){
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 4500);
+}
+
+/* ================= NHÂN VIÊN: ĐĂNG KÝ / ĐĂNG NHẬP ================= */
+const nvMsg = document.getElementById("nvMsg");
+const nvForm = document.getElementById("nvForm");
+const nvInfo = document.getElementById("nvInfo");
+
+async function submitDangKy(ten, msnv, silent){
+  const { data, error } = await sb.rpc("dangky_tai_khoan", { p_ten: ten, p_msnv: msnv });
+  if (error){
+    if(!silent) showMsg(nvMsg, "bad", "Có lỗi xảy ra, vui lòng thử lại.");
+    return null;
+  }
+  return data;
+}
+
+function renderApproved(d, ten, msnv){
+  nvForm.style.display = "none";
+  nvInfo.style.display = "block";
+  hideMsg(nvMsg);
+  document.getElementById("infoTen").textContent = d.ten;
+  document.getElementById("infoMsnv").textContent = d.msnv;
+  document.getElementById("infoChucVu").textContent = d.chuc_vu || "—";
+  document.getElementById("infoSdt").textContent = d.sdt || "—";
+  const quyenEl = document.getElementById("infoQuyen");
+  quyenEl.innerHTML = "";
+  const active = Object.keys(d.quyen || {}).filter(k => d.quyen[k]);
+  if(active.length === 0){
+    quyenEl.innerHTML = '<span class="badge" style="opacity:.5">Chưa cấp quyền</span>';
+  } else {
+    active.forEach(k=>{
+      const mod = modulesCache.find(m=>m.ma===k);
+      const label = mod ? mod.nhan : k;
+      quyenEl.innerHTML += `<span class="badge">${label}</span>`;
+    });
+  }
+  localStorage.setItem(LS_KEY, JSON.stringify({ten, msnv, lastStatus:"da_duyet"}));
+}
+
+function renderPending(ten, msnv, isNew){
+  nvForm.style.display = "block";
+  nvInfo.style.display = "none";
+  showMsg(nvMsg, "warn", isNew
+    ? "Bạn chưa có trong danh sách. Yêu cầu đăng ký đã được gửi, vui lòng chờ Ban chỉ huy phê duyệt."
+    : "Tài khoản của bạn đang chờ phê duyệt. Vui lòng quay lại sau.");
+  localStorage.setItem(LS_KEY, JSON.stringify({ten, msnv, lastStatus:"cho_duyet"}));
+}
+
+document.getElementById("btnNv").addEventListener("click", async ()=>{
+  const ten = document.getElementById("nvTen").value.trim();
+  const msnv = document.getElementById("nvMsnv").value.trim();
+  if(!ten || !msnv){ showMsg(nvMsg, "bad", "Vui lòng nhập đầy đủ Họ tên và MSNV."); return; }
+  const btn = document.getElementById("btnNv");
+  btn.disabled = true; btn.textContent = "Đang kiểm tra...";
+  const res = await submitDangKy(ten, msnv);
+  btn.disabled = false; btn.textContent = "Vào hệ thống";
+  if(!res) return;
+  if(res.status === "da_duyet"){
+    renderApproved(res.data, ten, msnv);
+  } else if(res.status === "cho_duyet"){
+    renderPending(ten, msnv, true);
+  } else if(res.status === "sai_ten"){
+    showMsg(nvMsg, "bad", "MSNV đã tồn tại nhưng Họ tên không khớp. Vui lòng kiểm tra lại chính xác.");
+  } else if(res.status === "tu_choi"){
+    showMsg(nvMsg, "bad", "Yêu cầu đăng ký của bạn đã bị từ chối. Vui lòng liên hệ Ban chỉ huy.");
+  } else {
+    showMsg(nvMsg, "bad", res.message || "Vui lòng nhập đầy đủ thông tin.");
+  }
+});
+
+document.getElementById("btnDangXuat").addEventListener("click", ()=>{
+  localStorage.removeItem(LS_KEY);
+  nvForm.style.display = "block";
+  nvInfo.style.display = "none";
+  document.getElementById("nvTen").value = "";
+  document.getElementById("nvMsnv").value = "";
+  hideMsg(nvMsg);
+});
+
+async function autoCheckSaved(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(!raw) return;
+  let saved;
+  try{ saved = JSON.parse(raw); } catch(e){ return; }
+  const res = await submitDangKy(saved.ten, saved.msnv, true);
+  if(!res) return;
+  if(res.status === "da_duyet"){
+    renderApproved(res.data, saved.ten, saved.msnv);
+    if(saved.lastStatus === "cho_duyet"){
+      showToast("🎉 Bạn đã được phê duyệt vào hệ thống!");
+    }
+  } else if(res.status === "cho_duyet"){
+    document.getElementById("nvTen").value = saved.ten;
+    document.getElementById("nvMsnv").value = saved.msnv;
+    renderPending(saved.ten, saved.msnv, false);
+  }
+}
+
+/* ================= CHUYỂN SANG KHU QUẢN LÝ ================= */
+const modalPass = document.getElementById("modalPass");
+document.getElementById("btnToggleAdmin").addEventListener("click", ()=>{
+  document.getElementById("adminPassInput").value = "";
+  hideMsg(document.getElementById("adminPassErr"));
+  modalPass.classList.add("show");
+});
+document.getElementById("btnCancelPass").addEventListener("click", ()=> modalPass.classList.remove("show"));
+
+document.getElementById("btnSubmitPass").addEventListener("click", async ()=>{
+  const pass = document.getElementById("adminPassInput").value;
+  const errEl = document.getElementById("adminPassErr");
+  const { data, error } = await sb.rpc("admin_dang_nhap", { p_pass: pass });
+  if(error || !data){
+    showMsg(errEl, "bad", "Sai mật khẩu, vui lòng thử lại.");
+    return;
+  }
+  currentAdminPass = pass;
+  modalPass.classList.remove("show");
+  document.getElementById("viewNhanVien").style.display = "none";
+  document.getElementById("viewAdmin").style.display = "block";
+  loadAdminData();
+});
+
+document.getElementById("btnCloseAdmin").addEventListener("click", ()=>{
+  currentAdminPass = null;
+  document.getElementById("viewAdmin").style.display = "none";
+  document.getElementById("viewNhanVien").style.display = "block";
+});
+
+/* ================= QUẢN LÝ: TẢI DANH SÁCH ================= */
+async function loadModules(){
+  const { data, error } = await sb.rpc("lay_danh_sach_modules");
+  if(!error && data) modulesCache = data;
+}
+
+async function loadAdminData(){
+  document.getElementById("adminLoading").style.display = "block";
+  document.getElementById("tableWrap").style.display = "none";
+  await loadModules();
+  const { data, error } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass });
+  if(error){
+    showToast("Không tải được danh sách, vui lòng thử lại.");
+    return;
+  }
+  employeesCache = data || [];
+  renderAdminTable();
+  document.getElementById("adminLoading").style.display = "none";
+  document.getElementById("tableWrap").style.display = "block";
+}
+
+function renderAdminTable(){
+  const head = document.getElementById("tableHeadRow");
+  head.innerHTML = `<th>STT</th><th>MSNV</th><th>Tên nhân viên</th><th>Chức vụ</th><th>SĐT</th>` +
+    modulesCache.map(m=>`<th>${m.nhan}</th>`).join("") +
+    `<th>Trạng thái</th><th>Thao tác</th>`;
+
+  const body = document.getElementById("tableBody");
+  body.innerHTML = "";
+  employeesCache.forEach(emp=>{
+    const tr = document.createElement("tr");
+    if(emp.trang_thai === "cho_duyet") tr.className = "pending";
+    const quyen = emp.quyen || {};
+    const moduleCells = modulesCache.map(m=>{
+      const checked = quyen[m.ma] ? "checked" : "";
+      return `<td style="text-align:center"><input type="checkbox" data-id="${emp.id}" data-ma="${m.ma}" class="quyen-check" ${checked}></td>`;
+    }).join("");
+
+    let actionCell = "";
+    if(emp.trang_thai === "cho_duyet"){
+      actionCell = `<button class="icon-btn approve" data-action="approve" data-id="${emp.id}">Duyệt</button>
+                    <button class="icon-btn reject" data-action="reject" data-id="${emp.id}">Từ chối</button>`;
+    } else {
+      actionCell = `<button class="icon-btn" data-action="edit" data-id="${emp.id}">Sửa</button>
+                    <button class="icon-btn reject" data-action="delete" data-id="${emp.id}">Xoá</button>`;
+    }
+
+    tr.innerHTML = `
+      <td>${emp.stt ?? "—"}</td>
+      <td>${emp.msnv}</td>
+      <td>${emp.ten}</td>
+      <td>${emp.chuc_vu || "—"}</td>
+      <td>${emp.sdt || "—"}</td>
+      ${moduleCells}
+      <td><span class="status-pill ${emp.trang_thai}">${statusLabel(emp.trang_thai)}</span></td>
+      <td>${actionCell}</td>
+    `;
+    body.appendChild(tr);
+  });
+
+  document.querySelectorAll(".quyen-check").forEach(cb=>{
+    cb.addEventListener("change", async (e)=>{
+      const id = parseInt(e.target.dataset.id);
+      const ma = e.target.dataset.ma;
+      const emp = employeesCache.find(x=>x.id===id);
+      const newQuyen = { ...(emp.quyen||{}), [ma]: e.target.checked };
+      const { error } = await sb.rpc("admin_cap_nhat", {
+        p_pass: currentAdminPass, p_id: id, p_ten: null, p_msnv: null,
+        p_chuc_vu: null, p_sdt: null, p_quyen: newQuyen, p_trang_thai: null
+      });
+      if(error){ showToast("Không lưu được thay đổi."); e.target.checked = !e.target.checked; }
+      else emp.quyen = newQuyen;
+    });
+  });
+
+  document.querySelectorAll("[data-action]").forEach(btn=>{
+    btn.addEventListener("click", ()=> handleAction(btn.dataset.action, parseInt(btn.dataset.id)));
+  });
+}
+
+function statusLabel(s){
+  if(s==="da_duyet") return "Đã duyệt";
+  if(s==="cho_duyet") return "Chờ phê duyệt";
+  return "Từ chối";
+}
+
+async function handleAction(action, id){
+  const emp = employeesCache.find(x=>x.id===id);
+  if(action === "approve"){
+    const { error } = await sb.rpc("admin_cap_nhat", {
+      p_pass: currentAdminPass, p_id: id, p_ten: null, p_msnv: null,
+      p_chuc_vu: null, p_sdt: null, p_quyen: null, p_trang_thai: "da_duyet"
+    });
+    if(!error) loadAdminData();
+  } else if(action === "reject"){
+    if(!confirm(`Từ chối tài khoản của ${emp.ten}?`)) return;
+    const { error } = await sb.rpc("admin_cap_nhat", {
+      p_pass: currentAdminPass, p_id: id, p_ten: null, p_msnv: null,
+      p_chuc_vu: null, p_sdt: null, p_quyen: null, p_trang_thai: "tu_choi"
+    });
+    if(!error) loadAdminData();
+  } else if(action === "delete"){
+    if(!confirm(`Xoá vĩnh viễn ${emp.ten} khỏi danh sách?`)) return;
+    const { error } = await sb.rpc("admin_xoa", { p_pass: currentAdminPass, p_id: id });
+    if(!error) loadAdminData();
+  } else if(action === "edit"){
+    openEmpModal(emp);
+  }
+}
+
+/* ================= MODAL SỬA / THÊM NHÂN VIÊN ================= */
+const modalEmp = document.getElementById("modalEmp");
+function openEmpModal(emp){
+  document.getElementById("modalEmpTitle").textContent = emp ? "Sửa thông tin nhân viên" : "Thêm nhân viên mới";
+  document.getElementById("empId").value = emp ? emp.id : "";
+  document.getElementById("empTen").value = emp ? emp.ten : "";
+  document.getElementById("empMsnv").value = emp ? emp.msnv : "";
+  document.getElementById("empChucVu").value = emp ? (emp.chuc_vu||"") : "";
+  document.getElementById("empSdt").value = emp ? (emp.sdt||"") : "";
+  modalEmp.classList.add("show");
+}
+document.getElementById("btnAddEmp").addEventListener("click", ()=> openEmpModal(null));
+document.getElementById("btnCancelEmp").addEventListener("click", ()=> modalEmp.classList.remove("show"));
+document.getElementById("btnSaveEmp").addEventListener("click", async ()=>{
+  const id = document.getElementById("empId").value;
+  const ten = document.getElementById("empTen").value.trim();
+  const msnv = document.getElementById("empMsnv").value.trim();
+  const chucVu = document.getElementById("empChucVu").value.trim();
+  const sdt = document.getElementById("empSdt").value.trim();
+  if(!ten || !msnv){ alert("Vui lòng nhập Họ tên và MSNV."); return; }
+
+  if(id){
+    const { error } = await sb.rpc("admin_cap_nhat", {
+      p_pass: currentAdminPass, p_id: parseInt(id), p_ten: ten, p_msnv: msnv,
+      p_chuc_vu: chucVu, p_sdt: sdt, p_quyen: null, p_trang_thai: null
+    });
+    if(error){ alert("Không lưu được, MSNV có thể đã tồn tại."); return; }
+  } else {
+    const { error } = await sb.rpc("admin_them_moi", {
+      p_pass: currentAdminPass, p_ten: ten, p_msnv: msnv, p_chuc_vu: chucVu, p_sdt: sdt, p_quyen: {}
+    });
+    if(error){ alert("Không thêm được, MSNV có thể đã tồn tại."); return; }
+  }
+  modalEmp.classList.remove("show");
+  loadAdminData();
+});
+
+/* ================= MODAL THÊM QUYỀN MỚI ================= */
+const modalModule = document.getElementById("modalModule");
+document.getElementById("btnAddModule").addEventListener("click", ()=>{
+  document.getElementById("moduleNhan").value = "";
+  modalModule.classList.add("show");
+});
+document.getElementById("btnCancelModule").addEventListener("click", ()=> modalModule.classList.remove("show"));
+document.getElementById("btnSaveModule").addEventListener("click", async ()=>{
+  const nhan = document.getElementById("moduleNhan").value.trim();
+  if(!nhan){ alert("Vui lòng nhập tên quyền."); return; }
+  const ma = nhan.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+  const { error } = await sb.rpc("admin_them_module", { p_pass: currentAdminPass, p_ma: ma, p_nhan: nhan });
+  if(error){ alert("Không thêm được quyền này (có thể đã tồn tại)."); return; }
+  modalModule.classList.remove("show");
+  loadAdminData();
+});
+
+/* ================= ĐỔI MẬT KHẨU ================= */
+const modalChangePass = document.getElementById("modalChangePass");
+document.getElementById("btnChangePass").addEventListener("click", ()=>{
+  document.getElementById("oldPass").value = "";
+  document.getElementById("newPass").value = "";
+  hideMsg(document.getElementById("changePassErr"));
+  modalChangePass.classList.add("show");
+});
+document.getElementById("btnCancelChangePass").addEventListener("click", ()=> modalChangePass.classList.remove("show"));
+document.getElementById("btnSaveChangePass").addEventListener("click", async ()=>{
+  const oldP = document.getElementById("oldPass").value;
+  const newP = document.getElementById("newPass").value;
+  const errEl = document.getElementById("changePassErr");
+  if(!newP || newP.length < 4){ showMsg(errEl,"bad","Mật khẩu mới quá ngắn."); return; }
+  const { data, error } = await sb.rpc("admin_doi_mat_khau", { p_pass_cu: oldP, p_pass_moi: newP });
+  if(error || !data){ showMsg(errEl,"bad","Mật khẩu cũ không đúng."); return; }
+  currentAdminPass = newP;
+  modalChangePass.classList.remove("show");
+  showToast("Đã đổi mật khẩu thành công.");
+});
+
+/* ================= XUẤT EXCEL ================= */
+document.getElementById("btnExport").addEventListener("click", ()=>{
+  const rows = employeesCache.map(e=>{
+    const row = {
+      "STT": e.stt ?? "", "MSNV": e.msnv, "Tên nhân viên": e.ten,
+      "Chức vụ": e.chuc_vu || "", "SĐT": e.sdt || "", "Trạng thái": statusLabel(e.trang_thai)
+    };
+    modulesCache.forEach(m=>{ row[m.nhan] = (e.quyen && e.quyen[m.ma]) ? "X" : ""; });
+    return row;
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Danh sách");
+  XLSX.writeFile(wb, "danh_sach_nhan_su_BCH.xlsx");
+});
+
+/* ================= KHỞI ĐỘNG ================= */
+loadModules();
+autoCheckSaved();
+</script>
+</body>
+</html>
