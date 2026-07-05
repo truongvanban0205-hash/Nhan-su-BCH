@@ -3476,13 +3476,49 @@ function bchScheduleOne(cfg){
     if(el && !window.BCH_QUYEN[mapCard[key]]) el.style.display = 'none';
   });
 
-  // Thêm dòng tên + nút đăng xuất nhỏ (không sửa HTML tĩnh, chỉ chèn thêm bằng JS)
+  // Thêm dòng tên + nút xem thông tin tài khoản + đăng xuất (chỉ chèn thêm bằng JS)
   var headerDiv = document.querySelector('.home-header > div');
   if(headerDiv){
     var who = document.createElement('div');
     who.style.cssText = 'font-size:11px;color:#8b93a8;margin-top:4px;';
-    who.innerHTML = '👤 ' + res.data.ten + ' &nbsp;·&nbsp; <a href="#" style="color:#2196f3;" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
+    who.innerHTML = '👤 <a href="#" id="bch-profile-link" style="color:#8b93a8;text-decoration:underline;">' + res.data.ten + '</a> &nbsp;·&nbsp; <a href="#" style="color:#2196f3;" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
     headerDiv.appendChild(who);
+
+    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu' };
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5000;align-items:center;justify-content:center;padding:20px;';
+    var quyenBadges = Object.keys(window.BCH_QUYEN).filter(function(k){return window.BCH_QUYEN[k];})
+      .map(function(k){return '<span style="display:inline-block;background:#1e293b;color:#f9a825;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin:2px 4px 2px 0;">'+(mapLabel[k]||k)+'</span>';}).join('') || '<span style="color:#999;font-size:12px;">Chưa cấp quyền</span>';
+    overlay.innerHTML = '<div style="background:#131826;border:1px solid #252b3d;border-radius:16px;padding:22px;max-width:340px;width:100%;color:#e8ecf5;font-family:inherit;">'
+      + '<div style="font-weight:800;font-size:16px;margin-bottom:14px;">Thông tin tài khoản</div>'
+      + '<div style="font-size:13px;line-height:2;">'
+      + '<div><span style="color:#8b93a8">Họ và tên: </span><b>'+res.data.ten+'</b></div>'
+      + '<div><span style="color:#8b93a8">MSNV: </span><b>'+res.data.msnv+'</b></div>'
+      + '<div><span style="color:#8b93a8">Chức vụ: </span><b>'+(res.data.chuc_vu||'—')+'</b></div>'
+      + '<div><span style="color:#8b93a8">SĐT: </span><b>'+(res.data.sdt||'—')+'</b></div>'
+      + '</div>'
+      + '<div style="margin-top:10px;color:#8b93a8;font-size:12px;">Quyền truy cập:</div>'
+      + '<div style="margin-top:6px;">'+quyenBadges+'</div>'
+      + '<button style="margin-top:18px;width:100%;padding:10px;border:none;border-radius:10px;background:#1565c0;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;" onclick="document.getElementById(\'bch-profile-overlay\').style.display=\'none\';">Đóng</button>'
+      + '</div>';
+    overlay.id = 'bch-profile-overlay';
+    document.body.appendChild(overlay);
+    document.getElementById('bch-profile-link').addEventListener('click', function(e){
+      e.preventDefault();
+      overlay.style.display = 'flex';
+    });
+  }
+
+  // Thông báo nếu vừa được phê duyệt
+  if(localStorage.getItem('bch_just_approved')){
+    localStorage.removeItem('bch_just_approved');
+    setTimeout(function(){
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#2e7d32;color:#fff;padding:12px 20px;border-radius:12px;font-weight:700;font-size:13px;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.3);';
+      t.textContent = '🎉 Bạn đã được phê duyệt vào hệ thống!';
+      document.body.appendChild(t);
+      setTimeout(function(){ t.remove(); }, 4500);
+    }, 500);
   }
 
   document.body.style.display = '';
