@@ -46,11 +46,11 @@
     width:100%; max-width:440px; background:var(--panel); border:1px solid var(--border);
     border-radius:16px; padding:32px 28px; box-shadow:0 10px 40px rgba(0,0,0,.3);
   }
-  .card.wide{max-width:1100px;}
+  .card.wide{max-width:98vw; width:1700px;}
   h1{font-size:20px; margin:0 0 4px; font-weight:800;}
   .sub{color:var(--muted); font-size:13px; margin:0 0 24px; line-height:1.5;}
   label{display:block; font-size:13px; color:var(--muted); margin:0 0 6px; font-weight:500;}
-  input[type=text], input[type=password], input[type=tel]{
+  input[type=text], input[type=password], input[type=tel], select#moduleSelect{
     width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
     background:var(--panel2); color:var(--text); font-size:15px; font-family:inherit; margin-bottom:16px;
   }
@@ -96,7 +96,19 @@
   .status-pill.da_duyet{background:var(--ok-dim); color:var(--ok);}
   .status-pill.cho_duyet{background:var(--warn-dim); color:var(--warn);}
   .status-pill.tu_choi{background:var(--bad-dim); color:var(--bad);}
-  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:12px;}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:12px; max-height:72vh; overflow-y:auto;}
+  .col-freeze1{position:sticky; left:0; z-index:3; background:var(--panel);}
+  .col-freeze2{position:sticky; left:52px; z-index:3; background:var(--panel);}
+  .col-freeze3{position:sticky; left:150px; z-index:3; background:var(--panel);}
+  tr.pending .col-freeze1, tr.pending .col-freeze2, tr.pending .col-freeze3{background:#241d0f;}
+  th.col-freeze1, th.col-freeze2, th.col-freeze3{z-index:4;}
+  .admin-filters{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .admin-filters input, .admin-filters select{
+    padding:9px 12px; border-radius:8px; border:1px solid var(--border);
+    background:var(--panel2); color:var(--text); font-family:inherit; font-size:13px;
+  }
+  .admin-filters input{flex:1; min-width:200px;}
+  .count-pill{font-size:12px; color:var(--muted); align-self:center;}
   .icon-btn{background:none; border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 9px; cursor:pointer; font-size:12px; margin-right:4px; font-family:inherit;}
   .icon-btn:hover{border-color:var(--accent); color:var(--accent);}
   .icon-btn.approve{border-color:var(--ok); color:var(--ok);}
@@ -124,17 +136,27 @@
 
 <!-- ============ TRANG NHÂN VIÊN ============ -->
 <div class="card" id="viewNhanVien">
-  <h1>Đăng ký / Đăng nhập</h1>
-  <p class="sub">Nhập đúng Họ tên và MSNV để vào hệ thống. Nếu chưa có trong danh sách, tài khoản sẽ chờ được phê duyệt.</p>
+  <h1 id="nvTitle">Đăng nhập</h1>
+  <p class="sub" id="nvSub">Nhập đúng Họ tên và MSNV để vào hệ thống. Nếu bạn chưa có trong danh sách, hệ thống sẽ hỏi thêm thông tin để đăng ký mới.</p>
 
   <div class="msg" id="nvMsg"></div>
 
-  <div id="nvForm">
+  <div id="nvStep1">
     <label>Họ và tên</label>
     <input type="text" id="nvTen" placeholder="Ví dụ: Nguyễn Văn A">
     <label>Mã số nhân viên (MSNV)</label>
     <input type="text" id="nvMsnv" placeholder="Ví dụ: 3719358" inputmode="numeric">
-    <button class="btn" id="btnNv">Vào hệ thống</button>
+    <button class="btn" id="btnNv">Tra cứu</button>
+  </div>
+
+  <div id="nvStep2" style="display:none;">
+    <p class="sub" style="margin-top:0;">Không tìm thấy bạn trong danh sách. Vui lòng nhập thêm thông tin để gửi yêu cầu đăng ký:</p>
+    <label>Chức vụ</label>
+    <input type="text" id="nvChucVu" placeholder="Ví dụ: Nhân viên kỹ thuật hiện trường">
+    <label>Số điện thoại</label>
+    <input type="tel" id="nvSdt" placeholder="Ví dụ: 0912345678">
+    <button class="btn" id="btnDangKyMoi">Gửi đăng ký</button>
+    <a class="reset" id="btnBackStep1">‹ Quay lại</a>
   </div>
 
   <div id="nvInfo" style="display:none; margin-top:6px;">
@@ -175,6 +197,16 @@
       <button class="linkbtn" id="btnCloseAdmin">Đóng</button>
     </div>
   </div>
+  <div class="admin-filters" id="adminFilters" style="display:none;">
+    <input type="text" id="searchInput" placeholder="Tìm theo tên, MSNV hoặc chức vụ...">
+    <select id="statusFilter">
+      <option value="all">Tất cả trạng thái</option>
+      <option value="da_duyet">Đã duyệt</option>
+      <option value="cho_duyet">Chờ phê duyệt</option>
+      <option value="tu_choi">Từ chối</option>
+    </select>
+    <span class="count-pill" id="countPill"></span>
+  </div>
   <div class="loading" id="adminLoading">Đang tải danh sách...</div>
   <div class="table-wrap" id="tableWrap" style="display:none;">
     <table>
@@ -209,9 +241,10 @@
 <!-- ============ MODAL THÊM QUYỀN MỚI ============ -->
 <div class="modal-overlay" id="modalModule">
   <div class="modal">
-    <h3>Thêm mục quyền truy cập mới</h3>
-    <label>Tên hiển thị (ví dụ: Báo lịch nghiệm thu)</label>
-    <input type="text" id="moduleNhan">
+    <h3>Thêm mục quyền truy cập</h3>
+    <p class="sub" style="margin-top:-8px;">Chỉ được chọn đúng các mục lớn có thật trong ứng dụng chính (Nhan-su-BCH), không tự đặt tên khác.</p>
+    <label>Chọn mục</label>
+    <select id="moduleSelect"></select>
     <div class="modal-actions">
       <button class="btn secondary" id="btnCancelModule">Huỷ</button>
       <button class="btn" id="btnSaveModule">Thêm</button>
@@ -260,13 +293,15 @@ function showToast(text){
   setTimeout(()=>t.remove(), 4500);
 }
 
-/* ================= NHÂN VIÊN: ĐĂNG KÝ / ĐĂNG NHẬP ================= */
+/* ================= NHÂN VIÊN: ĐĂNG NHẬP / ĐĂNG KÝ MỚI ================= */
 const nvMsg = document.getElementById("nvMsg");
-const nvForm = document.getElementById("nvForm");
+const nvStep1 = document.getElementById("nvStep1");
+const nvStep2 = document.getElementById("nvStep2");
 const nvInfo = document.getElementById("nvInfo");
+let pendingNewReg = null; // {ten, msnv} khi đang chờ nhập thêm chức vụ/sđt
 
-async function submitDangKy(ten, msnv, silent){
-  const { data, error } = await sb.rpc("dangky_tai_khoan", { p_ten: ten, p_msnv: msnv });
+async function traCuu(ten, msnv, silent){
+  const { data, error } = await sb.rpc("tra_cuu", { p_ten: ten, p_msnv: msnv });
   if (error){
     if(!silent) showMsg(nvMsg, "bad", "Có lỗi xảy ra, vui lòng thử lại.");
     return null;
@@ -274,9 +309,12 @@ async function submitDangKy(ten, msnv, silent){
   return data;
 }
 
+function showStep1(){ nvStep1.style.display = "block"; nvStep2.style.display = "none"; nvInfo.style.display = "none"; }
+function showStep2(){ nvStep1.style.display = "none"; nvStep2.style.display = "block"; nvInfo.style.display = "none"; }
+function showInfo(){ nvStep1.style.display = "none"; nvStep2.style.display = "none"; nvInfo.style.display = "block"; }
+
 function renderApproved(d, ten, msnv){
-  nvForm.style.display = "none";
-  nvInfo.style.display = "block";
+  showInfo();
   hideMsg(nvMsg);
   document.getElementById("infoTen").textContent = d.ten;
   document.getElementById("infoMsnv").textContent = d.msnv;
@@ -297,12 +335,9 @@ function renderApproved(d, ten, msnv){
   localStorage.setItem(LS_KEY, JSON.stringify({ten, msnv, lastStatus:"da_duyet"}));
 }
 
-function renderPending(ten, msnv, isNew){
-  nvForm.style.display = "block";
-  nvInfo.style.display = "none";
-  showMsg(nvMsg, "warn", isNew
-    ? "Bạn chưa có trong danh sách. Yêu cầu đăng ký đã được gửi, vui lòng chờ Ban chỉ huy phê duyệt."
-    : "Tài khoản của bạn đang chờ phê duyệt. Vui lòng quay lại sau.");
+function renderPending(ten, msnv){
+  showStep1();
+  showMsg(nvMsg, "warn", "Tài khoản của bạn đang chờ Ban chỉ huy phê duyệt. Vui lòng quay lại sau.");
   localStorage.setItem(LS_KEY, JSON.stringify({ten, msnv, lastStatus:"cho_duyet"}));
 }
 
@@ -312,26 +347,57 @@ document.getElementById("btnNv").addEventListener("click", async ()=>{
   if(!ten || !msnv){ showMsg(nvMsg, "bad", "Vui lòng nhập đầy đủ Họ tên và MSNV."); return; }
   const btn = document.getElementById("btnNv");
   btn.disabled = true; btn.textContent = "Đang kiểm tra...";
-  const res = await submitDangKy(ten, msnv);
-  btn.disabled = false; btn.textContent = "Vào hệ thống";
+  const res = await traCuu(ten, msnv);
+  btn.disabled = false; btn.textContent = "Tra cứu";
   if(!res) return;
   if(res.status === "da_duyet"){
     renderApproved(res.data, ten, msnv);
   } else if(res.status === "cho_duyet"){
-    renderPending(ten, msnv, true);
+    renderPending(ten, msnv);
   } else if(res.status === "sai_ten"){
     showMsg(nvMsg, "bad", "MSNV đã tồn tại nhưng Họ tên không khớp. Vui lòng kiểm tra lại chính xác.");
   } else if(res.status === "tu_choi"){
     showMsg(nvMsg, "bad", "Yêu cầu đăng ký của bạn đã bị từ chối. Vui lòng liên hệ Ban chỉ huy.");
+  } else if(res.status === "khong_tim_thay"){
+    pendingNewReg = { ten, msnv };
+    hideMsg(nvMsg);
+    document.getElementById("nvChucVu").value = "";
+    document.getElementById("nvSdt").value = "";
+    showStep2();
   } else {
     showMsg(nvMsg, "bad", res.message || "Vui lòng nhập đầy đủ thông tin.");
   }
 });
 
+document.getElementById("btnBackStep1").addEventListener("click", ()=>{
+  pendingNewReg = null;
+  hideMsg(nvMsg);
+  showStep1();
+});
+
+document.getElementById("btnDangKyMoi").addEventListener("click", async ()=>{
+  if(!pendingNewReg) return;
+  const chucVu = document.getElementById("nvChucVu").value.trim();
+  const sdt = document.getElementById("nvSdt").value.trim();
+  if(!chucVu || !sdt){ alert("Vui lòng nhập đầy đủ Chức vụ và Số điện thoại."); return; }
+  const btn = document.getElementById("btnDangKyMoi");
+  btn.disabled = true; btn.textContent = "Đang gửi...";
+  const { data, error } = await sb.rpc("dang_ky_moi", {
+    p_ten: pendingNewReg.ten, p_msnv: pendingNewReg.msnv, p_chuc_vu: chucVu, p_sdt: sdt
+  });
+  btn.disabled = false; btn.textContent = "Gửi đăng ký";
+  if(error || !data){ alert("Có lỗi xảy ra, vui lòng thử lại."); return; }
+  if(data.status === "da_ton_tai"){
+    alert("MSNV này vừa được đăng ký bởi người khác, vui lòng kiểm tra lại.");
+    showStep1(); return;
+  }
+  renderPending(pendingNewReg.ten, pendingNewReg.msnv);
+  pendingNewReg = null;
+});
+
 document.getElementById("btnDangXuat").addEventListener("click", ()=>{
   localStorage.removeItem(LS_KEY);
-  nvForm.style.display = "block";
-  nvInfo.style.display = "none";
+  showStep1();
   document.getElementById("nvTen").value = "";
   document.getElementById("nvMsnv").value = "";
   hideMsg(nvMsg);
@@ -342,7 +408,7 @@ async function autoCheckSaved(){
   if(!raw) return;
   let saved;
   try{ saved = JSON.parse(raw); } catch(e){ return; }
-  const res = await submitDangKy(saved.ten, saved.msnv, true);
+  const res = await traCuu(saved.ten, saved.msnv, true);
   if(!res) return;
   if(res.status === "da_duyet"){
     renderApproved(res.data, saved.ten, saved.msnv);
@@ -352,11 +418,50 @@ async function autoCheckSaved(){
   } else if(res.status === "cho_duyet"){
     document.getElementById("nvTen").value = saved.ten;
     document.getElementById("nvMsnv").value = saved.msnv;
-    renderPending(saved.ten, saved.msnv, false);
+    renderPending(saved.ten, saved.msnv);
   }
 }
 
-/* ================= CHUYỂN SANG KHU QUẢN LÝ ================= */
+/* ================= TÌM KIẾM / LỌC ================= */
+let searchQuery = "";
+let statusFilterVal = "all";
+
+function getFilteredSorted(){
+  let list = employeesCache.filter(e=>{
+    if(statusFilterVal !== "all" && e.trang_thai !== statusFilterVal) return false;
+    if(searchQuery){
+      const q = searchQuery.toLowerCase();
+      return (e.ten||"").toLowerCase().includes(q) || (e.msnv||"").includes(q) || (e.chuc_vu||"").toLowerCase().includes(q);
+    }
+    return true;
+  });
+  const statusOrder = { da_duyet: 0, cho_duyet: 1, tu_choi: 2 };
+  list.sort((a,b)=>{
+    const so = statusOrder[a.trang_thai] - statusOrder[b.trang_thai];
+    if(so !== 0) return so;
+    const aStt = a.stt == null ? Infinity : a.stt;
+    const bStt = b.stt == null ? Infinity : b.stt;
+    if(aStt !== bStt) return aStt - bStt;
+    return new Date(a.tao_luc) - new Date(b.tao_luc);
+  });
+  return list;
+}
+
+document.getElementById("searchInput").addEventListener("input", (e)=>{
+  searchQuery = e.target.value.trim();
+  renderAdminTable();
+});
+document.getElementById("statusFilter").addEventListener("change", (e)=>{
+  statusFilterVal = e.target.value;
+  renderAdminTable();
+});
+
+/* Danh mục các mục lớn CÓ THẬT trong app chính (Nhan-su-BCH) — chỉ được chọn trong này */
+const MODULE_CATALOG = [
+  { nhan: "Báo cáo Nhân sự", ma: "bao_cao_nhan_su" },
+  { nhan: "Báo cáo MMTB", ma: "bao_cao_mmtb" },
+  { nhan: "Báo Lịch nghiệm thu", ma: "bao_lich_nghiem_thu" },
+];
 const modalPass = document.getElementById("modalPass");
 document.getElementById("btnToggleAdmin").addEventListener("click", ()=>{
   document.getElementById("adminPassInput").value = "";
@@ -377,12 +482,17 @@ document.getElementById("btnSubmitPass").addEventListener("click", async ()=>{
   modalPass.classList.remove("show");
   document.getElementById("viewNhanVien").style.display = "none";
   document.getElementById("viewAdmin").style.display = "block";
+  document.getElementById("adminFilters").style.display = "flex";
+  searchQuery = ""; statusFilterVal = "all";
+  document.getElementById("searchInput").value = "";
+  document.getElementById("statusFilter").value = "all";
   loadAdminData();
 });
 
 document.getElementById("btnCloseAdmin").addEventListener("click", ()=>{
   currentAdminPass = null;
   document.getElementById("viewAdmin").style.display = "none";
+  document.getElementById("adminFilters").style.display = "none";
   document.getElementById("viewNhanVien").style.display = "block";
 });
 
@@ -409,13 +519,17 @@ async function loadAdminData(){
 
 function renderAdminTable(){
   const head = document.getElementById("tableHeadRow");
-  head.innerHTML = `<th>STT</th><th>MSNV</th><th>Tên nhân viên</th><th>Chức vụ</th><th>SĐT</th>` +
-    modulesCache.map(m=>`<th>${m.nhan}</th>`).join("") +
+  head.innerHTML =
+    `<th class="col-freeze1">STT</th><th class="col-freeze2">MSNV</th><th class="col-freeze3">Tên nhân viên</th><th>Chức vụ</th><th>SĐT</th>` +
+    modulesCache.map(m=>`<th>${m.nhan} <span class="icon-btn reject" style="padding:1px 6px; margin-left:4px;" data-remove-module="${m.id}" title="Xoá quyền này">✕</span></th>`).join("") +
     `<th>Trạng thái</th><th>Thao tác</th>`;
+
+  const list = getFilteredSorted();
+  document.getElementById("countPill").textContent = `${list.length} / ${employeesCache.length} người`;
 
   const body = document.getElementById("tableBody");
   body.innerHTML = "";
-  employeesCache.forEach(emp=>{
+  list.forEach((emp, idx)=>{
     const tr = document.createElement("tr");
     if(emp.trang_thai === "cho_duyet") tr.className = "pending";
     const quyen = emp.quyen || {};
@@ -434,9 +548,9 @@ function renderAdminTable(){
     }
 
     tr.innerHTML = `
-      <td>${emp.stt ?? "—"}</td>
-      <td>${emp.msnv}</td>
-      <td>${emp.ten}</td>
+      <td class="col-freeze1">${idx+1}</td>
+      <td class="col-freeze2">${emp.msnv}</td>
+      <td class="col-freeze3">${emp.ten}</td>
       <td>${emp.chuc_vu || "—"}</td>
       <td>${emp.sdt || "—"}</td>
       ${moduleCells}
@@ -463,6 +577,18 @@ function renderAdminTable(){
 
   document.querySelectorAll("[data-action]").forEach(btn=>{
     btn.addEventListener("click", ()=> handleAction(btn.dataset.action, parseInt(btn.dataset.id)));
+  });
+
+  document.querySelectorAll("[data-remove-module]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.removeModule);
+      const mod = modulesCache.find(m=>m.id===id);
+      if(!confirm(`Xoá quyền "${mod.nhan}" khỏi hệ thống? Mọi nhân viên đang có quyền này sẽ mất quyền đó.`)) return;
+      const { error } = await sb.rpc("admin_xoa_module", { p_pass: currentAdminPass, p_id: id });
+      if(error){ showToast("Không xoá được quyền này."); return; }
+      loadAdminData();
+    });
   });
 }
 
@@ -536,15 +662,22 @@ document.getElementById("btnSaveEmp").addEventListener("click", async ()=>{
 /* ================= MODAL THÊM QUYỀN MỚI ================= */
 const modalModule = document.getElementById("modalModule");
 document.getElementById("btnAddModule").addEventListener("click", ()=>{
-  document.getElementById("moduleNhan").value = "";
+  const sel = document.getElementById("moduleSelect");
+  const existing = modulesCache.map(m=>m.ma);
+  const available = MODULE_CATALOG.filter(c=>!existing.includes(c.ma));
+  if(available.length === 0){
+    alert("Tất cả các mục lớn có trong app chính đã được thêm đủ.");
+    return;
+  }
+  sel.innerHTML = available.map(c=>`<option value="${c.ma}">${c.nhan}</option>`).join("");
   modalModule.classList.add("show");
 });
 document.getElementById("btnCancelModule").addEventListener("click", ()=> modalModule.classList.remove("show"));
 document.getElementById("btnSaveModule").addEventListener("click", async ()=>{
-  const nhan = document.getElementById("moduleNhan").value.trim();
-  if(!nhan){ alert("Vui lòng nhập tên quyền."); return; }
-  const ma = nhan.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
-  const { error } = await sb.rpc("admin_them_module", { p_pass: currentAdminPass, p_ma: ma, p_nhan: nhan });
+  const ma = document.getElementById("moduleSelect").value;
+  const catalogItem = MODULE_CATALOG.find(c=>c.ma===ma);
+  if(!catalogItem) return;
+  const { error } = await sb.rpc("admin_them_module", { p_pass: currentAdminPass, p_ma: catalogItem.ma, p_nhan: catalogItem.nhan });
   if(error){ alert("Không thêm được quyền này (có thể đã tồn tại)."); return; }
   modalModule.classList.remove("show");
   loadAdminData();
