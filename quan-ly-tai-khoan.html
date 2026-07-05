@@ -314,25 +314,8 @@ function showStep2(){ nvStep1.style.display = "none"; nvStep2.style.display = "b
 function showInfo(){ nvStep1.style.display = "none"; nvStep2.style.display = "none"; nvInfo.style.display = "block"; }
 
 function renderApproved(d, ten, msnv){
-  showInfo();
-  hideMsg(nvMsg);
-  document.getElementById("infoTen").textContent = d.ten;
-  document.getElementById("infoMsnv").textContent = d.msnv;
-  document.getElementById("infoChucVu").textContent = d.chuc_vu || "—";
-  document.getElementById("infoSdt").textContent = d.sdt || "—";
-  const quyenEl = document.getElementById("infoQuyen");
-  quyenEl.innerHTML = "";
-  const active = Object.keys(d.quyen || {}).filter(k => d.quyen[k]);
-  if(active.length === 0){
-    quyenEl.innerHTML = '<span class="badge" style="opacity:.5">Chưa cấp quyền</span>';
-  } else {
-    active.forEach(k=>{
-      const mod = modulesCache.find(m=>m.ma===k);
-      const label = mod ? mod.nhan : k;
-      quyenEl.innerHTML += `<span class="badge">${label}</span>`;
-    });
-  }
   localStorage.setItem(LS_KEY, JSON.stringify({ten, msnv, lastStatus:"da_duyet"}));
+  location.href = "index.html";
 }
 
 function renderPending(ten, msnv){
@@ -411,10 +394,8 @@ async function autoCheckSaved(){
   const res = await traCuu(saved.ten, saved.msnv, true);
   if(!res) return;
   if(res.status === "da_duyet"){
+    if(saved.lastStatus === "cho_duyet") localStorage.setItem("bch_just_approved", "1");
     renderApproved(res.data, saved.ten, saved.msnv);
-    if(saved.lastStatus === "cho_duyet"){
-      showToast("🎉 Bạn đã được phê duyệt vào hệ thống!");
-    }
   } else if(res.status === "cho_duyet"){
     document.getElementById("nvTen").value = saved.ten;
     document.getElementById("nvMsnv").value = saved.msnv;
