@@ -3487,7 +3487,9 @@ function bchScheduleOne(cfg){
 
   document.body.style.display = '';
 
-  // Tự động điền tên đã đăng nhập vào ô "Người nhập" của 2 module, bỏ bước gõ tay
+  var hienThi = res.data.ten + (res.data.chuc_vu ? ' - ' + res.data.chuc_vu : '');
+
+  // Tự động điền tên (+ chức vụ) đã đăng nhập vào ô "Người nhập" của 2 module, bỏ bước gõ tay
   var _origShowScreen = showScreen;
   showScreen = function(name){
     _origShowScreen(name);
@@ -3495,7 +3497,7 @@ function bchScheduleOne(cfg){
       var box = document.querySelector('#screen-ns .login-box');
       var input = document.getElementById('uname');
       if(input && !curUser){
-        input.value = res.data.ten;
+        input.value = hienThi;
         setUser();
         if(box) box.style.display = 'none';
       }
@@ -3504,7 +3506,7 @@ function bchScheduleOne(cfg){
       var box2 = document.querySelector('#screen-mmtb .login-box');
       var input2 = document.getElementById('mmtb-uname');
       if(input2 && !mmtbUser){
-        input2.value = res.data.ten;
+        input2.value = hienThi;
         mmtbSetUser();
         if(box2) box2.style.display = 'none';
       }
