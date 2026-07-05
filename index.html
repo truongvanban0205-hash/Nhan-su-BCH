@@ -213,7 +213,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 .ldt-ac-item .ph{font-size:10px;color:#888;}
 </style>
 </head>
-<body>
+<body style="display:none">
 
 <!-- ============ TRANG CHỌN MODULE ============ -->
 <div id="screen-home" class="app-screen active">
@@ -3450,8 +3450,70 @@ function bchScheduleOne(cfg){
   }
 })();
 
-// Khởi động: hiện trang chọn module trước
-showScreen('home');
+// ============ CỔNG KIỂM TRA ĐĂNG NHẬP (THÊM MỚI — KHÔNG SỬA CODE CŨ) ============
+(async function bchAuthGate(){
+  var LS_KEY = 'bch_nv_login';
+  var LOGIN_PAGE = 'quan-ly-tai-khoan.html';
+  var raw = localStorage.getItem(LS_KEY);
+  if(!raw){ location.href = LOGIN_PAGE; return; }
+
+  var saved;
+  try{ saved = JSON.parse(raw); } catch(e){ location.href = LOGIN_PAGE; return; }
+
+  var res;
+  try{
+    var r = await sc.rpc('tra_cuu', { p_ten: saved.ten, p_msnv: saved.msnv });
+    res = r.data;
+  }catch(e){ res = null; }
+
+  if(!res || res.status !== 'da_duyet'){ location.href = LOGIN_PAGE; return; }
+
+  // Lưu quyền truy cập để lọc mục trên trang chủ
+  window.BCH_QUYEN = res.data.quyen || {};
+  var mapCard = { ns:'bao_cao_nhan_su', mmtb:'bao_cao_mmtb', ldt:'bao_lich_nghiem_thu' };
+  Object.keys(mapCard).forEach(function(key){
+    var el = document.querySelector('.mod-card.c-' + key);
+    if(el && !window.BCH_QUYEN[mapCard[key]]) el.style.display = 'none';
+  });
+
+  // Thêm dòng tên + nút đăng xuất nhỏ (không sửa HTML tĩnh, chỉ chèn thêm bằng JS)
+  var headerDiv = document.querySelector('.home-header > div');
+  if(headerDiv){
+    var who = document.createElement('div');
+    who.style.cssText = 'font-size:11px;color:#8b93a8;margin-top:4px;';
+    who.innerHTML = '👤 ' + res.data.ten + ' &nbsp;·&nbsp; <a href="#" style="color:#2196f3;" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
+    headerDiv.appendChild(who);
+  }
+
+  document.body.style.display = '';
+
+  // Tự động điền tên đã đăng nhập vào ô "Người nhập" của 2 module, bỏ bước gõ tay
+  var _origShowScreen = showScreen;
+  showScreen = function(name){
+    _origShowScreen(name);
+    if(name === 'ns'){
+      var box = document.querySelector('#screen-ns .login-box');
+      var input = document.getElementById('uname');
+      if(input && !curUser){
+        input.value = res.data.ten;
+        setUser();
+        if(box) box.style.display = 'none';
+      }
+    }
+    if(name === 'mmtb'){
+      var box2 = document.querySelector('#screen-mmtb .login-box');
+      var input2 = document.getElementById('mmtb-uname');
+      if(input2 && !mmtbUser){
+        input2.value = res.data.ten;
+        mmtbSetUser();
+        if(box2) box2.style.display = 'none';
+      }
+    }
+  };
+
+  // Khởi động: hiện trang chọn module trước
+  showScreen('home');
+})();
 </script>
 <script>
 if('serviceWorker' in navigator){
