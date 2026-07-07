@@ -306,14 +306,6 @@
           <button class="btn small" data-add-hc="face_id">Thêm</button>
         </div>
       </div>
-      <div>
-        <label>Bữa cơm</label>
-        <div id="hcListCom" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:100px; overflow-y:auto; margin-bottom:8px;"></div>
-        <div style="display:flex; gap:6px;">
-          <input type="text" id="hcInputCom" placeholder="Thêm buổi..." style="margin-bottom:0;">
-          <button class="btn small" data-add-hc="com">Thêm</button>
-        </div>
-      </div>
     </div>
 
     <div class="modal-actions">
@@ -682,15 +674,11 @@ function renderHcAll(){
   renderHcList("vi_tri", "hcListViTri");
   renderHcList("noi_o", "hcListNoiO");
   renderHcList("face_id", "hcListFaceId");
-  renderHcList("com", "hcListCom");
 }
 
 document.getElementById("btnCauHinhHC").addEventListener("click", async ()=>{
   await loadHauCanTuyChon();
   renderHcAll();
-  const today = new Date().toISOString().slice(0,10);
-  document.getElementById("hcTuNgay").value = today;
-  document.getElementById("hcDenNgay").value = today;
   document.getElementById("modalHauCan").classList.add("show");
 });
 document.getElementById("btnCloseHauCan").addEventListener("click", ()=>{
