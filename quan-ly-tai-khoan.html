@@ -50,6 +50,10 @@
   h1{font-size:20px; margin:0 0 4px; font-weight:800;}
   .sub{color:var(--muted); font-size:13px; margin:0 0 24px; line-height:1.5;}
   label{display:block; font-size:13px; color:var(--muted); margin:0 0 6px; font-weight:500;}
+  input[type=date]{
+    padding:8px 10px; border-radius:8px; border:1px solid var(--border);
+    background:var(--panel2); color:var(--text); font-family:inherit; font-size:13px; margin-bottom:16px;
+  }
   input[type=text], input[type=password], input[type=tel], select#moduleSelect{
     width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
     background:var(--panel2); color:var(--text); font-size:15px; font-family:inherit; margin-bottom:16px;
@@ -190,6 +194,7 @@
       <p class="sub" style="margin:0;">Danh sách nhân viên &amp; phê duyệt tài khoản</p>
     </div>
     <div class="admin-actions">
+      <button class="linkbtn" id="btnCauHinhHC">Cấu hình Hậu cần</button>
       <button class="linkbtn" id="btnCauHinhNS">Cấu hình Nhân sự</button>
       <button class="linkbtn" id="btnAddModule">+ Thêm quyền</button>
       <button class="linkbtn" id="btnAddEmp">+ Thêm nhân viên</button>
@@ -270,6 +275,64 @@
 </div>
 
 <footer>BCH ĐA CAM LÂM — CAM RANH · Hệ thống quản lý tài khoản nội bộ</footer>
+
+<!-- ============ MODAL CẤU HÌNH & DỮ LIỆU HẬU CẦN ============ -->
+<div class="modal-overlay" id="modalHauCan">
+  <div class="modal" style="max-width:760px;">
+    <h3>Hậu cần — Cấu hình &amp; Dữ liệu</h3>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:20px;">
+      <div>
+        <label>Vị trí làm việc</label>
+        <div id="hcListViTri" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:140px; overflow-y:auto; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="hcInputViTri" placeholder="Thêm vị trí..." style="margin-bottom:0;">
+          <button class="btn small" data-add-hc="vi_tri">Thêm</button>
+        </div>
+      </div>
+      <div>
+        <label>Nơi ở</label>
+        <div id="hcListNoiO" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:140px; overflow-y:auto; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="hcInputNoiO" placeholder="Thêm nơi ở..." style="margin-bottom:0;">
+          <button class="btn small" data-add-hc="noi_o">Thêm</button>
+        </div>
+      </div>
+      <div>
+        <label>Face ID</label>
+        <div id="hcListFaceId" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:100px; overflow-y:auto; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="hcInputFaceId" placeholder="Thêm lựa chọn..." style="margin-bottom:0;">
+          <button class="btn small" data-add-hc="face_id">Thêm</button>
+        </div>
+      </div>
+      <div>
+        <label>Bữa cơm</label>
+        <div id="hcListCom" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:100px; overflow-y:auto; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="hcInputCom" placeholder="Thêm buổi..." style="margin-bottom:0;">
+          <button class="btn small" data-add-hc="com">Thêm</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border); padding-top:16px;">
+      <label>Xuất dữ liệu</label>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button class="btn small" id="btnXuatHoSoHC">Xuất Excel: Vị trí &amp; nơi ở (tất cả)</button>
+        <span style="color:var(--muted); font-size:12px;">|</span>
+        <input type="date" id="hcTuNgay" style="margin:0; width:auto;">
+        <span style="font-size:12px; color:var(--muted);">đến</span>
+        <input type="date" id="hcDenNgay" style="margin:0; width:auto;">
+        <button class="btn small" id="btnXuatComHC">Xuất Excel: Đăng ký cơm</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCloseHauCan">Đóng</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ MODAL CẤU HÌNH NHÂN SỰ (DỰ ÁN / CA LÀM VIỆC) ============ -->
 <div class="modal-overlay" id="modalCauHinh">
@@ -481,6 +544,7 @@ const MODULE_CATALOG = [
   { nhan: "Báo cáo Nhân sự", ma: "bao_cao_nhan_su" },
   { nhan: "Báo cáo MMTB", ma: "bao_cao_mmtb" },
   { nhan: "Báo Lịch nghiệm thu", ma: "bao_lich_nghiem_thu" },
+  { nhan: "Hậu cần", ma: "hau_can" },
 ];
 const modalPass = document.getElementById("modalPass");
 /* ================= CẤU HÌNH NHÂN SỰ: DỰ ÁN / LOẠI CA / TÊN RIÊNG ================= */
@@ -596,6 +660,100 @@ document.getElementById("btnThemCa").addEventListener("click", async ()=>{
   if(error){ alert("Không thêm được."); return; }
   document.getElementById("inputCaMoi").value = "";
   await loadCauHinhNS(); renderCauHinhAll();
+});
+
+/* ================= HẬU CẦN: CẤU HÌNH & XUẤT DỮ LIỆU ================= */
+let hcTuyChonCache = { vi_tri: [], noi_o: [], face_id: [], com: [] };
+
+async function loadHauCanTuyChon(){
+  hcTuyChonCache = { vi_tri: [], noi_o: [], face_id: [], com: [] };
+  const { data } = await sb.rpc("hc_lay_tuy_chon");
+  (data || []).forEach(t => { if(hcTuyChonCache[t.nhom]) hcTuyChonCache[t.nhom].push(t); });
+}
+
+function renderHcList(nhom, elId){
+  const el = document.getElementById(elId);
+  const list = hcTuyChonCache[nhom];
+  if(!list || list.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:12px;">Chưa có mục nào.</div>'; return; }
+  el.innerHTML = list.map(t => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 4px; border-bottom:1px solid var(--border); font-size:13px;">
+      <span>${t.gia_tri}</span>
+      <button class="icon-btn reject" data-del-hc="${t.id}" style="padding:2px 8px;">Xoá</button>
+    </div>`).join("");
+  el.querySelectorAll("[data-del-hc]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(!confirm("Xoá mục này?")) return;
+      const { error } = await sb.rpc("admin_hc_xoa_tuy_chon", { p_pass: currentAdminPass, p_id: parseInt(btn.dataset.delHc) });
+      if(error){ alert("Không xoá được."); return; }
+      await loadHauCanTuyChon(); renderHcAll();
+    });
+  });
+}
+
+function renderHcAll(){
+  renderHcList("vi_tri", "hcListViTri");
+  renderHcList("noi_o", "hcListNoiO");
+  renderHcList("face_id", "hcListFaceId");
+  renderHcList("com", "hcListCom");
+}
+
+document.getElementById("btnCauHinhHC").addEventListener("click", async ()=>{
+  await loadHauCanTuyChon();
+  renderHcAll();
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById("hcTuNgay").value = today;
+  document.getElementById("hcDenNgay").value = today;
+  document.getElementById("modalHauCan").classList.add("show");
+});
+document.getElementById("btnCloseHauCan").addEventListener("click", ()=>{
+  document.getElementById("modalHauCan").classList.remove("show");
+});
+
+document.querySelectorAll("[data-add-hc]").forEach(btn=>{
+  btn.addEventListener("click", async ()=>{
+    const nhom = btn.dataset.addHc;
+    const inputMap = { vi_tri:"hcInputViTri", noi_o:"hcInputNoiO", face_id:"hcInputFaceId", com:"hcInputCom" };
+    const input = document.getElementById(inputMap[nhom]);
+    const giaTri = input.value.trim();
+    if(!giaTri){ alert("Vui lòng nhập nội dung."); return; }
+    const { error } = await sb.rpc("admin_hc_them_tuy_chon", { p_pass: currentAdminPass, p_nhom: nhom, p_gia_tri: giaTri });
+    if(error){ alert("Không thêm được (có thể trùng)."); return; }
+    input.value = "";
+    await loadHauCanTuyChon(); renderHcAll();
+  });
+});
+
+document.getElementById("btnXuatHoSoHC").addEventListener("click", async ()=>{
+  const { data, error } = await sb.rpc("admin_hc_lay_ho_so", { p_pass: currentAdminPass });
+  if(error){ alert("Không lấy được dữ liệu."); return; }
+  const rows = (data || []).map(r => ({
+    "MSNV": r.msnv, "Họ tên": r.ten,
+    "Vị trí làm việc": (r.vi_tri||[]).join(", "),
+    "Nơi ở": (r.noi_o||[]).join(", "),
+    "Face ID": r.face_id || "",
+    "Cập nhật lúc": new Date(r.cap_nhat_luc).toLocaleString("vi-VN")
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Vi tri - Noi o");
+  XLSX.writeFile(wb, "hau_can_vi_tri_noi_o.xlsx");
+});
+
+document.getElementById("btnXuatComHC").addEventListener("click", async ()=>{
+  const tuNgay = document.getElementById("hcTuNgay").value;
+  const denNgay = document.getElementById("hcDenNgay").value;
+  if(!tuNgay || !denNgay){ alert("Vui lòng chọn khoảng ngày."); return; }
+  const { data, error } = await sb.rpc("admin_hc_lay_dang_ky_com", { p_pass: currentAdminPass, p_tu_ngay: tuNgay, p_den_ngay: denNgay });
+  if(error){ alert("Không lấy được dữ liệu."); return; }
+  const rows = (data || []).map(r => ({
+    "Ngày": r.ngay, "MSNV": r.msnv, "Họ tên": r.ten,
+    "Buổi đăng ký": (r.buoi||[]).join(", "),
+    "Cập nhật lúc": new Date(r.cap_nhat_luc).toLocaleString("vi-VN")
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Dang ky com");
+  XLSX.writeFile(wb, `hau_can_dang_ky_com_${tuNgay}_den_${denNgay}.xlsx`);
 });
 
 document.getElementById("btnToggleAdmin").addEventListener("click", ()=>{
