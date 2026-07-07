@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bch-app-v3';
+const CACHE_NAME = 'bch-app-v4';
 const urlsToCache = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(e){
@@ -15,6 +15,7 @@ self.addEventListener('activate', function(e){
 });
 
 self.addEventListener('fetch', function(e){
+  if(e.request.method !== 'GET') return; // Không cache POST (vd: gọi Supabase) — tránh lỗi Console vô hại
   e.respondWith(
     fetch(e.request).then(function(r){
       var copy=r.clone();
