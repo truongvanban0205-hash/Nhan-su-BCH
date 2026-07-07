@@ -190,6 +190,7 @@
       <p class="sub" style="margin:0;">Danh sách nhân viên &amp; phê duyệt tài khoản</p>
     </div>
     <div class="admin-actions">
+      <button class="linkbtn" id="btnCauHinhNS">Cấu hình Nhân sự</button>
       <button class="linkbtn" id="btnAddModule">+ Thêm quyền</button>
       <button class="linkbtn" id="btnAddEmp">+ Thêm nhân viên</button>
       <button class="linkbtn" id="btnExport">Xuất Excel</button>
@@ -269,6 +270,44 @@
 </div>
 
 <footer>BCH ĐA CAM LÂM — CAM RANH · Hệ thống quản lý tài khoản nội bộ</footer>
+
+<!-- ============ MODAL CẤU HÌNH NHÂN SỰ (DỰ ÁN / CA LÀM VIỆC) ============ -->
+<div class="modal-overlay" id="modalCauHinh">
+  <div class="modal" style="max-width:720px;">
+    <h3>Cấu hình Nhân sự — Dự án &amp; Ca làm việc</h3>
+
+    <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:20px;">
+      <div style="flex:1; min-width:260px;">
+        <label>Danh sách Dự án</label>
+        <div id="listDuAn" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:180px; overflow-y:auto; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="inputDuAnMoi" placeholder="Tên dự án mới" style="margin-bottom:0;">
+          <button class="btn small" id="btnThemDuAn">Thêm</button>
+        </div>
+      </div>
+      <div style="flex:1; min-width:260px;">
+        <label>Danh sách Loại ca (áp dụng chung mọi dự án)</label>
+        <div id="listLoaiCa" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:180px; overflow-y:auto; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="inputCaMoi" placeholder="Tên ca mới (vd: Ca 3)" style="margin-bottom:0;">
+          <button class="btn small" id="btnThemCa">Thêm</button>
+        </div>
+      </div>
+    </div>
+
+    <label>Tên ca riêng theo từng dự án <span style="color:var(--muted); font-weight:400;">(để trống = dùng tên mặc định)</span></label>
+    <div class="table-wrap" style="max-height:260px;">
+      <table>
+        <thead><tr id="cauHinhHeadRow"></tr></thead>
+        <tbody id="cauHinhBodyRows"></tbody>
+      </table>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCloseCauHinh">Đóng</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const SUPABASE_URL = "https://jqwjzvucwvlwbcgxhath.supabase.co";
@@ -444,6 +483,120 @@ const MODULE_CATALOG = [
   { nhan: "Báo Lịch nghiệm thu", ma: "bao_lich_nghiem_thu" },
 ];
 const modalPass = document.getElementById("modalPass");
+/* ================= CẤU HÌNH NHÂN SỰ: DỰ ÁN / LOẠI CA / TÊN RIÊNG ================= */
+let duAnCache = [];
+let loaiCaCache = [];
+let tenCaRiengCache = [];
+
+async function loadCauHinhNS(){
+  const [r1, r2, r3] = await Promise.all([
+    sb.rpc("cauhinh_lay_du_an"),
+    sb.rpc("cauhinh_lay_loai_ca"),
+    sb.rpc("cauhinh_lay_ten_ca_rieng")
+  ]);
+  duAnCache = r1.data || [];
+  loaiCaCache = r2.data || [];
+  tenCaRiengCache = r3.data || [];
+}
+
+function renderListDuAn(){
+  const el = document.getElementById("listDuAn");
+  if(duAnCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có dự án nào.</div>'; return; }
+  el.innerHTML = duAnCache.map(d => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);">
+      <span>${d.ten}</span>
+      <button class="icon-btn reject" data-del-duan="${d.id}">Xoá</button>
+    </div>`).join("");
+  el.querySelectorAll("[data-del-duan]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.delDuan);
+      const d = duAnCache.find(x=>x.id===id);
+      if(!confirm(`Xoá dự án "${d.ten}"?`)) return;
+      const { error } = await sb.rpc("admin_xoa_du_an", { p_pass: currentAdminPass, p_id: id });
+      if(error){ alert("Không xoá được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+}
+
+function renderListLoaiCa(){
+  const el = document.getElementById("listLoaiCa");
+  if(loaiCaCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có ca nào.</div>'; return; }
+  el.innerHTML = loaiCaCache.map(c => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);">
+      <span>${c.ten_mac_dinh}</span>
+      <button class="icon-btn reject" data-del-ca="${c.id}">Xoá</button>
+    </div>`).join("");
+  el.querySelectorAll("[data-del-ca]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.delCa);
+      const c = loaiCaCache.find(x=>x.id===id);
+      if(!confirm(`Xoá loại ca "${c.ten_mac_dinh}" khỏi TẤT CẢ dự án?`)) return;
+      const { error } = await sb.rpc("admin_xoa_loai_ca", { p_pass: currentAdminPass, p_id: id });
+      if(error){ alert("Không xoá được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+}
+
+function renderTenCaRieng(){
+  const head = document.getElementById("cauHinhHeadRow");
+  head.innerHTML = `<th>Dự án</th>` + loaiCaCache.map(c=>`<th>${c.ten_mac_dinh}</th>`).join("");
+  const body = document.getElementById("cauHinhBodyRows");
+  body.innerHTML = duAnCache.map(d=>{
+    const cells = loaiCaCache.map(c=>{
+      const found = tenCaRiengCache.find(t=>t.du_an===d.ten && t.ma_ca===c.ma);
+      const val = found ? found.ten_rieng : "";
+      return `<td><input type="text" data-duan="${d.ten}" data-ma="${c.ma}" class="ten-rieng-input"
+        placeholder="${c.ten_mac_dinh}" value="${val}" style="margin:0;padding:6px 8px;font-size:12px;width:110px;"></td>`;
+    }).join("");
+    return `<tr><td>${d.ten}</td>${cells}</tr>`;
+  }).join("");
+
+  body.querySelectorAll(".ten-rieng-input").forEach(inp=>{
+    inp.addEventListener("change", async ()=>{
+      const { error } = await sb.rpc("admin_luu_ten_ca_rieng", {
+        p_pass: currentAdminPass, p_du_an: inp.dataset.duan, p_ma_ca: inp.dataset.ma, p_ten_rieng: inp.value.trim()
+      });
+      if(error) showToast("Không lưu được tên ca này.");
+    });
+  });
+}
+
+function renderCauHinhAll(){
+  renderListDuAn();
+  renderListLoaiCa();
+  renderTenCaRieng();
+}
+
+document.getElementById("btnCauHinhNS").addEventListener("click", async ()=>{
+  await loadCauHinhNS();
+  renderCauHinhAll();
+  document.getElementById("modalCauHinh").classList.add("show");
+});
+document.getElementById("btnCloseCauHinh").addEventListener("click", ()=>{
+  document.getElementById("modalCauHinh").classList.remove("show");
+});
+
+document.getElementById("btnThemDuAn").addEventListener("click", async ()=>{
+  const ten = document.getElementById("inputDuAnMoi").value.trim();
+  if(!ten){ alert("Vui lòng nhập tên dự án."); return; }
+  const { error } = await sb.rpc("admin_them_du_an", { p_pass: currentAdminPass, p_ten: ten });
+  if(error){ alert("Không thêm được (có thể trùng tên)."); return; }
+  document.getElementById("inputDuAnMoi").value = "";
+  await loadCauHinhNS(); renderCauHinhAll();
+});
+
+document.getElementById("btnThemCa").addEventListener("click", async ()=>{
+  const ten = document.getElementById("inputCaMoi").value.trim();
+  if(!ten){ alert("Vui lòng nhập tên ca."); return; }
+  const ma = "ca_" + Date.now();
+  const { error } = await sb.rpc("admin_them_loai_ca", { p_pass: currentAdminPass, p_ma: ma, p_ten_mac_dinh: ten });
+  if(error){ alert("Không thêm được."); return; }
+  document.getElementById("inputCaMoi").value = "";
+  await loadCauHinhNS(); renderCauHinhAll();
+});
+
 document.getElementById("btnToggleAdmin").addEventListener("click", ()=>{
   document.getElementById("adminPassInput").value = "";
   hideMsg(document.getElementById("adminPassErr"));
