@@ -3476,6 +3476,20 @@ function bchScheduleOne(cfg){
     if(el && !window.BCH_QUYEN[mapCard[key]]) el.style.display = 'none';
   });
 
+  // Thẻ "Hậu cần" — chèn thêm bằng JS, chỉ hiện nếu có quyền, không sửa 3 thẻ tĩnh có sẵn
+  if(window.BCH_QUYEN.hau_can){
+    var hcCard = document.createElement('div');
+    hcCard.className = 'mod-card c-mmtb';
+    hcCard.style.cursor = 'pointer';
+    hcCard.innerHTML = '<div class="mod-icon i-mmtb">🍱</div>'
+      + '<div class="mod-body"><div class="mod-title">Hậu cần</div>'
+      + '<div class="mod-desc">Vị trí, nơi ở &amp; đăng ký cơm</div></div>'
+      + '<div class="mod-arrow">›</div>';
+    hcCard.addEventListener('click', function(){ location.href = 'hau-can.html'; });
+    var cardsWrap = document.querySelector('.home-cards');
+    if(cardsWrap) cardsWrap.appendChild(hcCard);
+  }
+
   // Thêm dòng tên + nút xem thông tin tài khoản + đăng xuất (chỉ chèn thêm bằng JS)
   var headerDiv = document.querySelector('.home-header > div');
   if(headerDiv){
