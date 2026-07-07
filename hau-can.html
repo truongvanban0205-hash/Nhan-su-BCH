@@ -7,46 +7,44 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg:#0d1117; --panel:#151b23; --panel2:#1c232d; --border:#2a3340; --text:#e6edf3; --muted:#8b96a5;
-    --accent:#ff8a3d; --ok:#3fb950; --ok-dim:#3fb95022; --bad:#f85149; --bad-dim:#f8514922;
+    --bg:#f4f6f9; --panel:#ffffff; --panel2:#f0f3f7; --border:#d7dee6; --text:#1a2433; --muted:#5b6b7d;
+    --accent:#1565c0; --accent-dark:#0d47a1; --ok:#2e7d32; --ok-dim:#e8f5e9; --bad:#c62828; --bad-dim:#fdecea;
   }
   *{box-sizing:border-box;}
   body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:'Be Vietnam Pro',system-ui,sans-serif;
     display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;}
   .topbar{width:100%;max-width:520px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
-  .brand{font-size:14px;color:var(--muted);font-weight:600;}
-  .brand b{color:var(--accent);}
-  a.back{color:var(--muted);font-size:13px;text-decoration:none;border:1px solid var(--border);padding:7px 14px;border-radius:8px;}
+  .brand{font-size:15px;color:var(--accent-dark);font-weight:800;}
+  a.back{color:var(--muted);font-size:13px;text-decoration:none;border:1px solid var(--border);padding:8px 16px;border-radius:8px;background:#fff;}
   .card{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--border);border-radius:16px;
-    padding:26px 24px;box-shadow:0 10px 40px rgba(0,0,0,.3);margin-bottom:18px;}
-  h2{font-size:17px;margin:0 0 4px;font-weight:800;}
-  .sub{color:var(--muted);font-size:13px;margin:0 0 18px;line-height:1.5;}
-  .group-label{font-size:13px;color:var(--muted);font-weight:600;margin:14px 0 8px;}
-  .chip-list{display:flex;flex-wrap:wrap;gap:8px;}
+    padding:26px 24px;box-shadow:0 4px 20px rgba(20,40,70,.08);margin-bottom:18px;}
+  h2{font-size:19px;margin:0 0 4px;font-weight:800;color:var(--accent-dark);}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 18px;line-height:1.5;}
+  .group-label{font-size:16px;color:var(--text);font-weight:700;margin:16px 0 10px;}
+  .chip-list{display:flex;flex-wrap:wrap;gap:10px;}
   .chip{position:relative;}
   .chip input{position:absolute;opacity:0;inset:0;cursor:pointer;margin:0;}
-  .chip span{display:inline-block;padding:9px 16px;border-radius:20px;border:1px solid var(--border);
-    background:var(--panel2);font-size:13px;cursor:pointer;user-select:none;transition:.15s;}
-  .chip input:checked + span{background:var(--accent);border-color:var(--accent);color:#1a1005;font-weight:700;}
-  .radio-list{display:flex;gap:10px;}
-  .btn{width:100%;padding:13px;border-radius:10px;border:none;background:var(--accent);color:#1a1005;
-    font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:18px;}
+  .chip span{display:inline-block;padding:11px 18px;border-radius:20px;border:2px solid var(--border);
+    background:var(--panel2);font-size:14px;font-weight:600;cursor:pointer;user-select:none;transition:.15s;color:var(--text);}
+  .chip input:checked + span{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn{width:100%;padding:15px;border-radius:10px;border:none;background:var(--accent);color:#fff;
+    font-weight:800;font-size:16px;cursor:pointer;font-family:inherit;margin-top:20px;}
   .btn:hover{filter:brightness(1.08);}
-  .msg{padding:12px 14px;border-radius:10px;font-size:13px;margin-top:14px;display:none;}
+  .btn.secondary{background:#fff;color:var(--accent-dark);border:2px solid var(--accent);}
+  .msg{padding:13px 16px;border-radius:10px;font-size:14px;margin-top:14px;display:none;font-weight:600;}
   .msg.show{display:block;}
   .msg.ok{background:var(--ok-dim);color:var(--ok);border:1px solid var(--ok);}
   .msg.bad{background:var(--bad-dim);color:var(--bad);border:1px solid var(--bad);}
-  .date-badge{display:inline-block;background:var(--panel2);color:var(--accent);font-weight:700;
-    padding:5px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;}
-  .loading{color:var(--muted);text-align:center;padding:20px;font-size:13px;}
+  .loading{color:var(--muted);text-align:center;padding:30px;font-size:15px;}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="brand">BCH ĐA CAM LÂM — <b>CAM RANH</b></div>
+  <div class="brand">BCH ĐA CAM LÂM — CAM RANH</div>
   <a class="back" href="index.html">‹ Về trang báo cáo</a>
 </div>
 
@@ -54,34 +52,28 @@
 
 <div id="appBox" style="display:none; width:100%; max-width:520px;">
 
-  <!-- MỤC 1: VỊ TRÍ / NƠI Ở / FACE ID -->
   <div class="card">
     <h2>Thông tin vị trí &amp; nơi ở</h2>
     <p class="sub">Cập nhật khi có thay đổi. Hệ thống chỉ giữ lại lần cập nhật gần nhất.</p>
 
-    <div class="group-label">Vị trí làm việc (chọn 1 hoặc nhiều)</div>
+    <div class="group-label">Chọn vị trí làm việc:</div>
     <div class="chip-list" id="chipViTri"></div>
 
-    <div class="group-label">Nơi ở (chọn 1 hoặc nhiều)</div>
+    <div class="group-label">Chọn vị trí ở:</div>
     <div class="chip-list" id="chipNoiO"></div>
 
-    <div class="group-label">Face ID ra vào cổng</div>
+    <div class="group-label">Face ID ra vào cổng:</div>
     <div class="chip-list" id="chipFaceId"></div>
 
     <button class="btn" id="btnLuuHoSo">Lưu thông tin</button>
     <div class="msg" id="msgHoSo"></div>
   </div>
 
-  <!-- MỤC 2: ĐĂNG KÝ CƠM NGÀY MAI -->
   <div class="card">
-    <h2>Đăng ký cơm</h2>
-    <div class="date-badge" id="ngayMaiLabel"></div>
-    <p class="sub" style="margin-top:-8px;">Chọn các buổi bạn cần suất ăn cho ngày trên.</p>
-
-    <div class="chip-list" id="chipCom"></div>
-
-    <button class="btn" id="btnLuuCom">Lưu đăng ký</button>
-    <div class="msg" id="msgCom"></div>
+    <h2>Xuất báo cáo</h2>
+    <p class="sub">Xuất danh sách vị trí &amp; nơi ở của toàn bộ nhân viên ra file Excel.</p>
+    <button class="btn secondary" id="btnXuatExcel">📄 Xuất Excel</button>
+    <div class="msg" id="msgXuat"></div>
   </div>
 
 </div>
@@ -94,38 +86,27 @@ const LS_KEY = "bch_nv_login";
 const LOGIN_PAGE = "quan-ly-tai-khoan.html";
 
 let saved = null;
-let tuyChon = { vi_tri: [], noi_o: [], face_id: [], com: [] };
+let tuyChon = { vi_tri: [], noi_o: [], face_id: [] };
 
 function showMsg(el, type, text){ el.className = "msg show " + type; el.textContent = text; }
 
-function renderChips(containerId, name, options, type){
+function renderChips(containerId, name, options){
   const el = document.getElementById(containerId);
   el.innerHTML = options.map(o => `
     <label class="chip">
-      <input type="${type}" name="${name}" value="${o.gia_tri}">
+      <input type="radio" name="${name}" value="${o.gia_tri}">
       <span>${o.gia_tri}</span>
     </label>`).join("");
 }
 
 function getChecked(name){
-  return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(i => i.value);
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? [el.value] : [];
 }
 function setChecked(name, values){
   document.querySelectorAll(`input[name="${name}"]`).forEach(i => {
     i.checked = (values || []).includes(i.value);
   });
-}
-
-function ngayMaiISO(){
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0,10);
-}
-function ngayMaiHienThi(){
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  const t = ["CN","Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7"][d.getDay()];
-  return `${t}, ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
 async function init(){
@@ -144,12 +125,9 @@ async function init(){
   const { data: tc } = await sb.rpc("hc_lay_tuy_chon");
   (tc || []).forEach(t => { if(tuyChon[t.nhom]) tuyChon[t.nhom].push(t); });
 
-  renderChips("chipViTri", "vi_tri", tuyChon.vi_tri, "checkbox");
-  renderChips("chipNoiO", "noi_o", tuyChon.noi_o, "checkbox");
-  renderChips("chipFaceId", "face_id", tuyChon.face_id, "radio");
-  renderChips("chipCom", "com", tuyChon.com, "checkbox");
-
-  document.getElementById("ngayMaiLabel").textContent = "Ngày: " + ngayMaiHienThi();
+  renderChips("chipViTri", "vi_tri", tuyChon.vi_tri);
+  renderChips("chipNoiO", "noi_o", tuyChon.noi_o);
+  renderChips("chipFaceId", "face_id", tuyChon.face_id);
 
   const { data: hoSo } = await sb.rpc("hc_lay_ho_so_ca_nhan", { p_msnv: saved.msnv });
   if(hoSo){
@@ -157,9 +135,6 @@ async function init(){
     setChecked("noi_o", hoSo.noi_o);
     setChecked("face_id", [hoSo.face_id]);
   }
-
-  const { data: com } = await sb.rpc("hc_lay_dang_ky_ca_nhan", { p_msnv: saved.msnv, p_ngay: ngayMaiISO() });
-  if(com){ setChecked("com", com.buoi); }
 
   document.getElementById("loadingBox").style.display = "none";
   document.getElementById("appBox").style.display = "block";
@@ -179,12 +154,23 @@ document.getElementById("btnLuuHoSo").addEventListener("click", async ()=>{
   showMsg(document.getElementById("msgHoSo"), error ? "bad" : "ok", error ? "Có lỗi, vui lòng thử lại." : "✓ Đã lưu thông tin.");
 });
 
-document.getElementById("btnLuuCom").addEventListener("click", async ()=>{
-  const buoi = getChecked("com");
-  const { error } = await sb.rpc("hc_luu_dang_ky_com", {
-    p_msnv: saved.msnv, p_ten: saved.ten, p_ngay: ngayMaiISO(), p_buoi: buoi
-  });
-  showMsg(document.getElementById("msgCom"), error ? "bad" : "ok", error ? "Có lỗi, vui lòng thử lại." : "✓ Đã lưu đăng ký cơm.");
+document.getElementById("btnXuatExcel").addEventListener("click", async ()=>{
+  const pass = prompt("Nhập mật khẩu để xuất báo cáo:");
+  if(pass === null) return;
+  const { data, error } = await sb.rpc("hc_xuat_ho_so", { p_pass: pass });
+  const msgEl = document.getElementById("msgXuat");
+  if(error){ showMsg(msgEl, "bad", "Sai mật khẩu hoặc có lỗi xảy ra."); return; }
+  const rows = (data || []).map(r => ({
+    "MSNV": r.msnv, "Họ tên": r.ten, "Chức vụ": r.chuc_vu || "",
+    "Vị trí làm việc": (r.vi_tri||[]).join(", "),
+    "Nơi ở": (r.noi_o||[]).join(", "),
+    "Face ID": r.face_id || ""
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Vi tri - Noi o");
+  XLSX.writeFile(wb, "hau_can_vi_tri_noi_o.xlsx");
+  showMsg(msgEl, "ok", "✓ Đã xuất file Excel.");
 });
 
 init();
