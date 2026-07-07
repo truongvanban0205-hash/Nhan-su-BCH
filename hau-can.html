@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hậu cần — BCH ĐA CAM LÂM - CAM RANH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#151b23; --panel2:#1c232d; --border:#2a3340; --text:#e6edf3; --muted:#8b96a5;
+    --accent:#ff8a3d; --ok:#3fb950; --ok-dim:#3fb95022; --bad:#f85149; --bad-dim:#f8514922;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:'Be Vietnam Pro',system-ui,sans-serif;
+    display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;}
+  .topbar{width:100%;max-width:520px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+  .brand{font-size:14px;color:var(--muted);font-weight:600;}
+  .brand b{color:var(--accent);}
+  a.back{color:var(--muted);font-size:13px;text-decoration:none;border:1px solid var(--border);padding:7px 14px;border-radius:8px;}
+  .card{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--border);border-radius:16px;
+    padding:26px 24px;box-shadow:0 10px 40px rgba(0,0,0,.3);margin-bottom:18px;}
+  h2{font-size:17px;margin:0 0 4px;font-weight:800;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 18px;line-height:1.5;}
+  .group-label{font-size:13px;color:var(--muted);font-weight:600;margin:14px 0 8px;}
+  .chip-list{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{position:relative;}
+  .chip input{position:absolute;opacity:0;inset:0;cursor:pointer;margin:0;}
+  .chip span{display:inline-block;padding:9px 16px;border-radius:20px;border:1px solid var(--border);
+    background:var(--panel2);font-size:13px;cursor:pointer;user-select:none;transition:.15s;}
+  .chip input:checked + span{background:var(--accent);border-color:var(--accent);color:#1a1005;font-weight:700;}
+  .radio-list{display:flex;gap:10px;}
+  .btn{width:100%;padding:13px;border-radius:10px;border:none;background:var(--accent);color:#1a1005;
+    font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:18px;}
+  .btn:hover{filter:brightness(1.08);}
+  .msg{padding:12px 14px;border-radius:10px;font-size:13px;margin-top:14px;display:none;}
+  .msg.show{display:block;}
+  .msg.ok{background:var(--ok-dim);color:var(--ok);border:1px solid var(--ok);}
+  .msg.bad{background:var(--bad-dim);color:var(--bad);border:1px solid var(--bad);}
+  .date-badge{display:inline-block;background:var(--panel2);color:var(--accent);font-weight:700;
+    padding:5px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;}
+  .loading{color:var(--muted);text-align:center;padding:20px;font-size:13px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">BCH ĐA CAM LÂM — <b>CAM RANH</b></div>
+  <a class="back" href="index.html">‹ Về trang báo cáo</a>
+</div>
+
+<div id="loadingBox" class="loading">Đang tải...</div>
+
+<div id="appBox" style="display:none; width:100%; max-width:520px;">
+
+  <!-- MỤC 1: VỊ TRÍ / NƠI Ở / FACE ID -->
+  <div class="card">
+    <h2>Thông tin vị trí &amp; nơi ở</h2>
+    <p class="sub">Cập nhật khi có thay đổi. Hệ thống chỉ giữ lại lần cập nhật gần nhất.</p>
+
+    <div class="group-label">Vị trí làm việc (chọn 1 hoặc nhiều)</div>
+    <div class="chip-list" id="chipViTri"></div>
+
+    <div class="group-label">Nơi ở (chọn 1 hoặc nhiều)</div>
+    <div class="chip-list" id="chipNoiO"></div>
+
+    <div class="group-label">Face ID ra vào cổng</div>
+    <div class="chip-list" id="chipFaceId"></div>
+
+    <button class="btn" id="btnLuuHoSo">Lưu thông tin</button>
+    <div class="msg" id="msgHoSo"></div>
+  </div>
+
+  <!-- MỤC 2: ĐĂNG KÝ CƠM NGÀY MAI -->
+  <div class="card">
+    <h2>Đăng ký cơm</h2>
+    <div class="date-badge" id="ngayMaiLabel"></div>
+    <p class="sub" style="margin-top:-8px;">Chọn các buổi bạn cần suất ăn cho ngày trên.</p>
+
+    <div class="chip-list" id="chipCom"></div>
+
+    <button class="btn" id="btnLuuCom">Lưu đăng ký</button>
+    <div class="msg" id="msgCom"></div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://jqwjzvucwvlwbcgxhath.supabase.co";
+const SUPABASE_KEY = "sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const LS_KEY = "bch_nv_login";
+const LOGIN_PAGE = "quan-ly-tai-khoan.html";
+
+let saved = null;
+let tuyChon = { vi_tri: [], noi_o: [], face_id: [], com: [] };
+
+function showMsg(el, type, text){ el.className = "msg show " + type; el.textContent = text; }
+
+function renderChips(containerId, name, options, type){
+  const el = document.getElementById(containerId);
+  el.innerHTML = options.map(o => `
+    <label class="chip">
+      <input type="${type}" name="${name}" value="${o.gia_tri}">
+      <span>${o.gia_tri}</span>
+    </label>`).join("");
+}
+
+function getChecked(name){
+  return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(i => i.value);
+}
+function setChecked(name, values){
+  document.querySelectorAll(`input[name="${name}"]`).forEach(i => {
+    i.checked = (values || []).includes(i.value);
+  });
+}
+
+function ngayMaiISO(){
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0,10);
+}
+function ngayMaiHienThi(){
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const t = ["CN","Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7"][d.getDay()];
+  return `${t}, ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+async function init(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(!raw){ location.href = LOGIN_PAGE; return; }
+  try{ saved = JSON.parse(raw); } catch(e){ location.href = LOGIN_PAGE; return; }
+
+  const { data: res } = await sb.rpc("tra_cuu", { p_ten: saved.ten, p_msnv: saved.msnv });
+  if(!res || res.status !== "da_duyet"){ location.href = LOGIN_PAGE; return; }
+  if(!res.data.quyen || !res.data.quyen.hau_can){
+    document.getElementById("loadingBox").textContent = "Bạn chưa được cấp quyền truy cập mục Hậu cần. Vui lòng liên hệ Ban chỉ huy.";
+    return;
+  }
+  saved.ten = res.data.ten; saved.msnv = res.data.msnv;
+
+  const { data: tc } = await sb.rpc("hc_lay_tuy_chon");
+  (tc || []).forEach(t => { if(tuyChon[t.nhom]) tuyChon[t.nhom].push(t); });
+
+  renderChips("chipViTri", "vi_tri", tuyChon.vi_tri, "checkbox");
+  renderChips("chipNoiO", "noi_o", tuyChon.noi_o, "checkbox");
+  renderChips("chipFaceId", "face_id", tuyChon.face_id, "radio");
+  renderChips("chipCom", "com", tuyChon.com, "checkbox");
+
+  document.getElementById("ngayMaiLabel").textContent = "Ngày: " + ngayMaiHienThi();
+
+  const { data: hoSo } = await sb.rpc("hc_lay_ho_so_ca_nhan", { p_msnv: saved.msnv });
+  if(hoSo){
+    setChecked("vi_tri", hoSo.vi_tri);
+    setChecked("noi_o", hoSo.noi_o);
+    setChecked("face_id", [hoSo.face_id]);
+  }
+
+  const { data: com } = await sb.rpc("hc_lay_dang_ky_ca_nhan", { p_msnv: saved.msnv, p_ngay: ngayMaiISO() });
+  if(com){ setChecked("com", com.buoi); }
+
+  document.getElementById("loadingBox").style.display = "none";
+  document.getElementById("appBox").style.display = "block";
+}
+
+document.getElementById("btnLuuHoSo").addEventListener("click", async ()=>{
+  const viTri = getChecked("vi_tri");
+  const noiO = getChecked("noi_o");
+  const faceId = getChecked("face_id")[0] || "";
+  if(viTri.length === 0 || noiO.length === 0 || !faceId){
+    showMsg(document.getElementById("msgHoSo"), "bad", "Vui lòng chọn đầy đủ Vị trí, Nơi ở và Face ID.");
+    return;
+  }
+  const { error } = await sb.rpc("hc_luu_ho_so", {
+    p_msnv: saved.msnv, p_ten: saved.ten, p_vi_tri: viTri, p_noi_o: noiO, p_face_id: faceId
+  });
+  showMsg(document.getElementById("msgHoSo"), error ? "bad" : "ok", error ? "Có lỗi, vui lòng thử lại." : "✓ Đã lưu thông tin.");
+});
+
+document.getElementById("btnLuuCom").addEventListener("click", async ()=>{
+  const buoi = getChecked("com");
+  const { error } = await sb.rpc("hc_luu_dang_ky_com", {
+    p_msnv: saved.msnv, p_ten: saved.ten, p_ngay: ngayMaiISO(), p_buoi: buoi
+  });
+  showMsg(document.getElementById("msgCom"), error ? "bad" : "ok", error ? "Có lỗi, vui lòng thử lại." : "✓ Đã lưu đăng ký cơm.");
+});
+
+init();
+</script>
+</body>
+</html>
