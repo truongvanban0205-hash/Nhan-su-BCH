@@ -316,18 +316,6 @@
       </div>
     </div>
 
-    <div style="border-top:1px solid var(--border); padding-top:16px;">
-      <label>Xuất dữ liệu</label>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <button class="btn small" id="btnXuatHoSoHC">Xuất Excel: Vị trí &amp; nơi ở (tất cả)</button>
-        <span style="color:var(--muted); font-size:12px;">|</span>
-        <input type="date" id="hcTuNgay" style="margin:0; width:auto;">
-        <span style="font-size:12px; color:var(--muted);">đến</span>
-        <input type="date" id="hcDenNgay" style="margin:0; width:auto;">
-        <button class="btn small" id="btnXuatComHC">Xuất Excel: Đăng ký cơm</button>
-      </div>
-    </div>
-
     <div class="modal-actions">
       <button class="btn secondary" id="btnCloseHauCan">Đóng</button>
     </div>
@@ -721,39 +709,6 @@ document.querySelectorAll("[data-add-hc]").forEach(btn=>{
     input.value = "";
     await loadHauCanTuyChon(); renderHcAll();
   });
-});
-
-document.getElementById("btnXuatHoSoHC").addEventListener("click", async ()=>{
-  const { data, error } = await sb.rpc("admin_hc_lay_ho_so", { p_pass: currentAdminPass });
-  if(error){ alert("Không lấy được dữ liệu."); return; }
-  const rows = (data || []).map(r => ({
-    "MSNV": r.msnv, "Họ tên": r.ten,
-    "Vị trí làm việc": (r.vi_tri||[]).join(", "),
-    "Nơi ở": (r.noi_o||[]).join(", "),
-    "Face ID": r.face_id || "",
-    "Cập nhật lúc": new Date(r.cap_nhat_luc).toLocaleString("vi-VN")
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Vi tri - Noi o");
-  XLSX.writeFile(wb, "hau_can_vi_tri_noi_o.xlsx");
-});
-
-document.getElementById("btnXuatComHC").addEventListener("click", async ()=>{
-  const tuNgay = document.getElementById("hcTuNgay").value;
-  const denNgay = document.getElementById("hcDenNgay").value;
-  if(!tuNgay || !denNgay){ alert("Vui lòng chọn khoảng ngày."); return; }
-  const { data, error } = await sb.rpc("admin_hc_lay_dang_ky_com", { p_pass: currentAdminPass, p_tu_ngay: tuNgay, p_den_ngay: denNgay });
-  if(error){ alert("Không lấy được dữ liệu."); return; }
-  const rows = (data || []).map(r => ({
-    "Ngày": r.ngay, "MSNV": r.msnv, "Họ tên": r.ten,
-    "Buổi đăng ký": (r.buoi||[]).join(", "),
-    "Cập nhật lúc": new Date(r.cap_nhat_luc).toLocaleString("vi-VN")
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Dang ky com");
-  XLSX.writeFile(wb, `hau_can_dang_ky_com_${tuNgay}_den_${denNgay}.xlsx`);
 });
 
 document.getElementById("btnToggleAdmin").addEventListener("click", ()=>{
