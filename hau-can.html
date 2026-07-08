@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hậu cần — BCH DA CAM LÂM - CAM RANH</title>
+<title>Hậu cần — BCH ĐA CAM LÂM - CAM RANH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -44,7 +44,7 @@
 <body>
 
 <div class="topbar">
-  <div class="brand">BCH DA CAM LÂM — CAM RANH</div>
+  <div class="brand">BCH ĐA CAM LÂM — CAM RANH</div>
   <a class="back" href="index.html">‹ Về trang báo cáo</a>
 </div>
 
@@ -53,13 +53,13 @@
 <div id="appBox" style="display:none; width:100%; max-width:520px;">
 
   <div class="card">
-    <h2>Thông tin vị trí làm việc &amp; nơi ở hiện tại</h2>
+    <h2>Thông tin vị trí &amp; nơi ở</h2>
     <p class="sub">Cập nhật khi có thay đổi. Hệ thống chỉ giữ lại lần cập nhật gần nhất.</p>
 
-    <div class="group-label">Vị trí làm việc:</div>
+    <div class="group-label">Chọn vị trí làm việc:</div>
     <div class="chip-list" id="chipViTri"></div>
 
-    <div class="group-label">chỗ ở hiện tại:</div>
+    <div class="group-label">Chọn vị trí ở:</div>
     <div class="chip-list" id="chipNoiO"></div>
 
     <div class="group-label">Face ID ra vào cổng:</div>
@@ -138,6 +138,24 @@ async function init(){
 
   document.getElementById("loadingBox").style.display = "none";
   document.getElementById("appBox").style.display = "block";
+
+  // Bảng tin nội bộ
+  try{
+    const { data: tb } = await sb.rpc("lay_thong_bao_moi_nhat");
+    if(tb){
+      const seenKey = "bch_tb_seen_" + tb.id;
+      if(!localStorage.getItem(seenKey)){
+        const banner = document.createElement("div");
+        banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:#1565c0;color:#fff;padding:12px 16px;font-size:13px;font-weight:600;z-index:9998;display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.2);";
+        banner.innerHTML = '<span>📢 ' + tb.noi_dung + '</span><span style="cursor:pointer;font-weight:800;padding:0 6px;" id="bchTbClose">✕</span>';
+        document.body.appendChild(banner);
+        document.getElementById("bchTbClose").addEventListener("click", ()=>{
+          localStorage.setItem(seenKey, "1");
+          banner.remove();
+        });
+      }
+    }
+  }catch(e){}
 }
 
 document.getElementById("btnLuuHoSo").addEventListener("click", async ()=>{
