@@ -295,6 +295,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
           <div class="qstat-val" id="qs-ns-ca2">-</div><div class="qstat-lbl">Ca 2</div>
           <svg class="qstat-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="0,19 20,17 35,12 50,14 65,8 80,10 100,4" fill="none" stroke="#a5d6a7" stroke-width="2"/></svg>
         </div>
+        <div id="qs-ns-extra"></div>
         <div class="qstat-card q-red qs-clickable" id="qs-ns-nghi-card" onclick="qsShowDetail('ns-nghi')">
           <div class="qstat-icon-circle">⏰</div>
           <div class="qstat-val" id="qs-ns-nghi">-</div><div class="qstat-lbl">Nghỉ</div>
@@ -656,33 +657,58 @@ async function loadQuickStats(){
     var prevTotal=null;
     if(nsY.data){
       var ydt=nsY.data.data.data||{},yprojs=nsY.data.data.projects||[];
-      var yc1=0,yc2=0,yng=0;
+      var yTong={}; TYPES.forEach(function(t){yTong[t]=0;});
       yprojs.forEach(function(p){
-        if(ydt[p]&&ydt[p].ca1)Object.values(ydt[p].ca1).forEach(function(v){yc1+=v||0;});
-        if(ydt[p]&&ydt[p].ca2)Object.values(ydt[p].ca2).forEach(function(v){yc2+=v||0;});
-        if(ydt[p]&&ydt[p].nghi)Object.values(ydt[p].nghi).forEach(function(v){yng+=v||0;});
+        TYPES.forEach(function(t){
+          if(ydt[p]&&ydt[p][t])Object.values(ydt[p][t]).forEach(function(v){yTong[t]+=v||0;});
+        });
       });
-      prevTotal={dilam:yc1+yc2,ca1:yc1,ca2:yc2,nghi:yng,tong:yc1+yc2+yng};
+      var ydilam=0; TYPES.forEach(function(t){ if(t!=='nghi') ydilam+=yTong[t]; });
+      var yng=yTong['nghi']||0;
+      prevTotal={dilam:ydilam,nghi:yng,tong:ydilam+yng};
+      TYPES.forEach(function(t){ prevTotal[t]=yTong[t]; });
     }
     if(nsR.data){
       var nd=nsR.data.data,projs=nd.projects||[],dt=nd.data||{};
-      var c1=0,c2=0,ng=0;
+      var tongTheoLoai={}; TYPES.forEach(function(t){tongTheoLoai[t]=0;});
       var nghiList=[];
       projs.forEach(function(p){
-        if(dt[p]&&dt[p].ca1)Object.values(dt[p].ca1).forEach(function(v){c1+=v||0;});
-        if(dt[p]&&dt[p].ca2)Object.values(dt[p].ca2).forEach(function(v){c2+=v||0;});
+        TYPES.forEach(function(t){
+          if(dt[p]&&dt[p][t])Object.values(dt[p][t]).forEach(function(v){tongTheoLoai[t]+=v||0;});
+        });
         if(dt[p]&&dt[p].nghi){
           var pn=0;
-          Object.entries(dt[p].nghi).forEach(function(en){pn+=en[1]||0;});
-          Object.values(dt[p].nghi).forEach(function(v){ng+=v||0;});
+          Object.values(dt[p].nghi).forEach(function(v){pn+=v||0;});
           if(pn>0)nghiList.push({proj:p,n:pn});
         }
       });
-      var tongAll=c1+c2+ng;
-      qsDetailData.ns={dilam:c1+c2,ca1:c1,ca2:c2,nghi:ng,tong:tongAll,nghiList:nghiList,projects:projs};
-      document.getElementById('qs-ns-dilam').innerHTML=(c1+c2)+qsArrow(c1+c2,prevTotal&&prevTotal.dilam);
-      document.getElementById('qs-ns-ca1').innerHTML=c1+qsArrow(c1,prevTotal&&prevTotal.ca1);
-      document.getElementById('qs-ns-ca2').innerHTML=c2+qsArrow(c2,prevTotal&&prevTotal.ca2);
+      var dilam=0; TYPES.forEach(function(t){ if(t!=='nghi') dilam+=tongTheoLoai[t]; });
+      var ng=tongTheoLoai['nghi']||0;
+      var tongAll=dilam+ng;
+      qsDetailData.ns={dilam:dilam,nghi:ng,tong:tongAll,nghiList:nghiList,projects:projs};
+      TYPES.forEach(function(t){ qsDetailData.ns[t]=tongTheoLoai[t]; });
+      document.getElementById('qs-ns-dilam').innerHTML=dilam+qsArrow(dilam,prevTotal&&prevTotal.dilam);
+
+      // Ca1/Ca2 hiện đúng 2 ô có sẵn nếu tồn tại; các ca khác (ca3, ca4...) tự thêm ô mới
+      var extraEl = document.getElementById('qs-ns-extra');
+      extraEl.innerHTML = '';
+      TYPES.forEach(function(t, ti){
+        if(t === 'nghi') return;
+        var val = tongTheoLoai[t] || 0;
+        var prevVal = prevTotal && prevTotal[t];
+        if(t === 'ca1' || t === 'ca2'){
+          var elx = document.getElementById('qs-ns-'+t);
+          if(elx) elx.innerHTML = val + qsArrow(val, prevVal);
+        } else {
+          var card = document.createElement('div');
+          card.className = 'qstat-card q-green';
+          card.innerHTML = '<div class="qstat-icon-circle">🔷</div>'
+            + '<div class="qstat-val">'+val+qsArrow(val,prevVal)+'</div>'
+            + '<div class="qstat-lbl">'+(TLABELS[ti]||t)+'</div>';
+          extraEl.appendChild(card);
+        }
+      });
+
       document.getElementById('qs-ns-nghi').innerHTML=ng+qsArrow(ng,prevTotal&&prevTotal.nghi);
       document.getElementById('qs-ns-tong').innerHTML=tongAll+qsArrow(tongAll,prevTotal&&prevTotal.tong);
       qsCheckAlert('qs-ns-nghi-card',ng>0&&tongAll>0&&(ng/tongAll)>0.15);
@@ -843,7 +869,7 @@ async function exportFullReport(){
     var dt=d.data||{},projs=d.projects||[];
     var t=0;
     projs.forEach(function(p){
-      ['ca1','ca2','nghi'].forEach(function(ty){
+      TYPES.forEach(function(ty){
         if(dt[p]&&dt[p][ty])Object.values(dt[p][ty]).forEach(function(v){t+=v||0;});
       });
     });
@@ -913,56 +939,57 @@ async function exportFullReport(){
   var nsCols=(nsToday&&nsToday.cols)||[];
   var nsData=(nsToday&&nsToday.data)||{};
   var nsRows='';
-  var bchTot={ca1:{},ca2:{},nghi:{}};
-  nsCols.forEach(function(c){bchTot.ca1[c.k]=0;bchTot.ca2[c.k]=0;bchTot.nghi[c.k]=0;});
+  var bchTot={}; TYPES.forEach(function(t){bchTot[t]={};});
+  nsCols.forEach(function(c){ TYPES.forEach(function(t){ bchTot[t][c.k]=0; }); });
   function fN(v){return v===0?'-':(v<10?'0'+v:v);}
   nsProjs.forEach(function(proj){
-    var rcs=[['Ca 1','#e3f2fd'],['Ca 2','#e3f2fd'],['Nghỉ','#ffebee']];
     var pdata=nsData[proj]||{};
-    rcs.forEach(function(rc,ti){
-      var typeKey=ti===0?'ca1':(ti===1?'ca2':'nghi');
+    var rowspanN = TYPES.length + 1;
+    TYPES.forEach(function(typeKey,ti){
+      var isNghi = (typeKey === 'nghi');
+      var bg = isNghi ? '#ffebee' : '#e3f2fd';
+      var lbl = getTenCa(proj, ti);
       nsRows+='<tr>';
-      if(ti===0)nsRows+='<td rowspan="4" style="border:1px solid #ccc;padding:4px;font-weight:800;background:#fff;vertical-align:middle">'+proj+'</td>';
-      nsRows+='<td style="border:1px solid #ccc;padding:4px;background:'+rc[1]+';font-weight:600;font-size:11px">'+rc[0]+'</td>';
+      if(ti===0)nsRows+='<td rowspan="'+rowspanN+'" style="border:1px solid #ccc;padding:4px;font-weight:800;background:#fff;vertical-align:middle">'+proj+'</td>';
+      nsRows+='<td style="border:1px solid #ccc;padding:4px;background:'+bg+';font-weight:600;font-size:11px">'+lbl+'</td>';
       var rowT=0;
       nsCols.forEach(function(c){
         var v=(pdata[typeKey]&&pdata[typeKey][c.k])||0;
         rowT+=v;
         bchTot[typeKey][c.k]=(bchTot[typeKey][c.k]||0)+v;
-        var clr=ti===2&&v?'#e53935':'#1a1a1a';
-        nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+rc[1]+';font-size:11px;color:'+clr+'">'+fN(v)+'</td>';
+        var clr=isNghi&&v?'#e53935':'#1a1a1a';
+        nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+bg+';font-size:11px;color:'+clr+'">'+fN(v)+'</td>';
       });
-      nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+rc[1]+';font-weight:700;font-size:11px">'+fN(rowT)+'</td>';
+      nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+bg+';font-weight:700;font-size:11px">'+fN(rowT)+'</td>';
       nsRows+='</tr>';
     });
     var totRowT=0;
     nsRows+='<tr><td style="border:1px solid #ccc;padding:4px;background:#fff9c4;font-weight:700;font-size:11px">Tổng</td>';
     nsCols.forEach(function(c){
-      var s=['ca1','ca2','nghi'].reduce(function(a,t){return a+((pdata[t]&&pdata[t][c.k])||0);},0);
+      var s=TYPES.reduce(function(a,t){return a+((pdata[t]&&pdata[t][c.k])||0);},0);
       totRowT+=s;
       nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#fff9c4;font-weight:700;font-size:11px">'+fN(s)+'</td>';
     });
     nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#ffeb3b;font-weight:800;font-size:11px">'+fN(totRowT)+'</td></tr>';
   });
   // TỔNG BCH
-  var bchLbls=[['Ca 1','#f5f5f5'],['Ca 2','#f5f5f5'],['Nghỉ','#f5f5f5']];
   var grandTot=0;
-  bchLbls.forEach(function(rc,ti){
-    var typeKey=ti===0?'ca1':(ti===1?'ca2':'nghi');
+  var bchRowspanN = TYPES.length + 1;
+  TYPES.forEach(function(typeKey,ti){
     nsRows+='<tr>';
-    if(ti===0)nsRows+='<td rowspan="4" style="border:2px solid #546e7a;padding:4px;font-weight:800;background:#f5f5f5;vertical-align:middle">TỔNG BCH</td>';
-    nsRows+='<td style="border:1px solid #ccc;padding:4px;background:'+rc[1]+';font-weight:700;font-size:11px">'+rc[0]+'</td>';
+    if(ti===0)nsRows+='<td rowspan="'+bchRowspanN+'" style="border:2px solid #546e7a;padding:4px;font-weight:800;background:#f5f5f5;vertical-align:middle">TỔNG BCH</td>';
+    nsRows+='<td style="border:1px solid #ccc;padding:4px;background:#f5f5f5;font-weight:700;font-size:11px">'+TLABELS[ti]+'</td>';
     var rowT2=0;
     nsCols.forEach(function(c){
       var v=bchTot[typeKey][c.k]||0;rowT2+=v;
-      var clr=ti===2&&v?'#e53935':'#1a1a1a';
-      nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+rc[1]+';font-size:11px;color:'+clr+'">'+fN(v)+'</td>';
+      var clr=(typeKey==='nghi')&&v?'#e53935':'#1a1a1a';
+      nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#f5f5f5;font-size:11px;color:'+clr+'">'+fN(v)+'</td>';
     });
-    nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+rc[1]+';font-weight:700;font-size:11px">'+fN(rowT2)+'</td></tr>';
+    nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#f5f5f5;font-weight:700;font-size:11px">'+fN(rowT2)+'</td></tr>';
   });
   nsRows+='<tr><td style="border:2px solid #546e7a;padding:4px;background:#ffeb3b;font-weight:800;font-size:11px">Tổng</td>';
   nsCols.forEach(function(c){
-    var s2=['ca1','ca2','nghi'].reduce(function(a,t){return a+(bchTot[t][c.k]||0);},0);
+    var s2=TYPES.reduce(function(a,t){return a+(bchTot[t][c.k]||0);},0);
     grandTot+=s2;
     nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#ffeb3b;font-weight:800;font-size:11px">'+fN(s2)+'</td>';
   });
@@ -1093,7 +1120,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
   function calcGroup(grp,projs,dt){
     var total=0;
     (projs||[]).forEach(function(p){
-      ['ca1','ca2','nghi'].forEach(function(t){
+      TYPES.forEach(function(t){
         grp.keys.forEach(function(k){total+=(dt[p]&&dt[p][t]?dt[p][t][k]||0:0);});
       });
     });
@@ -1102,7 +1129,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
   function calcOther(projs,cols,dt){
     var total=0;
     (projs||[]).forEach(function(p){
-      ['ca1','ca2','nghi'].forEach(function(t){
+      TYPES.forEach(function(t){
         otherKeys.forEach(function(k){total+=(dt[p]&&dt[p][t]?dt[p][t][k]||0:0);});
         (cols||[]).forEach(function(c){
           var isKnown=groups.some(function(g){return g.keys.indexOf(c.k)>=0;})||otherKeys.indexOf(c.k)>=0;
@@ -2147,7 +2174,7 @@ function exportXL(){
     });
     tr.push(gt);rows.push(tr);rows.push([]);
   });
-  var bTypes=['ca1','ca2','nghi'];
+  var bTypes=TYPES;
   bTypes.forEach(function(type,ti){
     var r=[ti===0?'TỔNG BCH':'',TLABELS[ti]];
     var rt=0;
@@ -2166,7 +2193,7 @@ function exportXL(){
   });
   tr.push(gt);rows.push(tr);
   // TỔNG BCH
-  var bTypes2=['ca1','ca2','nghi'];
+  var bTypes2=TYPES;
   bTypes2.forEach(function(type,ti){
     var r=[ti===0?'TỔNG BCH':'',TLABELS[ti]];var rt=0;
     COLS.forEach(function(c){
@@ -2232,7 +2259,7 @@ async function exportXLRange(){
         tr.push(gt);sheetRows.push(tr);sheetRows.push([]);
       });
       // TỔNG BCH cho range
-      var bTypes3=['ca1','ca2','nghi'];
+      var bTypes3=TYPES;
       bTypes3.forEach(function(type,ti){
         var r=[ti===0?'TỔNG BCH':'',TLABELS[ti]];var rt=0;
         cls.forEach(function(c){
