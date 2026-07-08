@@ -3537,6 +3537,24 @@ function bchScheduleOne(cfg){
 
   document.body.style.display = '';
 
+  // Bảng tin nội bộ — hiện thông báo mới nhất do Ban chỉ huy đăng (nếu chưa đóng)
+  try{
+    var { data: tb } = await sc.rpc('lay_thong_bao_moi_nhat');
+    if(tb){
+      var seenKey = 'bch_tb_seen_' + tb.id;
+      if(!localStorage.getItem(seenKey)){
+        var banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#1565c0;color:#fff;padding:12px 16px;font-size:13px;font-weight:600;z-index:9998;display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.2);';
+        banner.innerHTML = '<span>📢 ' + tb.noi_dung + '</span><span style="cursor:pointer;font-weight:800;padding:0 6px;" id="bchTbClose">✕</span>';
+        document.body.appendChild(banner);
+        document.getElementById('bchTbClose').addEventListener('click', function(){
+          localStorage.setItem(seenKey, '1');
+          banner.remove();
+        });
+      }
+    }
+  }catch(e){}
+
   var hienThi = res.data.ten + (res.data.chuc_vu ? ' - ' + res.data.chuc_vu : '');
 
   // Tự động điền tên (+ chức vụ) đã đăng nhập vào ô "Người nhập" của 2 module, bỏ bước gõ tay
