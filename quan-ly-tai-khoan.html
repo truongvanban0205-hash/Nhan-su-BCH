@@ -194,6 +194,7 @@
       <p class="sub" style="margin:0;">Danh sách nhân viên &amp; phê duyệt tài khoản</p>
     </div>
     <div class="admin-actions">
+      <button class="linkbtn" id="btnThongBao">📢 Thông báo</button>
       <button class="linkbtn" id="btnCauHinhHC">Cấu hình Hậu cần</button>
       <button class="linkbtn" id="btnCauHinhNS">Cấu hình Nhân sự</button>
       <button class="linkbtn" id="btnAddModule">+ Thêm quyền</button>
@@ -275,6 +276,25 @@
 </div>
 
 <footer>BCH ĐA CAM LÂM — CAM RANH · Hệ thống quản lý tài khoản nội bộ</footer>
+
+<!-- ============ MODAL THÔNG BÁO CHUNG ============ -->
+<div class="modal-overlay" id="modalThongBao">
+  <div class="modal">
+    <h3>📢 Thông báo chung</h3>
+    <p class="sub" style="margin-top:-8px;">Hiện cho mọi người khi họ mở app (trang báo cáo / Hậu cần).</p>
+    <div id="tbHienTai" style="font-size:13px; color:var(--muted); margin-bottom:12px;"></div>
+    <label>Nội dung thông báo mới</label>
+    <textarea id="tbNoiDung" rows="4" placeholder="Ví dụ: Thứ 7 này BCH họp giao ban lúc 8h sáng tại văn phòng."
+      style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--panel2); color:var(--text); font-family:inherit; font-size:14px; margin-bottom:16px; resize:vertical;"></textarea>
+    <div class="modal-actions">
+      <button class="btn danger" id="btnXoaThongBao">Xoá thông báo hiện tại</button>
+      <button class="btn" id="btnDangThongBao">Đăng thông báo</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCloseThongBao">Đóng</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ MODAL CẤU HÌNH & DỮ LIỆU HẬU CẦN ============ -->
 <div class="modal-overlay" id="modalHauCan">
@@ -697,6 +717,44 @@ document.querySelectorAll("[data-add-hc]").forEach(btn=>{
     input.value = "";
     await loadHauCanTuyChon(); renderHcAll();
   });
+});
+
+/* ================= THÔNG BÁO CHUNG ================= */
+async function loadThongBaoHienTai(){
+  const { data } = await sb.rpc("lay_thong_bao_moi_nhat");
+  const el = document.getElementById("tbHienTai");
+  if(data){
+    el.innerHTML = `<b>Đang hiện:</b> "${data.noi_dung}" <span style="opacity:.7;">(đăng lúc ${new Date(data.tao_luc).toLocaleString("vi-VN")})</span>`;
+  } else {
+    el.innerHTML = `<i>Hiện không có thông báo nào đang hiện.</i>`;
+  }
+}
+
+document.getElementById("btnThongBao").addEventListener("click", async ()=>{
+  document.getElementById("tbNoiDung").value = "";
+  await loadThongBaoHienTai();
+  document.getElementById("modalThongBao").classList.add("show");
+});
+document.getElementById("btnCloseThongBao").addEventListener("click", ()=>{
+  document.getElementById("modalThongBao").classList.remove("show");
+});
+
+document.getElementById("btnDangThongBao").addEventListener("click", async ()=>{
+  const noiDung = document.getElementById("tbNoiDung").value.trim();
+  if(!noiDung){ alert("Vui lòng nhập nội dung thông báo."); return; }
+  const { error } = await sb.rpc("admin_dang_thong_bao", { p_pass: currentAdminPass, p_noi_dung: noiDung });
+  if(error){ alert("Không đăng được, vui lòng thử lại."); return; }
+  document.getElementById("tbNoiDung").value = "";
+  await loadThongBaoHienTai();
+  showToast("✓ Đã đăng thông báo mới.");
+});
+
+document.getElementById("btnXoaThongBao").addEventListener("click", async ()=>{
+  if(!confirm("Xoá thông báo đang hiện? Mọi người sẽ không thấy banner này nữa.")) return;
+  const { error } = await sb.rpc("admin_xoa_thong_bao", { p_pass: currentAdminPass });
+  if(error){ alert("Không xoá được."); return; }
+  await loadThongBaoHienTai();
+  showToast("✓ Đã xoá thông báo.");
 });
 
 document.getElementById("btnToggleAdmin").addEventListener("click", ()=>{
