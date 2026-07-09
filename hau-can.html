@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hậu cần — BCH ĐA CAM LÂM - CAM RANH</title>
+<title>Hậu cần — BCH DA CAM LÂM - CAM RANH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -39,12 +39,38 @@
   .msg.ok{background:var(--ok-dim);color:var(--ok);border:1px solid var(--ok);}
   .msg.bad{background:var(--bad-dim);color:var(--bad);border:1px solid var(--bad);}
   .loading{color:var(--muted);text-align:center;padding:30px;font-size:15px;}
+
+  /* ============ Trường thông tin (field) — có trạng thái "đã cập nhật" ============ */
+  .field{border:2px solid var(--border);background:var(--panel2);border-radius:12px;padding:14px 16px;margin-bottom:12px;transition:.15s;}
+  .field.done{border-color:var(--ok);background:var(--ok-dim);}
+  .field-label{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .field-label .req{color:var(--bad);font-weight:800;}
+  .field-check{display:none;align-items:center;gap:4px;font-size:11px;font-weight:800;color:var(--ok);white-space:nowrap;}
+  .field.done .field-check{display:flex;}
+  .field input[type=text],.field input[type=tel],.field select{
+    width:100%;padding:11px 12px;border-radius:8px;border:1.5px solid var(--border);
+    background:#fff;font-size:14px;font-family:inherit;outline:none;color:var(--text);
+  }
+  .field input:focus,.field select:focus{border-color:var(--accent);}
+  .field-row2{display:grid;grid-template-columns:1fr;gap:8px;}
+  .field-sub{font-size:11px;color:var(--muted);margin:8px 0 4px;font-weight:700;}
+  .field-group-title{font-size:15px;font-weight:800;color:var(--accent-dark);margin:20px 0 4px;display:flex;align-items:center;gap:6px;}
+  .field-group-title:first-child{margin-top:0;}
+  .date-triple{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;}
+  .date-triple select{width:100%;padding:11px 8px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-size:14px;font-family:inherit;outline:none;color:var(--text);}
+  .date-triple select:focus{border-color:var(--accent);}
+  .field-label{cursor:pointer;}
+  .field-body{margin-top:10px;}
+  .field.collapsed .field-body{display:none;}
+  .field.collapsed{padding:12px 16px;}
+  .field-label .chev{font-size:11px;color:var(--muted);transition:.15s;margin-left:4px;}
+  .field.collapsed .chev{transform:rotate(-90deg);display:inline-block;}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="brand">BCH ĐA CAM LÂM — CAM RANH</div>
+  <div class="brand">BCH DA CAM LÂM — CAM RANH</div>
   <a class="back" href="index.html">‹ Về trang báo cáo</a>
 </div>
 
@@ -53,17 +79,125 @@
 <div id="appBox" style="display:none; width:100%; max-width:520px;">
 
   <div class="card">
-    <h2>Thông tin vị trí &amp; nơi ở</h2>
+    <h2>Cập nhật thông tin cá nhân</h2>
     <p class="sub">Cập nhật khi có thay đổi. Hệ thống chỉ giữ lại lần cập nhật gần nhất.</p>
 
-    <div class="group-label">Chọn vị trí làm việc:</div>
-    <div class="chip-list" id="chipViTri"></div>
+    <div class="field" id="fCccd">
+      <div class="field-label">Số căn cước công dân <span class="field-check">✓ Đã nhập</span></div>
+      <input type="text" id="inpCccd" inputmode="numeric" maxlength="12" placeholder="Nhập đúng 12 số">
+    </div>
 
-    <div class="group-label">Chọn vị trí ở:</div>
-    <div class="chip-list" id="chipNoiO"></div>
+    <div class="field" id="fNgayCapCccd">
+      <div class="field-label">Ngày tháng cấp CCCD <span class="field-check">✓ Đã chọn</span></div>
+      <div class="date-triple">
+        <select id="selCccdNgay"></select>
+        <select id="selCccdThang"></select>
+        <select id="selCccdNam"></select>
+      </div>
+    </div>
 
-    <div class="group-label">Face ID ra vào cổng:</div>
-    <div class="chip-list" id="chipFaceId"></div>
+    <div class="field" id="fNoiCapCccd">
+      <div class="field-label">Nơi cấp CCCD <span class="field-check">✓ Đã chọn</span></div>
+      <select id="selNoiCapCccd">
+        <option value="">— Chọn nơi cấp —</option>
+        <option value="Cục Cảnh sát QLHC về TTXH">Cục Cảnh sát QLHC về TTXH</option>
+        <option value="__khac__">Khác (tự nhập)</option>
+      </select>
+      <input type="text" id="inpNoiCapCccdKhac" placeholder="Nhập nơi cấp khác" style="display:none;margin-top:8px;">
+    </div>
+
+    <div class="field" id="fGioiTinh">
+      <div class="field-label">Giới tính <span class="field-check">✓ Đã chọn</span></div>
+      <div class="chip-list" id="chipGioiTinh"></div>
+    </div>
+
+    <div class="field" id="fNgaySinh">
+      <div class="field-label">Ngày tháng năm sinh <span class="field-check">✓ Đã chọn</span></div>
+      <div class="date-triple">
+        <select id="selSinhNgay"></select>
+        <select id="selSinhThang"></select>
+        <select id="selSinhNam"></select>
+      </div>
+    </div>
+
+    <div class="field" id="fHonNhan">
+      <div class="field-label">Tình trạng hôn nhân <span class="field-check">✓ Đã chọn</span></div>
+      <div class="chip-list" id="chipHonNhan"></div>
+    </div>
+
+    <div class="field" id="fQuocTich">
+      <div class="field-label">Quốc tịch <span class="field-check">✓ Đã nhập</span></div>
+      <input type="text" id="inpQuocTich" placeholder="Việt Nam" value="Việt Nam">
+    </div>
+
+    <div class="field" id="fNgayBatDau">
+      <div class="field-label">Ngày bắt đầu làm việc tại dự án <span class="field-check">✓ Đã chọn</span></div>
+      <div class="date-triple">
+        <select id="selBdNgay"></select>
+        <select id="selBdThang"></select>
+        <select id="selBdNam"></select>
+      </div>
+    </div>
+
+    <div class="field" id="fThuongTru">
+      <div class="field-label">Địa chỉ thường trú (sau sáp nhập) <span class="field-check">✓ Đã cập nhật</span></div>
+      <div class="field-row2">
+        <select id="selTtTinh"><option value="">— Chọn Tỉnh/Thành phố —</option></select>
+        <input type="text" id="inpTtXa" placeholder="Xã/Phường">
+        <input type="text" id="inpTtThon" placeholder="Thôn/Tổ dân phố">
+      </div>
+    </div>
+
+    <div class="field" id="fHienTai">
+      <div class="field-label">Địa chỉ hiện tại (sau sáp nhập) <span class="field-check">✓ Đã cập nhật</span></div>
+      <div class="field-row2">
+        <select id="selHtTinh"><option value="">— Chọn Tỉnh/Thành phố —</option></select>
+        <input type="text" id="inpHtXa" placeholder="Xã/Phường">
+        <input type="text" id="inpHtThon" placeholder="Thôn/Tổ dân phố">
+      </div>
+    </div>
+
+    <div class="field" id="fDuAn">
+      <div class="field-label">Dự án làm việc <span class="field-check">✓ Đã chọn</span></div>
+      <div class="chip-list" id="chipDuAn"></div>
+    </div>
+
+    <div class="field" id="fNguon">
+      <div class="field-label">Nguồn nhân sự <span class="field-check">✓ Đã chọn</span></div>
+      <div class="chip-list" id="chipNguon"></div>
+    </div>
+
+    <button class="btn" id="btnLuuCaNhan">Lưu thông tin cá nhân</button>
+    <div class="msg" id="msgCaNhan"></div>
+  </div>
+
+  <div class="card">
+    <h2>Cập nhật thông tin CBCNV tại Cam Ranh</h2>
+    <p class="sub">Cập nhật khi có thay đổi. Hệ thống chỉ giữ lại lần cập nhật gần nhất.</p>
+
+    <div class="field" id="fViTri">
+      <div class="field-label">Vị trí làm việc <span class="field-check">✓ Đã chọn</span></div>
+      <div class="chip-list" id="chipViTri"></div>
+    </div>
+
+    <div class="field" id="fNoiO">
+      <div class="field-label">Chỗ ở hiện tại <span class="field-check">✓ Đã chọn</span></div>
+      <div class="chip-list" id="chipNoiO"></div>
+    </div>
+
+    <div class="field" id="fFaceId">
+      <div class="field-label">Face ID ra vào cổng <span class="field-check">✓ Đã chọn</span></div>
+      <div class="chip-list" id="chipFaceId"></div>
+    </div>
+
+    <div class="field" id="fKtx">
+      <div class="field-label">Ngày đăng ký KTX <span class="field-check">✓ Đã chọn</span></div>
+      <div class="date-triple">
+        <select id="selKtxNgay"></select>
+        <select id="selKtxThang"></select>
+        <select id="selKtxNam"></select>
+      </div>
+    </div>
 
     <button class="btn" id="btnLuuHoSo">Lưu thông tin</button>
     <div class="msg" id="msgHoSo"></div>
@@ -88,6 +222,19 @@ const LOGIN_PAGE = "quan-ly-tai-khoan.html";
 let saved = null;
 let tuyChon = { vi_tri: [], noi_o: [], face_id: [] };
 
+// 34 tỉnh/thành phố sau sáp nhập (có hiệu lực từ 1/7/2025) — không còn cấp Huyện
+const DANH_SACH_TINH = [
+  "An Giang","Bắc Ninh","Cao Bằng","Cà Mau","TP. Cần Thơ","TP. Đà Nẵng","Đắk Lắk","Điện Biên",
+  "Đồng Nai","Đồng Tháp","Gia Lai","TP. Hà Nội","Hà Tĩnh","TP. Hải Phòng","TP. Hồ Chí Minh",
+  "Hưng Yên","TP. Huế","Khánh Hòa","Lai Châu","Lạng Sơn","Lào Cai","Lâm Đồng","Nghệ An",
+  "Ninh Bình","Phú Thọ","Quảng Ngãi","Quảng Ninh","Quảng Trị","Sơn La","Tây Ninh",
+  "Thái Nguyên","Thanh Hóa","Tuyên Quang","Vĩnh Long"
+];
+const DU_AN_OPTIONS = ["Làng Vân","Cam Ranh","Phước Vĩnh Tây"].map(v=>({gia_tri:v}));
+const NGUON_OPTIONS = ["Tuyển mới","Vincons","Vinhomes"].map(v=>({gia_tri:v}));
+const GIOI_TINH_OPTIONS = ["Nam","Nữ"].map(v=>({gia_tri:v}));
+const HON_NHAN_OPTIONS = ["Độc thân","Đã kết hôn","Ly hôn"].map(v=>({gia_tri:v}));
+
 function showMsg(el, type, text){ el.className = "msg show " + type; el.textContent = text; }
 
 function renderChips(containerId, name, options){
@@ -99,6 +246,42 @@ function renderChips(containerId, name, options){
     </label>`).join("");
 }
 
+function renderTinhSelect(selId){
+  const el = document.getElementById(selId);
+  DANH_SACH_TINH.forEach(t=>{
+    const opt = document.createElement("option");
+    opt.value = t; opt.textContent = t;
+    el.appendChild(opt);
+  });
+}
+
+// Sinh 3 ô chọn Ngày/Tháng/Năm dùng chung cho CCCD, Ngày sinh, Ngày bắt đầu làm việc, Ngày đăng ký KTX
+function renderDateTriple(dayId, monthId, yearId){
+  const dEl = document.getElementById(dayId);
+  const mEl = document.getElementById(monthId);
+  const yEl = document.getElementById(yearId);
+  dEl.innerHTML = '<option value="">Ngày</option>' + Array.from({length:31},(_,i)=>i+1).map(d=>`<option value="${d}">${d}</option>`).join("");
+  mEl.innerHTML = '<option value="">Tháng</option>' + Array.from({length:12},(_,i)=>i+1).map(m=>`<option value="${m}">Tháng ${m}</option>`).join("");
+  const nowY = new Date().getFullYear();
+  const years = Array.from({length:nowY-1950+1},(_,i)=>nowY-i);
+  yEl.innerHTML = '<option value="">Năm</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join("");
+}
+function getDateTriple(dayId, monthId, yearId){
+  const d = document.getElementById(dayId).value, m = document.getElementById(monthId).value, y = document.getElementById(yearId).value;
+  if(!d || !m || !y) return null;
+  return y + "-" + String(m).padStart(2,"0") + "-" + String(d).padStart(2,"0");
+}
+function setDateTriple(dayId, monthId, yearId, isoDate){
+  if(!isoDate) return;
+  const [y,m,d] = isoDate.split("-");
+  document.getElementById(dayId).value = String(parseInt(d));
+  document.getElementById(monthId).value = String(parseInt(m));
+  document.getElementById(yearId).value = y;
+}
+function isDateTripleFilled(dayId, monthId, yearId){
+  return !!(document.getElementById(dayId).value && document.getElementById(monthId).value && document.getElementById(yearId).value);
+}
+
 function getChecked(name){
   const el = document.querySelector(`input[name="${name}"]:checked`);
   return el ? [el.value] : [];
@@ -107,6 +290,65 @@ function setChecked(name, values){
   document.querySelectorAll(`input[name="${name}"]`).forEach(i => {
     i.checked = (values || []).includes(i.value);
   });
+}
+
+// Tô màu field khi đã có dữ liệu (chọn hoặc nhập xong) để phân biệt trực quan
+function markDone(fieldId, isDone){
+  const el = document.getElementById(fieldId);
+  if(el) el.classList.toggle("done", !!isDone);
+}
+function refreshFieldStates(){
+  markDone("fCccd", document.getElementById("inpCccd").value.trim().length === 12);
+  markDone("fNgayCapCccd", isDateTripleFilled("selCccdNgay","selCccdThang","selCccdNam"));
+  markDone("fNoiCapCccd", !!getNoiCapCccdValue());
+  markDone("fGioiTinh", getChecked("gioi_tinh").length>0);
+  markDone("fNgaySinh", isDateTripleFilled("selSinhNgay","selSinhThang","selSinhNam"));
+  markDone("fHonNhan", getChecked("hon_nhan").length>0);
+  markDone("fQuocTich", document.getElementById("inpQuocTich").value.trim().length>0);
+  markDone("fNgayBatDau", isDateTripleFilled("selBdNgay","selBdThang","selBdNam"));
+  markDone("fThuongTru", document.getElementById("selTtTinh").value && document.getElementById("inpTtXa").value.trim());
+  markDone("fHienTai", document.getElementById("selHtTinh").value && document.getElementById("inpHtXa").value.trim());
+  markDone("fViTri", getChecked("vi_tri").length>0);
+  markDone("fNoiO", getChecked("noi_o").length>0);
+  markDone("fFaceId", getChecked("face_id").length>0);
+  markDone("fKtx", isDateTripleFilled("selKtxNgay","selKtxThang","selKtxNam"));
+  markDone("fDuAn", getChecked("du_an").length>0);
+  markDone("fNguon", getChecked("nguon").length>0);
+}
+
+// Tự bọc phần nội dung mỗi field vào 1 khối riêng để ẩn/hiện được,
+// và cho phép bấm vào tiêu đề để mở/đóng lại chỉnh sửa.
+function initCollapsibleFields(){
+  document.querySelectorAll(".field").forEach(field=>{
+    const label = field.querySelector(".field-label");
+    if(!label || field.querySelector(".field-body")) return;
+    const chev = document.createElement("span");
+    chev.className = "chev";
+    chev.textContent = "▾";
+    label.appendChild(chev);
+    const body = document.createElement("div");
+    body.className = "field-body";
+    Array.from(field.children).forEach(child=>{
+      if(child !== label) body.appendChild(child);
+    });
+    field.appendChild(body);
+    label.addEventListener("click", ()=>{ field.classList.toggle("collapsed"); });
+  });
+}
+
+// Tự thu gọn 1 field khi đã nhập/chọn xong (gọi khi rời khỏi ô — blur/change)
+function tryCollapse(fieldId){
+  const el = document.getElementById(fieldId);
+  if(el && el.classList.contains("done")) el.classList.add("collapsed");
+}
+function tryCollapseAllDone(){
+  document.querySelectorAll(".field.done").forEach(el=>el.classList.add("collapsed"));
+}
+
+function getNoiCapCccdValue(){
+  const sel = document.getElementById("selNoiCapCccd").value;
+  if(sel === "__khac__") return document.getElementById("inpNoiCapCccdKhac").value.trim();
+  return sel;
 }
 
 async function init(){
@@ -128,6 +370,24 @@ async function init(){
   renderChips("chipViTri", "vi_tri", tuyChon.vi_tri);
   renderChips("chipNoiO", "noi_o", tuyChon.noi_o);
   renderChips("chipFaceId", "face_id", tuyChon.face_id);
+  renderChips("chipDuAn", "du_an", DU_AN_OPTIONS);
+  renderChips("chipNguon", "nguon", NGUON_OPTIONS);
+  renderChips("chipGioiTinh", "gioi_tinh", GIOI_TINH_OPTIONS);
+  renderChips("chipHonNhan", "hon_nhan", HON_NHAN_OPTIONS);
+  renderTinhSelect("selTtTinh");
+  renderTinhSelect("selHtTinh");
+  renderDateTriple("selCccdNgay","selCccdThang","selCccdNam");
+  renderDateTriple("selSinhNgay","selSinhThang","selSinhNam");
+  renderDateTriple("selBdNgay","selBdThang","selBdNam");
+  renderDateTriple("selKtxNgay","selKtxThang","selKtxNam");
+
+  initCollapsibleFields();
+
+  document.getElementById("selNoiCapCccd").addEventListener("change", (e)=>{
+    document.getElementById("inpNoiCapCccdKhac").style.display = (e.target.value === "__khac__") ? "block" : "none";
+    refreshFieldStates();
+  });
+  document.getElementById("inpNoiCapCccdKhac").addEventListener("input", refreshFieldStates);
 
   const { data: hoSo } = await sb.rpc("hc_lay_ho_so_ca_nhan", { p_msnv: saved.msnv });
   if(hoSo){
@@ -135,6 +395,83 @@ async function init(){
     setChecked("noi_o", hoSo.noi_o);
     setChecked("face_id", [hoSo.face_id]);
   }
+
+  // Tải lại thông tin cá nhân đã lưu trước đó (nếu có)
+  try{
+    const { data: ttcn } = await sb.rpc("hc_lay_thong_tin_ca_nhan", { p_msnv: saved.msnv });
+    if(ttcn){
+      if(ttcn.cccd) document.getElementById("inpCccd").value = ttcn.cccd;
+      if(ttcn.tt_tinh) document.getElementById("selTtTinh").value = ttcn.tt_tinh;
+      if(ttcn.tt_xa) document.getElementById("inpTtXa").value = ttcn.tt_xa;
+      if(ttcn.tt_thon) document.getElementById("inpTtThon").value = ttcn.tt_thon;
+      if(ttcn.ht_tinh) document.getElementById("selHtTinh").value = ttcn.ht_tinh;
+      if(ttcn.ht_xa) document.getElementById("inpHtXa").value = ttcn.ht_xa;
+      if(ttcn.ht_thon) document.getElementById("inpHtThon").value = ttcn.ht_thon;
+      setChecked("du_an", [ttcn.du_an_lam_viec]);
+      setChecked("nguon", [ttcn.nguon_nhan_su]);
+
+      setDateTriple("selCccdNgay","selCccdThang","selCccdNam", ttcn.ngay_cap_cccd);
+      if(ttcn.noi_cap_cccd){
+        const knownList = ["Cục Cảnh sát QLHC về TTXH"];
+        if(knownList.includes(ttcn.noi_cap_cccd)){
+          document.getElementById("selNoiCapCccd").value = ttcn.noi_cap_cccd;
+        } else {
+          document.getElementById("selNoiCapCccd").value = "__khac__";
+          document.getElementById("inpNoiCapCccdKhac").value = ttcn.noi_cap_cccd;
+          document.getElementById("inpNoiCapCccdKhac").style.display = "block";
+        }
+      }
+      setChecked("gioi_tinh", [ttcn.gioi_tinh]);
+      setChecked("hon_nhan", [ttcn.tinh_trang_hon_nhan]);
+      if(ttcn.quoc_tich) document.getElementById("inpQuocTich").value = ttcn.quoc_tich;
+      setDateTriple("selSinhNgay","selSinhThang","selSinhNam", ttcn.ngay_sinh);
+      setDateTriple("selBdNgay","selBdThang","selBdNam", ttcn.ngay_bat_dau_lam_viec);
+      setDateTriple("selKtxNgay","selKtxThang","selKtxNam", ttcn.ngay_dang_ky_ktx);
+    }
+  }catch(e){}
+
+  // CCCD: chỉ cho gõ số, tối đa 12 chữ số
+  document.getElementById("inpCccd").addEventListener("input", (e)=>{
+    e.target.value = e.target.value.replace(/\D/g,"").slice(0,12);
+    refreshFieldStates();
+  });
+  document.getElementById("inpCccd").addEventListener("blur", ()=>tryCollapse("fCccd"));
+  document.getElementById("inpNoiCapCccdKhac").addEventListener("blur", ()=>tryCollapse("fNoiCapCccd"));
+  document.getElementById("inpQuocTich").addEventListener("blur", ()=>tryCollapse("fQuocTich"));
+  document.getElementById("inpTtXa").addEventListener("blur", ()=>tryCollapse("fThuongTru"));
+  document.getElementById("inpTtThon").addEventListener("blur", ()=>tryCollapse("fThuongTru"));
+  document.getElementById("inpHtXa").addEventListener("blur", ()=>tryCollapse("fHienTai"));
+  document.getElementById("inpHtThon").addEventListener("blur", ()=>tryCollapse("fHienTai"));
+
+  // Tô màu trạng thái ngay khi người dùng chọn/nhập bất kỳ trường nào
+  ["selTtTinh","inpTtXa","inpTtThon","selHtTinh","inpHtXa","inpHtThon","inpQuocTich",
+   "selCccdNgay","selCccdThang","selCccdNam","selSinhNgay","selSinhThang","selSinhNam",
+   "selBdNgay","selBdThang","selBdNam","selKtxNgay","selKtxThang","selKtxNam"].forEach(id=>{
+    document.getElementById(id).addEventListener("input", refreshFieldStates);
+    document.getElementById(id).addEventListener("change", refreshFieldStates);
+  });
+  // Các ô select/ngày-tháng-năm: chọn xong (change) là tự thu gọn luôn
+  const collapseMap = {
+    selTtTinh:"fThuongTru", selHtTinh:"fHienTai", selNoiCapCccd:"fNoiCapCccd",
+    selCccdNgay:"fNgayCapCccd", selCccdThang:"fNgayCapCccd", selCccdNam:"fNgayCapCccd",
+    selSinhNgay:"fNgaySinh", selSinhThang:"fNgaySinh", selSinhNam:"fNgaySinh",
+    selBdNgay:"fNgayBatDau", selBdThang:"fNgayBatDau", selBdNam:"fNgayBatDau",
+    selKtxNgay:"fKtx", selKtxThang:"fKtx", selKtxNam:"fKtx"
+  };
+  Object.keys(collapseMap).forEach(id=>{
+    document.getElementById(id).addEventListener("change", ()=>{
+      setTimeout(()=>tryCollapse(collapseMap[id]), 150);
+    });
+  });
+  document.querySelectorAll('input[type=radio]').forEach(r=>{
+    r.addEventListener("change", refreshFieldStates);
+    r.addEventListener("change", (e)=>{
+      const fieldWrap = e.target.closest(".field");
+      if(fieldWrap) setTimeout(()=>tryCollapse(fieldWrap.id), 150);
+    });
+  });
+  refreshFieldStates();
+  tryCollapseAllDone(); // Thu gọn sẵn các mục đã có dữ liệu từ trước khi mở lại trang
 
   document.getElementById("loadingBox").style.display = "none";
   document.getElementById("appBox").style.display = "block";
@@ -158,6 +495,36 @@ async function init(){
   }catch(e){}
 }
 
+document.getElementById("btnLuuCaNhan").addEventListener("click", async ()=>{
+  const cccd = document.getElementById("inpCccd").value.trim();
+  const msgEl = document.getElementById("msgCaNhan");
+  if(cccd && cccd.length !== 12){
+    showMsg(msgEl, "bad", "Số căn cước phải đủ 12 chữ số.");
+    return;
+  }
+  const payload = {
+    p_msnv: saved.msnv, p_ten: saved.ten, p_cccd: cccd || null,
+    p_tt_tinh: document.getElementById("selTtTinh").value || null,
+    p_tt_xa: document.getElementById("inpTtXa").value.trim() || null,
+    p_tt_thon: document.getElementById("inpTtThon").value.trim() || null,
+    p_ht_tinh: document.getElementById("selHtTinh").value || null,
+    p_ht_xa: document.getElementById("inpHtXa").value.trim() || null,
+    p_ht_thon: document.getElementById("inpHtThon").value.trim() || null,
+    p_du_an: getChecked("du_an")[0] || null,
+    p_nguon: getChecked("nguon")[0] || null,
+    p_ngay_cap_cccd: getDateTriple("selCccdNgay","selCccdThang","selCccdNam"),
+    p_noi_cap_cccd: getNoiCapCccdValue() || null,
+    p_tinh_trang_hon_nhan: getChecked("hon_nhan")[0] || null,
+    p_gioi_tinh: getChecked("gioi_tinh")[0] || null,
+    p_quoc_tich: document.getElementById("inpQuocTich").value.trim() || "Việt Nam",
+    p_ngay_sinh: getDateTriple("selSinhNgay","selSinhThang","selSinhNam"),
+    p_ngay_bat_dau_lam_viec: getDateTriple("selBdNgay","selBdThang","selBdNam")
+  };
+  const { error } = await sb.rpc("hc_luu_thong_tin_ca_nhan", payload);
+  showMsg(msgEl, error ? "bad" : "ok", error ? "Có lỗi, vui lòng thử lại." : "✓ Đã lưu thông tin cá nhân.");
+  refreshFieldStates();
+});
+
 document.getElementById("btnLuuHoSo").addEventListener("click", async ()=>{
   const viTri = getChecked("vi_tri");
   const noiO = getChecked("noi_o");
@@ -169,25 +536,42 @@ document.getElementById("btnLuuHoSo").addEventListener("click", async ()=>{
   const { error } = await sb.rpc("hc_luu_ho_so", {
     p_msnv: saved.msnv, p_ten: saved.ten, p_vi_tri: viTri, p_noi_o: noiO, p_face_id: faceId
   });
+  const ngayKtx = getDateTriple("selKtxNgay","selKtxThang","selKtxNam");
+  if(ngayKtx){
+    await sb.rpc("hc_luu_ngay_dang_ky_ktx", { p_msnv: saved.msnv, p_ngay: ngayKtx });
+  }
   showMsg(document.getElementById("msgHoSo"), error ? "bad" : "ok", error ? "Có lỗi, vui lòng thử lại." : "✓ Đã lưu thông tin.");
+  refreshFieldStates();
 });
 
 document.getElementById("btnXuatExcel").addEventListener("click", async ()=>{
   const pass = prompt("Nhập mật khẩu để xuất báo cáo:");
   if(pass === null) return;
-  const { data, error } = await sb.rpc("hc_xuat_ho_so", { p_pass: pass });
+  const { data, error } = await sb.rpc("hc_xuat_thong_tin_day_du", { p_pass: pass });
   const msgEl = document.getElementById("msgXuat");
   if(error){ showMsg(msgEl, "bad", "Sai mật khẩu hoặc có lỗi xảy ra."); return; }
   const rows = (data || []).map(r => ({
     "MSNV": r.msnv, "Họ tên": r.ten, "Chức vụ": r.chuc_vu || "",
+    "Giới tính": r.gioi_tinh || "",
+    "Ngày sinh": r.ngay_sinh || "",
+    "Quốc tịch": r.quoc_tich || "",
+    "Tình trạng hôn nhân": r.tinh_trang_hon_nhan || "",
+    "Số căn cước": r.cccd || "",
+    "Ngày cấp CCCD": r.ngay_cap_cccd || "",
+    "Nơi cấp CCCD": r.noi_cap_cccd || "",
+    "Thường trú - Tỉnh/TP": r.tt_tinh || "", "Thường trú - Xã/Phường": r.tt_xa || "", "Thường trú - Thôn/Tổ": r.tt_thon || "",
+    "Hiện tại - Tỉnh/TP": r.ht_tinh || "", "Hiện tại - Xã/Phường": r.ht_xa || "", "Hiện tại - Thôn/Tổ": r.ht_thon || "",
+    "Dự án làm việc": r.du_an_lam_viec || "", "Nguồn nhân sự": r.nguon_nhan_su || "",
+    "Ngày bắt đầu làm việc": r.ngay_bat_dau_lam_viec || "",
     "Vị trí làm việc": (r.vi_tri||[]).join(", "),
     "Nơi ở": (r.noi_o||[]).join(", "),
-    "Face ID": r.face_id || ""
+    "Face ID": r.face_id || "",
+    "Ngày đăng ký KTX": r.ngay_dang_ky_ktx || ""
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Vi tri - Noi o");
-  XLSX.writeFile(wb, "hau_can_vi_tri_noi_o.xlsx");
+  XLSX.utils.book_append_sheet(wb, ws, "Thong tin day du");
+  XLSX.writeFile(wb, "hau_can_thong_tin_day_du.xlsx");
   showMsg(msgEl, "ok", "✓ Đã xuất file Excel.");
 });
 
