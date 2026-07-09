@@ -80,20 +80,20 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .qs-icon-box.qs-ic-ldt{background:linear-gradient(135deg,#1565c0,#26c6da);}
 .qs-group{width:100%;max-width:420px;position:relative;z-index:1;margin-bottom:12px;}
 .qs-group-title{font-size:14px;font-weight:800;color:#fff;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.quickstats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.quickstats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;}
 .quickstats-grid.cols4{grid-template-columns:repeat(4,1fr);}
 .quickstats-grid.cols3{grid-template-columns:1fr 1fr 1fr;}
-.qstat-card{border-radius:10px;padding:8px 6px;text-align:left;position:relative;overflow:hidden;}
+.qstat-card{border-radius:8px;padding:5px 3px;text-align:left;position:relative;overflow:hidden;}
 .qstat-card.q-green{background:linear-gradient(145deg,#1b5e20,#2e7d32);box-shadow:0 3px 10px rgba(46,125,50,0.35);}
 .qstat-card.q-red{background:linear-gradient(145deg,#5c1a1a,#8b2222);box-shadow:0 3px 10px rgba(139,34,34,0.35);}
 .qstat-card.q-orange{background:linear-gradient(145deg,#6d4c00,#9e6b00);box-shadow:0 3px 10px rgba(158,107,0,0.35);}
 .qstat-card.q-blue{background:linear-gradient(145deg,#1565c0,#42a5f5);box-shadow:0 3px 10px rgba(21,101,192,0.35);}
 .qstat-card.q-white{background:#fff;box-shadow:0 3px 10px rgba(0,0,0,0.15);}
-.qstat-icon-circle{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;margin-bottom:5px;background:rgba(255,255,255,0.95);}
+.qstat-icon-circle{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;margin-bottom:3px;background:rgba(255,255,255,0.95);}
 .qstat-card.q-white .qstat-icon-circle{background:rgba(21,101,192,0.1);}
-.qstat-card .qstat-val{color:#fff;font-size:15px;font-weight:800;margin-bottom:0px;}
+.qstat-card .qstat-val{color:#fff;font-size:13px;font-weight:800;margin-bottom:0px;}
 .qstat-card.q-white .qstat-val{color:#1565c0;}
-.qstat-card .qstat-lbl{color:rgba(255,255,255,0.85);font-size:8px;}
+.qstat-card .qstat-lbl{color:rgba(255,255,255,0.85);font-size:7px;}
 .qstat-card.q-white .qstat-lbl{color:#555;}
 .qstat-spark{position:absolute;bottom:2px;left:6px;right:6px;height:12px;opacity:0.85;}
 .qstat-val{font-size:18px;font-weight:800;margin-bottom:3px;}
@@ -1535,14 +1535,25 @@ function setUser(){
 
 function fmtN(v){return v===0?'-':(v<10?'0'+v:String(v));}
 
+function safeEvalCongThuc(str){
+  if(!/^[0-9+\-*/.\s]+$/.test(str)) return null;
+  try{
+    var r = Function('"use strict";return ('+str+')')();
+    if(typeof r === 'number' && isFinite(r)) return Math.max(0, Math.round(r));
+  }catch(e){}
+  return null;
+}
 function niFocus(el){
   var n=parseInt(el.value)||0;
   el.value=n>0?String(n):'';
   el.select();
 }
 function niBlur(el){
-  var n=parseInt(el.value)||0;
+  var raw = el.value.trim();
+  var computed = /[+\-*/]/.test(raw) ? safeEvalCongThuc(raw) : null;
+  var n = computed !== null ? computed : (parseInt(raw)||0);
   el.value=n===0?'-':(n<10?'0'+n:String(n));
+  if(computed !== null) el.dispatchEvent(new Event('input'));
 }
 
 var pendingChanges={}; // {proj: {type: {col: value}}}
@@ -1679,7 +1690,7 @@ function renderTable(){
     TYPES.forEach(function(type,ti){
       var isNghi = (type === 'nghi');
       var bg = isNghi ? '#ffebee' : '#e3f2fd';
-      var txtColor = isNghi ? 'color:#e53935;' : '';
+      var txtColor = isNghi ? 'color:#e53935 !important;' : '';
       h+='<tr style="background:'+bg+';'+txtColor+'">';
       if(ti===0){
         h+='<td class="stk s0" rowspan="'+rowspanN+'" style="vertical-align:middle;font-weight:800;background:#fff">'+proj+'</td>';
