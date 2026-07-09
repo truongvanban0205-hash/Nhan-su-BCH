@@ -685,8 +685,9 @@ async function loadQuickStats(){
           if(ydt[p]&&ydt[p][t])Object.values(ydt[p][t]).forEach(function(v){yTong[t]+=v||0;});
         });
       });
-      var ydilam=0; TYPES.forEach(function(t){ if(t!=='nghi') ydilam+=yTong[t]; });
-      var yng=TYPES.indexOf('nghi')>=0?(yTong['nghi']||0):null;
+      var ydilam=0; TYPES.forEach(function(t){ if(!isNghiType(t)) ydilam+=yTong[t]; });
+      var ynk=nghiKey();
+      var yng=ynk?(yTong[ynk]||0):null;
       prevTotal={dilam:ydilam,nghi:yng,tong:ydilam+(yng||0)};
       TYPES.forEach(function(t){ prevTotal[t]=yTong[t]; });
     }
@@ -694,45 +695,39 @@ async function loadQuickStats(){
       var nd=nsR.data.data,projs=nd.projects||[],dt=nd.data||{};
       var tongTheoLoai={}; TYPES.forEach(function(t){tongTheoLoai[t]=0;});
       var nghiList=[];
+      var nk=nghiKey();
       projs.forEach(function(p){
         TYPES.forEach(function(t){
           if(dt[p]&&dt[p][t])Object.values(dt[p][t]).forEach(function(v){tongTheoLoai[t]+=v||0;});
         });
-        if(dt[p]&&dt[p].nghi){
+        if(nk && dt[p]&&dt[p][nk]){
           var pn=0;
-          Object.values(dt[p].nghi).forEach(function(v){pn+=v||0;});
+          Object.values(dt[p][nk]).forEach(function(v){pn+=v||0;});
           if(pn>0)nghiList.push({proj:p,n:pn});
         }
       });
-      var coNghi = TYPES.indexOf('nghi') >= 0;
-      var dilam=0; TYPES.forEach(function(t){ if(t!=='nghi') dilam+=tongTheoLoai[t]; });
-      var ng = coNghi ? (tongTheoLoai['nghi']||0) : 0;
+      var dilam=0; TYPES.forEach(function(t){ if(!isNghiType(t)) dilam+=tongTheoLoai[t]; });
+      var ng = nk ? (tongTheoLoai[nk]||0) : 0;
       var tongAll=dilam+ng;
-      qsDetailData.ns={dilam:dilam,nghi:(coNghi?ng:null),tong:tongAll,nghiList:nghiList,projects:projs};
+      qsDetailData.ns={dilam:dilam,nghi:ng,tong:tongAll,nghiList:nghiList,projects:projs};
       TYPES.forEach(function(t){ qsDetailData.ns[t]=tongTheoLoai[t]; });
 
-      // Donut Nhân sự: nửa phải = Đi làm/Nghỉ (tình trạng), nửa trái = cơ cấu theo loại ca — luôn khớp đúng cấu hình hiện tại
-      var attendTotal = dilam + ng;
-      var shiftPalette = ['#43a047','#66bb6a','#81c784','#a5d6a7','#c8e6c9','#2e7d32'];
-      var segs = [];
-      segs.push({label:'Đi làm', value:dilam, color:'#1b5e20', frac: qsSafeDiv(dilam,attendTotal)*0.5});
-      if(coNghi){
-        segs.push({label:'Nghỉ', value:ng, color:'#e53935', frac: qsSafeDiv(ng,attendTotal)*0.5});
-      }
-      var legendRows=[{label:'Đi làm', value:dilam, color:'#1b5e20'}];
-      if(coNghi) legendRows.push({label:'Nghỉ', value:ng, color:'#e53935', onclick:"qsShowDetail('ns-nghi')"});
-      var pIdx=0;
+      // Donut Nhân sự: 1 vòng phẳng như MMTB — mỗi loại ca 1 mảnh, tỉ lệ trực tiếp trên tổng.
+      // Loại CUỐI CÙNG trong danh sách (quy ước = Nghỉ, theo VỊ TRÍ chứ không theo tên) luôn tô đỏ.
+      var shiftPalette = ['#2e7d32','#43a047','#66bb6a','#81c784','#a5d6a7','#c8e6c9'];
+      var segs=[], legendRows=[], pIdx=0;
       TYPES.forEach(function(t,ti){
-        if(t==='nghi')return;
         var v=tongTheoLoai[t]||0;
-        var color=shiftPalette[pIdx%shiftPalette.length]; pIdx++;
-        segs.push({label:TLABELS[ti]||t, value:v, color:color, frac: qsSafeDiv(v,dilam)*0.5});
-        legendRows.push({label:TLABELS[ti]||t, value:v, color:color});
+        var last=isNghiType(t);
+        var color = last ? '#e53935' : shiftPalette[pIdx%shiftPalette.length];
+        if(!last) pIdx++;
+        segs.push({label:TLABELS[ti]||t, value:v, color:color, frac: qsSafeDiv(v,tongAll)});
+        legendRows.push({label:TLABELS[ti]||t, value:v, color:color, onclick: last?"qsShowDetail('ns-nghi')":null});
       });
       qsRenderDonut('qs-ns-donut-svg', segs);
       qsRenderLegend('qs-ns-legend', legendRows);
       document.getElementById('qs-ns-donut-tong').innerHTML=tongAll+qsArrow(tongAll,prevTotal&&prevTotal.tong);
-      if(coNghi){
+      if(nk){
         qsCheckAlert('qs-ns-donut-wrap',ng>0&&tongAll>0&&(ng/tongAll)>0.15);
       }
     }
@@ -1014,7 +1009,7 @@ async function exportFullReport(){
     var rowT2=0;
     nsCols.forEach(function(c){
       var v=bchTot[typeKey][c.k]||0;rowT2+=v;
-      var clr=(typeKey==='nghi')&&v?'#e53935':'#1a1a1a';
+      var clr=isNghiType(typeKey)&&v?'#e53935':'#1a1a1a';
       nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#f5f5f5;font-size:11px;color:'+clr+'">'+fN(v)+'</td>';
     });
     nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#f5f5f5;font-weight:700;font-size:11px">'+fN(rowT2)+'</td></tr>';
@@ -1197,11 +1192,12 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
       +'<span style="font-weight:600;color:#1a1a1a;min-width:30px;text-align:right">'+arrow+r.value+'</span></div>';
   });
   html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;"><span style="color:#555;">Tổng</span><span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span></div>';
-  // Chỉ tách dòng Đi làm/Nghỉ nếu cấu hình Loại ca hiện tại còn mục mã 'nghi'
-  if(TYPES.indexOf('nghi')>=0){
+  // Tách dòng Đi làm/Nghỉ theo loại ca CUỐI CÙNG trong cấu hình (quy ước Nghỉ theo vị trí)
+  var nk=nghiKey();
+  if(nk){
     var nghiTotal=0;
     nsProjs.forEach(function(p){
-      if(nsData[p]&&nsData[p].nghi)Object.values(nsData[p].nghi).forEach(function(v){nghiTotal+=v||0;});
+      if(nsData[p]&&nsData[p][nk])Object.values(nsData[p][nk]).forEach(function(v){nghiTotal+=v||0;});
     });
     var diLamTotal=grandTotal-nghiTotal;
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#555;">Đi làm</span><span style="font-weight:700;color:#1a1a1a">'+diLamTotal+'</span></div>';
@@ -1389,6 +1385,11 @@ function getTenCa(proj, ti){
   if(TEN_RIENG_MAP[proj] && TEN_RIENG_MAP[proj][ma]) return TEN_RIENG_MAP[proj][ma];
   return TLABELS[ti];
 }
+
+// Quy ước bắt buộc: loại ca CUỐI CÙNG trong danh sách cấu hình luôn được coi là "Nghỉ"
+// (xét theo VỊ TRÍ, không theo tên/mã) — để không phụ thuộc việc đặt tên.
+function nghiKey(){ return TYPES.length ? TYPES[TYPES.length-1] : null; }
+function isNghiType(t){ return TYPES.length>0 && t===nghiKey(); }
 
 async function taiCauHinhCaLamViec(){
   try{
@@ -1723,9 +1724,9 @@ function renderTable(){
     ensureProj(proj);
     var rowspanN = TYPES.length + 1;
     TYPES.forEach(function(type,ti){
-      var isNghi = (type === 'nghi');
-      var bg = isNghi ? '#ffebee' : '#e3f2fd';
-      var txtColor = isNghi ? 'color:#e53935 !important;' : '';
+      var isNghi = isNghiType(type);
+      var bg = isNghi ? '#ffcdd2' : '#e3f2fd';
+      var txtColor = isNghi ? 'color:#b71c1c !important;font-weight:700;' : '';
       h+='<tr style="background:'+bg+';'+txtColor+'">';
       if(ti===0){
         h+='<td class="stk s0" rowspan="'+rowspanN+'" style="vertical-align:middle;font-weight:800;background:#fff">'+proj+'</td>';
@@ -1858,7 +1859,7 @@ function renderCharts(){
   function calcGroup(proj,grp){
     var total=0;
     TYPES.forEach(function(t){
-      if(t==='nghi')return;
+      if(isNghiType(t))return;
       grp.keys.forEach(function(k){
         total+=(data[proj]&&data[proj][t]?data[proj][t][k]||0:0);
       });
@@ -1869,7 +1870,7 @@ function renderCharts(){
   function calcOther(proj){
     var total=0;
     TYPES.forEach(function(t){
-      if(t==='nghi')return;
+      if(isNghiType(t))return;
       otherKeys.forEach(function(k){
         total+=(data[proj]&&data[proj][t]?data[proj][t][k]||0:0);
       });
@@ -1984,12 +1985,13 @@ function renderCharts(){
     +'<span style="color:#555;">Tổng</span>'
     +'<span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span>'
     +'</div>';
-  // Chỉ tách dòng Đi làm/Nghỉ nếu cấu hình Loại ca hiện tại còn mục mã 'nghi'
-  if(TYPES.indexOf('nghi')>=0){
+  // Tách dòng Đi làm/Nghỉ theo loại ca CUỐI CÙNG trong cấu hình (quy ước Nghỉ theo vị trí)
+  var nk2=nghiKey();
+  if(nk2){
     var tongNghi=0;
     projects.forEach(function(proj){
       COLS.forEach(function(c){
-        tongNghi+=(data[proj]&&data[proj]['nghi']?data[proj]['nghi'][c.k]||0:0);
+        tongNghi+=(data[proj]&&data[proj][nk2]?data[proj][nk2][c.k]||0:0);
       });
     });
     var tongDiLam=grandTotal-tongNghi;
