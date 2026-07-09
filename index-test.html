@@ -285,22 +285,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
           <div class="qstat-val" id="qs-ns-dilam">-</div><div class="qstat-lbl">Đi làm</div>
           <svg class="qstat-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="0,20 20,16 35,18 50,10 65,12 80,5 100,2" fill="none" stroke="#a5d6a7" stroke-width="2"/></svg>
         </div>
-        <div class="qstat-card q-green">
-          <div class="qstat-icon-circle">1️⃣</div>
-          <div class="qstat-val" id="qs-ns-ca1">-</div><div class="qstat-lbl">Ca 1</div>
-          <svg class="qstat-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="0,18 20,14 35,16 50,9 65,11 80,4 100,3" fill="none" stroke="#a5d6a7" stroke-width="2"/></svg>
-        </div>
-        <div class="qstat-card q-green">
-          <div class="qstat-icon-circle">2️⃣</div>
-          <div class="qstat-val" id="qs-ns-ca2">-</div><div class="qstat-lbl">Ca 2</div>
-          <svg class="qstat-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="0,19 20,17 35,12 50,14 65,8 80,10 100,4" fill="none" stroke="#a5d6a7" stroke-width="2"/></svg>
-        </div>
-        <div id="qs-ns-extra"></div>
-        <div class="qstat-card q-red qs-clickable" id="qs-ns-nghi-card" onclick="qsShowDetail('ns-nghi')">
-          <div class="qstat-icon-circle">⏰</div>
-          <div class="qstat-val" id="qs-ns-nghi">-</div><div class="qstat-lbl">Nghỉ</div>
-          <svg class="qstat-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><circle cx="5" cy="14" r="2.2" fill="#ef9a9a"/><circle cx="35" cy="14" r="2.2" fill="#ef9a9a"/><circle cx="65" cy="14" r="2.2" fill="#ef9a9a"/><circle cx="95" cy="14" r="2.2" fill="#ef9a9a"/><line x1="5" y1="14" x2="95" y2="14" stroke="#ef9a9a" stroke-width="1.5" stroke-dasharray="3,3"/></svg>
-        </div>
+        <div id="qs-ns-types"></div>
         <div class="qstat-card q-white">
           <div class="qstat-icon-circle">👥</div>
           <div class="qstat-val" id="qs-ns-tong">-</div><div class="qstat-lbl">Tổng</div>
@@ -664,8 +649,8 @@ async function loadQuickStats(){
         });
       });
       var ydilam=0; TYPES.forEach(function(t){ if(t!=='nghi') ydilam+=yTong[t]; });
-      var yng=yTong['nghi']||0;
-      prevTotal={dilam:ydilam,nghi:yng,tong:ydilam+yng};
+      var yng=TYPES.indexOf('nghi')>=0?(yTong['nghi']||0):null;
+      prevTotal={dilam:ydilam,nghi:yng,tong:ydilam+(yng||0)};
       TYPES.forEach(function(t){ prevTotal[t]=yTong[t]; });
     }
     if(nsR.data){
@@ -682,36 +667,35 @@ async function loadQuickStats(){
           if(pn>0)nghiList.push({proj:p,n:pn});
         }
       });
+      var coNghi = TYPES.indexOf('nghi') >= 0;
       var dilam=0; TYPES.forEach(function(t){ if(t!=='nghi') dilam+=tongTheoLoai[t]; });
-      var ng=tongTheoLoai['nghi']||0;
+      var ng = coNghi ? (tongTheoLoai['nghi']||0) : 0;
       var tongAll=dilam+ng;
-      qsDetailData.ns={dilam:dilam,nghi:ng,tong:tongAll,nghiList:nghiList,projects:projs};
+      qsDetailData.ns={dilam:dilam,nghi:(coNghi?ng:null),tong:tongAll,nghiList:nghiList,projects:projs};
       TYPES.forEach(function(t){ qsDetailData.ns[t]=tongTheoLoai[t]; });
       document.getElementById('qs-ns-dilam').innerHTML=dilam+qsArrow(dilam,prevTotal&&prevTotal.dilam);
 
-      // Ca1/Ca2 hiện đúng 2 ô có sẵn nếu tồn tại; các ca khác (ca3, ca4...) tự thêm ô mới
-      var extraEl = document.getElementById('qs-ns-extra');
-      extraEl.innerHTML = '';
+      // Sinh thẻ động cho TOÀN BỘ loại ca đang cấu hình — không giả định tên/số lượng cố định.
+      // Loại nào có mã 'nghi' thì tô đỏ + gắn cảnh báo; các loại còn lại tô xanh như nhau.
+      var typesEl = document.getElementById('qs-ns-types');
+      typesEl.innerHTML = '';
       TYPES.forEach(function(t, ti){
-        if(t === 'nghi') return;
         var val = tongTheoLoai[t] || 0;
         var prevVal = prevTotal && prevTotal[t];
-        if(t === 'ca1' || t === 'ca2'){
-          var elx = document.getElementById('qs-ns-'+t);
-          if(elx) elx.innerHTML = val + qsArrow(val, prevVal);
-        } else {
-          var card = document.createElement('div');
-          card.className = 'qstat-card q-green';
-          card.innerHTML = '<div class="qstat-icon-circle">🔷</div>'
-            + '<div class="qstat-val">'+val+qsArrow(val,prevVal)+'</div>'
-            + '<div class="qstat-lbl">'+(TLABELS[ti]||t)+'</div>';
-          extraEl.appendChild(card);
-        }
+        var isNghiType = (t === 'nghi');
+        var card = document.createElement('div');
+        card.className = 'qstat-card ' + (isNghiType ? 'q-red qs-clickable' : 'q-green');
+        if(isNghiType){ card.id = 'qs-ns-nghi-card'; card.setAttribute('onclick', "qsShowDetail('ns-nghi')"); }
+        card.innerHTML = '<div class="qstat-icon-circle">'+(isNghiType?'⏰':'🔷')+'</div>'
+          + '<div class="qstat-val">'+val+qsArrow(val,prevVal)+'</div>'
+          + '<div class="qstat-lbl">'+(TLABELS[ti]||t)+'</div>';
+        typesEl.appendChild(card);
       });
 
-      document.getElementById('qs-ns-nghi').innerHTML=ng+qsArrow(ng,prevTotal&&prevTotal.nghi);
       document.getElementById('qs-ns-tong').innerHTML=tongAll+qsArrow(tongAll,prevTotal&&prevTotal.tong);
-      qsCheckAlert('qs-ns-nghi-card',ng>0&&tongAll>0&&(ng/tongAll)>0.15);
+      if(coNghi){
+        qsCheckAlert('qs-ns-nghi-card',ng>0&&tongAll>0&&(ng/tongAll)>0.15);
+      }
     }
   }catch(e){}
 
@@ -1165,13 +1149,16 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
       +'<span style="font-weight:600;color:#1a1a1a;min-width:30px;text-align:right">'+arrow+r.value+'</span></div>';
   });
   html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;"><span style="color:#555;">Tổng</span><span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span></div>';
-  var nghiTotal=0;
-  nsProjs.forEach(function(p){
-    if(nsData[p]&&nsData[p].nghi)Object.values(nsData[p].nghi).forEach(function(v){nghiTotal+=v||0;});
-  });
-  var diLamTotal=grandTotal-nghiTotal;
-  html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#555;">Đi làm</span><span style="font-weight:700;color:#1a1a1a">'+diLamTotal+'</span></div>';
-  html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#e53935;">Nghỉ</span><span style="font-weight:700;color:#e53935">'+nghiTotal+'</span></div>';
+  // Chỉ tách dòng Đi làm/Nghỉ nếu cấu hình Loại ca hiện tại còn mục mã 'nghi'
+  if(TYPES.indexOf('nghi')>=0){
+    var nghiTotal=0;
+    nsProjs.forEach(function(p){
+      if(nsData[p]&&nsData[p].nghi)Object.values(nsData[p].nghi).forEach(function(v){nghiTotal+=v||0;});
+    });
+    var diLamTotal=grandTotal-nghiTotal;
+    html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#555;">Đi làm</span><span style="font-weight:700;color:#1a1a1a">'+diLamTotal+'</span></div>';
+    html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#e53935;">Nghỉ</span><span style="font-weight:700;color:#e53935">'+nghiTotal+'</span></div>';
+  }
   el.innerHTML=html;
 }
 
@@ -1945,26 +1932,28 @@ function renderCharts(){
       +'<span style="font-weight:700;color:'+numColor2+';min-width:20px;text-align:right">'+arrow2+r.value+'</span>'
       +'</div>';
   });
-  // Tính đi làm và nghỉ
-  var tongNghi=0;
-  projects.forEach(function(proj){
-    COLS.forEach(function(c){
-      tongNghi+=(data[proj]&&data[proj]['nghi']?data[proj]['nghi'][c.k]||0:0);
-    });
-  });
-  var tongDiLam=grandTotal-tongNghi;
   html+='<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;">'
     +'<span style="color:#555;">Tổng</span>'
     +'<span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span>'
     +'</div>';
-  html+='<div style="display:flex;justify-content:space-between;padding:2px 0;">'
-    +'<span style="color:#333;font-size:10px;">Đi làm</span>'
-    +'<span style="font-weight:600;color:#1a1a1a;font-size:10px;">'+tongDiLam+'</span>'
-    +'</div>';
-  html+='<div style="display:flex;justify-content:space-between;padding:2px 0;">'
-    +'<span style="color:#e53935;font-size:10px;">Nghỉ</span>'
-    +'<span style="font-weight:600;color:#e53935;font-size:10px;">'+tongNghi+'</span>'
-    +'</div>';
+  // Chỉ tách dòng Đi làm/Nghỉ nếu cấu hình Loại ca hiện tại còn mục mã 'nghi'
+  if(TYPES.indexOf('nghi')>=0){
+    var tongNghi=0;
+    projects.forEach(function(proj){
+      COLS.forEach(function(c){
+        tongNghi+=(data[proj]&&data[proj]['nghi']?data[proj]['nghi'][c.k]||0:0);
+      });
+    });
+    var tongDiLam=grandTotal-tongNghi;
+    html+='<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+      +'<span style="color:#333;font-size:10px;">Đi làm</span>'
+      +'<span style="font-weight:600;color:#1a1a1a;font-size:10px;">'+tongDiLam+'</span>'
+      +'</div>';
+    html+='<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+      +'<span style="color:#e53935;font-size:10px;">Nghỉ</span>'
+      +'<span style="font-weight:600;color:#e53935;font-size:10px;">'+tongNghi+'</span>'
+      +'</div>';
+  }
   el.innerHTML=html;
 }
 
