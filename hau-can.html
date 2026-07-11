@@ -16,9 +16,11 @@
   *{box-sizing:border-box;}
   body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:'Be Vietnam Pro',system-ui,sans-serif;
     display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;}
-  .topbar{width:100%;max-width:520px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+  .topbar{width:100%;max-width:520px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;
+    position:sticky;top:0;z-index:500;background:var(--bg);padding:12px 0 8px;}
+  a.back{color:#fff;font-size:13px;font-weight:700;text-decoration:none;border:none;padding:10px 18px;border-radius:8px;
+    background:var(--accent);box-shadow:0 3px 10px rgba(21,101,192,.35);}
   .brand{font-size:15px;color:var(--accent-dark);font-weight:800;}
-  a.back{color:var(--muted);font-size:13px;text-decoration:none;border:1px solid var(--border);padding:8px 16px;border-radius:8px;background:#fff;}
   .card{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--border);border-radius:16px;
     padding:26px 24px;box-shadow:0 4px 20px rgba(20,40,70,.08);margin-bottom:18px;}
   h2{font-size:19px;margin:0 0 4px;font-weight:800;color:var(--accent-dark);}
@@ -34,6 +36,7 @@
     font-weight:800;font-size:16px;cursor:pointer;font-family:inherit;margin-top:20px;}
   .btn:hover{filter:brightness(1.08);}
   .btn.secondary{background:#fff;color:var(--accent-dark);border:2px solid var(--accent);}
+  .btn.save{background:linear-gradient(135deg,#2e7d32,#43a047);box-shadow:0 4px 14px rgba(46,125,50,.4);font-size:17px;}
   .msg{padding:13px 16px;border-radius:10px;font-size:14px;margin-top:14px;display:none;font-weight:600;}
   .msg.show{display:block;}
   .msg.ok{background:var(--ok-dim);color:var(--ok);border:1px solid var(--ok);}
@@ -45,7 +48,8 @@
   .field.done{border-color:var(--ok);background:var(--ok-dim);}
   .field-label{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .field-label .req{color:var(--bad);font-weight:800;}
-  .field-check{display:none;align-items:center;gap:4px;font-size:11px;font-weight:800;color:var(--ok);white-space:nowrap;}
+  .field-label{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .field-check{display:none;align-items:center;gap:4px;font-size:11px;font-weight:800;color:var(--ok);white-space:nowrap;margin-left:auto;}
   .field.done .field-check{display:flex;}
   .field input[type=text],.field input[type=tel],.field select{
     width:100%;padding:11px 12px;border-radius:8px;border:1.5px solid var(--border);
@@ -71,7 +75,7 @@
 
 <div class="topbar">
   <div class="brand">BCH DA CAM LÂM — CAM RANH</div>
-  <a class="back" href="index.html">‹ Về trang báo cáo</a>
+  <a class="back" href="index.html">‹ Về trang trước</a>
 </div>
 
 <div id="loadingBox" class="loading">Đang tải...</div>
@@ -99,11 +103,10 @@
     <div class="field" id="fNoiCapCccd">
       <div class="field-label">Nơi cấp CCCD <span class="field-check">✓ Đã chọn</span></div>
       <select id="selNoiCapCccd">
-        <option value="">— Chọn nơi cấp —</option>
-        <option value="Cục Cảnh sát QLHC về TTXH">Cục Cảnh sát QLHC về TTXH</option>
-        <option value="__khac__">Khác (tự nhập)</option>
+        <option value="">Chọn nơi cấp</option>
+        <option value="Cục CS quản lý hành chính trật tự xã hội (CCCD)">Cục CS quản lý hành chính trật tự xã hội (CCCD)</option>
+        <option value="Bộ Công an (Thẻ Căn cước)">Bộ Công an (Thẻ Căn cước)</option>
       </select>
-      <input type="text" id="inpNoiCapCccdKhac" placeholder="Nhập nơi cấp khác" style="display:none;margin-top:8px;">
     </div>
 
     <div class="field" id="fGioiTinh">
@@ -167,7 +170,7 @@
       <div class="chip-list" id="chipNguon"></div>
     </div>
 
-    <button class="btn" id="btnLuuCaNhan">Lưu thông tin cá nhân</button>
+    <button class="btn save" id="btnLuuCaNhan">Lưu thông tin cá nhân</button>
     <div class="msg" id="msgCaNhan"></div>
   </div>
 
@@ -199,7 +202,7 @@
       </div>
     </div>
 
-    <button class="btn" id="btnLuuHoSo">Lưu thông tin</button>
+    <button class="btn save" id="btnLuuHoSo">Lưu thông tin</button>
     <div class="msg" id="msgHoSo"></div>
   </div>
 
@@ -306,8 +309,8 @@ function refreshFieldStates(){
   markDone("fHonNhan", getChecked("hon_nhan").length>0);
   markDone("fQuocTich", document.getElementById("inpQuocTich").value.trim().length>0);
   markDone("fNgayBatDau", isDateTripleFilled("selBdNgay","selBdThang","selBdNam"));
-  markDone("fThuongTru", document.getElementById("selTtTinh").value && document.getElementById("inpTtXa").value.trim());
-  markDone("fHienTai", document.getElementById("selHtTinh").value && document.getElementById("inpHtXa").value.trim());
+  markDone("fThuongTru", document.getElementById("selTtTinh").value && document.getElementById("inpTtXa").value.trim() && document.getElementById("inpTtThon").value.trim());
+  markDone("fHienTai", document.getElementById("selHtTinh").value && document.getElementById("inpHtXa").value.trim() && document.getElementById("inpHtThon").value.trim());
   markDone("fViTri", getChecked("vi_tri").length>0);
   markDone("fNoiO", getChecked("noi_o").length>0);
   markDone("fFaceId", getChecked("face_id").length>0);
@@ -346,9 +349,7 @@ function tryCollapseAllDone(){
 }
 
 function getNoiCapCccdValue(){
-  const sel = document.getElementById("selNoiCapCccd").value;
-  if(sel === "__khac__") return document.getElementById("inpNoiCapCccdKhac").value.trim();
-  return sel;
+  return document.getElementById("selNoiCapCccd").value;
 }
 
 async function init(){
@@ -383,11 +384,7 @@ async function init(){
 
   initCollapsibleFields();
 
-  document.getElementById("selNoiCapCccd").addEventListener("change", (e)=>{
-    document.getElementById("inpNoiCapCccdKhac").style.display = (e.target.value === "__khac__") ? "block" : "none";
-    refreshFieldStates();
-  });
-  document.getElementById("inpNoiCapCccdKhac").addEventListener("input", refreshFieldStates);
+  document.getElementById("selNoiCapCccd").addEventListener("change", refreshFieldStates);
 
   const { data: hoSo } = await sb.rpc("hc_lay_ho_so_ca_nhan", { p_msnv: saved.msnv });
   if(hoSo){
@@ -412,14 +409,7 @@ async function init(){
 
       setDateTriple("selCccdNgay","selCccdThang","selCccdNam", ttcn.ngay_cap_cccd);
       if(ttcn.noi_cap_cccd){
-        const knownList = ["Cục Cảnh sát QLHC về TTXH"];
-        if(knownList.includes(ttcn.noi_cap_cccd)){
-          document.getElementById("selNoiCapCccd").value = ttcn.noi_cap_cccd;
-        } else {
-          document.getElementById("selNoiCapCccd").value = "__khac__";
-          document.getElementById("inpNoiCapCccdKhac").value = ttcn.noi_cap_cccd;
-          document.getElementById("inpNoiCapCccdKhac").style.display = "block";
-        }
+        document.getElementById("selNoiCapCccd").value = ttcn.noi_cap_cccd;
       }
       setChecked("gioi_tinh", [ttcn.gioi_tinh]);
       setChecked("hon_nhan", [ttcn.tinh_trang_hon_nhan]);
@@ -436,7 +426,6 @@ async function init(){
     refreshFieldStates();
   });
   document.getElementById("inpCccd").addEventListener("blur", ()=>tryCollapse("fCccd"));
-  document.getElementById("inpNoiCapCccdKhac").addEventListener("blur", ()=>tryCollapse("fNoiCapCccd"));
   document.getElementById("inpQuocTich").addEventListener("blur", ()=>tryCollapse("fQuocTich"));
   document.getElementById("inpTtXa").addEventListener("blur", ()=>tryCollapse("fThuongTru"));
   document.getElementById("inpTtThon").addEventListener("blur", ()=>tryCollapse("fThuongTru"));
