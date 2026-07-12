@@ -199,6 +199,7 @@
       <button class="linkbtn" id="btnCauHinhNS">Cấu hình Nhân sự</button>
       <button class="linkbtn" id="btnAddModule">+ Thêm quyền</button>
       <button class="linkbtn" id="btnAddEmp">+ Thêm nhân viên</button>
+      <button class="linkbtn" id="btnImport">📥 Nhập Excel</button>
       <button class="linkbtn" id="btnExport">Xuất Excel</button>
       <button class="linkbtn" id="btnChangePass">Đổi mật khẩu</button>
       <button class="linkbtn" id="btnCloseAdmin">Đóng</button>
@@ -241,6 +242,34 @@
     <div class="modal-actions">
       <button class="btn secondary" id="btnCancelEmp">Huỷ</button>
       <button class="btn" id="btnSaveEmp">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL NHẬP EXCEL HÀNG LOẠT ============ -->
+<div class="modal-overlay" id="modalImport">
+  <div class="modal" style="max-width:640px;">
+    <h3>📥 Nhập nhân viên hàng loạt từ Excel</h3>
+    <p class="sub" style="margin:0 0 14px;">
+      File cần đúng 4 cột theo thứ tự: <b>Tên nhân viên, MSNV, Chức vụ, SĐT</b> (dòng đầu là tiêu đề).
+      Chưa có file mẫu? <a href="#" id="btnTaiMauImport" style="color:var(--accent);font-weight:700;">Tải file mẫu tại đây</a>.
+    </p>
+    <input type="file" id="fileImport" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:8px;">
+    <div id="importPreviewBox" style="display:none;margin-top:16px;">
+      <div id="importSummary" style="font-size:13px;color:var(--muted);margin-bottom:8px;"></div>
+      <div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead style="position:sticky;top:0;background:#f4f6f9;">
+            <tr><th style="padding:8px;text-align:left;">Tên</th><th style="padding:8px;text-align:left;">MSNV</th><th style="padding:8px;text-align:left;">Chức vụ</th><th style="padding:8px;text-align:left;">SĐT</th><th style="padding:8px;text-align:left;">Trạng thái</th></tr>
+          </thead>
+          <tbody id="importPreviewBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="importResultBox" style="display:none;margin-top:14px;padding:12px 14px;border-radius:10px;font-size:14px;font-weight:600;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCancelImport">Đóng</button>
+      <button class="btn" id="btnConfirmImport" disabled>Xác nhận thêm</button>
     </div>
   </div>
 </div>
@@ -1012,6 +1041,92 @@ document.getElementById("btnExport").addEventListener("click", ()=>{
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Danh sách");
   XLSX.writeFile(wb, "danh_sach_nhan_su_BCH.xlsx");
+});
+
+/* ================= NHẬP EXCEL HÀNG LOẠT ================= */
+const modalImport = document.getElementById("modalImport");
+let importRows = [];
+
+document.getElementById("btnImport").addEventListener("click", ()=>{
+  document.getElementById("fileImport").value = "";
+  document.getElementById("importPreviewBox").style.display = "none";
+  document.getElementById("importResultBox").style.display = "none";
+  document.getElementById("btnConfirmImport").disabled = true;
+  importRows = [];
+  modalImport.classList.add("show");
+});
+document.getElementById("btnCancelImport").addEventListener("click", ()=> modalImport.classList.remove("show"));
+
+document.getElementById("btnTaiMauImport").addEventListener("click", (e)=>{
+  e.preventDefault();
+  const ws = XLSX.utils.json_to_sheet([
+    {"Tên nhân viên":"Nguyễn Văn An","MSNV":"0125","Chức vụ":"Công nhân","SĐT":"0901234567"}
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Mau");
+  XLSX.writeFile(wb, "mau_nhap_nhan_su.xlsx");
+});
+
+document.getElementById("fileImport").addEventListener("change", (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const wb = XLSX.read(ev.target.result, {type:"array"});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
+    const existingMsnv = new Set(employeesCache.map(x=>String(x.msnv).trim()));
+    const seenInFile = new Set();
+
+    importRows = rows.map(r=>{
+      const ten = String(r["Tên nhân viên"] ?? r["Ten nhan vien"] ?? r["Họ và tên"] ?? "").trim();
+      const msnv = String(r["MSNV"] ?? "").trim();
+      const chucVu = String(r["Chức vụ"] ?? r["Chuc vu"] ?? "").trim();
+      const sdt = String(r["SĐT"] ?? r["SDT"] ?? "").trim();
+      let trangThai = "✅ Sẽ thêm", loi = false;
+      if(!ten || !msnv){ trangThai = "❌ Thiếu Tên/MSNV"; loi = true; }
+      else if(existingMsnv.has(msnv)){ trangThai = "⚠️ MSNV đã tồn tại"; loi = true; }
+      else if(seenInFile.has(msnv)){ trangThai = "⚠️ Trùng trong file"; loi = true; }
+      seenInFile.add(msnv);
+      return {ten, msnv, chuc_vu:chucVu, sdt, trangThai, loi};
+    });
+
+    const hopLe = importRows.filter(r=>!r.loi);
+    document.getElementById("importSummary").textContent =
+      `Đọc được ${importRows.length} dòng — ${hopLe.length} dòng hợp lệ sẽ được thêm, ${importRows.length-hopLe.length} dòng có vấn đề (xem bên dưới).`;
+    document.getElementById("importPreviewBody").innerHTML = importRows.map(r=>`
+      <tr style="${r.loi?'background:#fdecea;':''}border-top:1px solid var(--border);">
+        <td style="padding:7px 8px;">${r.ten||"—"}</td>
+        <td style="padding:7px 8px;">${r.msnv||"—"}</td>
+        <td style="padding:7px 8px;">${r.chuc_vu||""}</td>
+        <td style="padding:7px 8px;">${r.sdt||""}</td>
+        <td style="padding:7px 8px;font-weight:700;${r.loi?'color:#c62828;':'color:#2e7d32;'}">${r.trangThai}</td>
+      </tr>`).join("");
+    document.getElementById("importPreviewBox").style.display = "block";
+    document.getElementById("btnConfirmImport").disabled = hopLe.length === 0;
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+document.getElementById("btnConfirmImport").addEventListener("click", async ()=>{
+  const hopLe = importRows.filter(r=>!r.loi).map(r=>({ten:r.ten, msnv:r.msnv, chuc_vu:r.chuc_vu, sdt:r.sdt}));
+  if(hopLe.length === 0) return;
+  document.getElementById("btnConfirmImport").disabled = true;
+  const { data, error } = await sb.rpc("admin_them_hang_loat", { p_pass: currentAdminPass, p_ds: hopLe });
+  const box = document.getElementById("importResultBox");
+  box.style.display = "block";
+  if(error){
+    box.style.background = "#fdecea"; box.style.color = "#c62828";
+    box.textContent = "Có lỗi khi thêm hàng loạt, vui lòng thử lại.";
+    document.getElementById("btnConfirmImport").disabled = false;
+    return;
+  }
+  box.style.background = "#e8f5e9"; box.style.color = "#2e7d32";
+  let txt = `✓ Đã thêm thành công ${data.da_them} nhân viên.`;
+  if(data.trung_msnv && data.trung_msnv.length) txt += ` Trùng MSNV (bỏ qua): ${data.trung_msnv.join(", ")}.`;
+  if(data.thieu_thong_tin) txt += ` ${data.thieu_thong_tin} dòng thiếu thông tin đã bỏ qua.`;
+  box.textContent = txt;
+  loadAdminData();
 });
 
 /* ================= KHỞI ĐỘNG ================= */
