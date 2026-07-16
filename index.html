@@ -47,27 +47,42 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:1;}
 .home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.25;}
 .home-header .sub{font-size:12px;color:var(--accent-blue);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:5px;}
-.home-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(124,77,255,0.5);overflow:hidden;background:#0a0e1a;border:2px solid rgba(124,77,255,0.3);}
+.home-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(124,77,255,0.5);overflow:hidden;background:#0a0e1a;border:2px solid rgba(124,77,255,0.3);cursor:pointer;transition:transform .15s;}
+.home-avatar:active{transform:scale(0.92);}
 .home-avatar img{width:100%;height:100%;object-fit:cover;object-position:center;}
+.export-popover-wrap{position:relative;}
+.export-popover{display:none;position:absolute;top:58px;right:0;z-index:50;background:var(--bg-card);border:1px solid var(--border-soft);
+  border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.5);padding:8px;min-width:210px;}
+.export-popover.show{display:block;}
+.export-popover button{width:100%;text-align:left;background:none;border:none;color:#fff;font-size:13px;font-weight:700;
+  padding:11px 12px;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;}
+.export-popover button:active{background:rgba(255,255,255,0.08);}
 .home-cards{display:flex;flex-direction:column;gap:16px;width:100%;max-width:420px;position:relative;z-index:1;}
-.mod-card{position:relative;background:linear-gradient(145deg,var(--bg-card),var(--bg-card2));border-radius:16px;padding:18px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;box-shadow:0 4px 20px rgba(0,0,0,0.4);border:1px solid var(--border-soft);transition:transform 0.15s;overflow:hidden;}
-.mod-card:active{transform:scale(0.98);}
-.mod-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent1),var(--accent2));opacity:0.9;}
-.mod-card::before{content:'';position:absolute;top:-30%;right:-15%;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,var(--accent1) 0%,transparent 70%);opacity:0.15;pointer-events:none;}
-.mod-card.c-ns{--accent1:#2196f3;--accent2:#64b5f6;}
-.mod-card.c-mmtb{--accent1:#ff9800;--accent2:#ffc947;}
-.mod-card.c-ldt{--accent1:#4caf50;--accent2:#81c784;}
-.mod-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;position:relative;z-index:1;}
-.mod-icon.i-ns{background:linear-gradient(145deg,rgba(33,150,243,0.18),rgba(33,150,243,0.06));box-shadow:inset 0 0 0 1.5px rgba(33,150,243,0.4),0 0 16px rgba(33,150,243,0.25);}
-.mod-icon.i-mmtb{background:linear-gradient(145deg,rgba(255,152,0,0.18),rgba(255,152,0,0.06));box-shadow:inset 0 0 0 1.5px rgba(255,152,0,0.4),0 0 16px rgba(255,152,0,0.25);}
-.mod-icon.i-ldt{background:linear-gradient(145deg,rgba(76,175,80,0.18),rgba(76,175,80,0.06));box-shadow:inset 0 0 0 1.5px rgba(76,175,80,0.4),0 0 16px rgba(76,175,80,0.25);}
-.mod-body{flex:1;position:relative;z-index:1;}
-.mod-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:3px;}
-.mod-desc{font-size:11px;color:var(--txt-dim);}
-.mod-arrow{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;position:relative;z-index:1;font-weight:800;}
-.mod-card.c-ns .mod-arrow{background:rgba(33,150,243,0.18);color:#64b5f6;}
-.mod-card.c-mmtb .mod-arrow{background:rgba(255,152,0,0.18);color:#ffc947;}
-.mod-card.c-ldt .mod-arrow{background:rgba(76,175,80,0.18);color:#81c784;}
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.mod-tile{position:relative;background:linear-gradient(145deg,var(--bg-card),var(--bg-card2));border-radius:16px;padding:16px 10px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;aspect-ratio:1/1;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4);border:1px solid var(--border-soft);transition:transform 0.15s;overflow:hidden;}
+.mod-tile:active{transform:scale(0.96);}
+.mod-tile::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent1),var(--accent2));opacity:0.9;}
+.mod-tile::before{content:'';position:absolute;top:-30%;right:-15%;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,var(--accent1) 0%,transparent 70%);opacity:0.15;pointer-events:none;}
+.mod-tile.c-ns{--accent1:#2196f3;--accent2:#64b5f6;}
+.mod-tile.c-mmtb{--accent1:#ff9800;--accent2:#ffc947;}
+.mod-tile.c-ldt{--accent1:#4caf50;--accent2:#81c784;}
+.mod-tile.c-hc{--accent1:#7c4dff;--accent2:#b388ff;}
+.mod-tile .mod-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;position:relative;z-index:1;}
+.mod-tile.c-ns .mod-icon{background:linear-gradient(145deg,rgba(33,150,243,0.18),rgba(33,150,243,0.06));box-shadow:inset 0 0 0 1.5px rgba(33,150,243,0.4),0 0 16px rgba(33,150,243,0.25);}
+.mod-tile.c-mmtb .mod-icon{background:linear-gradient(145deg,rgba(255,152,0,0.18),rgba(255,152,0,0.06));box-shadow:inset 0 0 0 1.5px rgba(255,152,0,0.4),0 0 16px rgba(255,152,0,0.25);}
+.mod-tile.c-ldt .mod-icon{background:linear-gradient(145deg,rgba(76,175,80,0.18),rgba(76,175,80,0.06));box-shadow:inset 0 0 0 1.5px rgba(76,175,80,0.4),0 0 16px rgba(76,175,80,0.25);}
+.mod-tile.c-hc .mod-icon{background:linear-gradient(145deg,rgba(124,77,255,0.18),rgba(124,77,255,0.06));box-shadow:inset 0 0 0 1.5px rgba(124,77,255,0.4),0 0 16px rgba(124,77,255,0.25);}
+.mod-tile .mod-title{font-size:12.5px;font-weight:800;color:#fff;text-align:center;line-height:1.3;position:relative;z-index:1;}
+.mod-badge{display:none;position:absolute;top:10px;right:10px;width:11px;height:11px;border-radius:50%;background:#ff5252;
+  box-shadow:0 0 0 rgba(255,82,82,0.6);z-index:2;}
+.mod-badge.show{display:block;animation:modBadgePulse 1.1s infinite;}
+@keyframes modBadgePulse{
+  0%{box-shadow:0 0 0 0 rgba(255,82,82,0.65);}
+  70%{box-shadow:0 0 0 8px rgba(255,82,82,0);}
+  100%{box-shadow:0 0 0 0 rgba(255,82,82,0);}
+}
 
 /* Thống kê nhanh */
 .quickstats-head{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin:24px 0 14px;position:relative;z-index:1;}
@@ -240,8 +255,11 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <h1>BCH DA CAM LÂM<br>CAM RANH</h1>
         <div class="sub">📅 <span id="home-date"></span></div>
       </div>
-      <div style="text-align:right">
-        <div class="home-avatar" id="home-avatar"><img src="icon.png" alt="VB"></div>
+      <div style="text-align:right" class="export-popover-wrap">
+        <div class="home-avatar" id="home-avatar" onclick="toggleExportPopover()"><img src="icon.png" alt="VB"></div>
+        <div class="export-popover" id="exportPopover">
+          <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo tổng hợp (ảnh)</button>
+        </div>
       </div>
     </div>
 
@@ -263,30 +281,23 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         </div>
         <button onclick="bchRequestNotif();document.getElementById('home-notif-banner').style.display='none';" style="background:#fff;color:#1565c0;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">Bật ngay</button>
       </div>
-      <div class="mod-card c-ns" onclick="showScreen('ns')">
-        <div class="mod-icon i-ns">📋</div>
-        <div class="mod-body">
-          <div class="mod-title">Báo cáo Nhân sự</div>
-          <div class="mod-desc">Nhập số liệu nhân sự hằng ngày</div>
-        </div>
-        <div class="mod-arrow">›</div>
+    <div class="mod-grid">
+      <div class="mod-tile c-ns" onclick="showScreen('ns')">
+        <span class="mod-badge" id="badge-ns"></span>
+        <div class="mod-icon">📋</div>
+        <div class="mod-title">Báo cáo<br>Nhân sự</div>
       </div>
-      <div class="mod-card c-mmtb" onclick="showScreen('mmtb')">
-        <div class="mod-icon i-mmtb">🚜</div>
-        <div class="mod-body">
-          <div class="mod-title">Báo cáo MMTB</div>
-          <div class="mod-desc">Máy móc thiết bị hằng ngày</div>
-        </div>
-        <div class="mod-arrow">›</div>
+      <div class="mod-tile c-mmtb" onclick="showScreen('mmtb')">
+        <span class="mod-badge" id="badge-mmtb"></span>
+        <div class="mod-icon">🚜</div>
+        <div class="mod-title">Báo cáo<br>MMTB</div>
       </div>
-      <div class="mod-card c-ldt" onclick="showScreen('ldt')">
-        <div class="mod-icon i-ldt">📅</div>
-        <div class="mod-body">
-          <div class="mod-title">Báo Lịch nghiệm thu</div>
-          <div class="mod-desc">Đăng ký lịch nghiệm thu hằng ngày</div>
-        </div>
-        <div class="mod-arrow">›</div>
+      <div class="mod-tile c-ldt" onclick="showScreen('ldt')">
+        <span class="mod-badge" id="badge-ldt"></span>
+        <div class="mod-icon">📅</div>
+        <div class="mod-title">Lịch<br>nghiệm thu</div>
       </div>
+    </div>
     </div>
 
     <div class="quickstats-head">
@@ -330,10 +341,6 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         </div>
       </div>
     </div>
-
-    <div class="qs-countdown-bar" id="qs-countdown">⏰ Đang tính...</div>
-
-    <button class="btn" style="width:100%;max-width:420px;background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff;justify-content:center;padding:12px;font-size:13px;margin-bottom:6px;position:relative;z-index:1;" onclick="exportFullReport()">📄 Xuất báo cáo tổng hợp (ảnh)</button>
 
 
   </div>
@@ -796,6 +803,7 @@ async function loadQuickStats(){
     }
   }catch(e){}
 
+  await taiGioHan();
   qsStartCountdown();
 }
 
@@ -806,28 +814,50 @@ function qsCheckAlert(cardId,shouldBlink){
   else el.classList.remove('qs-alert-blink');
 }
 
-var qsCountdownTimer=null;
+// Giờ hạn nhắc nhở — admin tự cấu hình trong Quản lý chung (patch10_gio_han.sql)
+var GIO_HAN = { gio_han_ns_mmtb: '16:00:00', gio_han_nghiem_thu: '16:00:00' };
+async function taiGioHan(){
+  try{
+    var r = await sc.rpc('cauhinh_lay_gio_han');
+    if(r.data) GIO_HAN = r.data;
+  }catch(e){ /* giữ mặc định 16:00 nếu lỗi mạng/chưa chạy patch10 */ }
+}
+
+function toggleExportPopover(){
+  var el = document.getElementById('exportPopover');
+  if(el) el.classList.toggle('show');
+}
+document.addEventListener('click', function(e){
+  var wrap = document.querySelector('.export-popover-wrap');
+  if(wrap && !wrap.contains(e.target)) document.getElementById('exportPopover').classList.remove('show');
+});
+
+// Chỉ hiện chấm nhấp nháy trong khung 30 phút trước giờ hạn — im lặng hoàn toàn ngoài khung đó
+// (không đếm giờ liên tục cả ngày, và cũng không nhắc mãi sau khi đã qua giờ hạn)
+var qsBadgeTimer=null;
 function qsStartCountdown(){
-  if(qsCountdownTimer)clearInterval(qsCountdownTimer);
+  if(qsBadgeTimer)clearInterval(qsBadgeTimer);
+  function parseHM(hms){
+    var p=(hms||'16:00:00').split(':');
+    var d=new Date(); d.setHours(parseInt(p[0]||16),parseInt(p[1]||0),0,0);
+    return d;
+  }
+  function setBadge(id, active){
+    var el=document.getElementById(id);
+    if(el) el.classList.toggle('show', !!active);
+  }
   function update(){
     var now=new Date();
-    var deadline=new Date();
-    deadline.setHours(16,0,0,0);
-    var el=document.getElementById('qs-countdown');
-    if(!el)return;
-    if(now>=deadline){
-      el.textContent='⏰ Đã qua hạn báo lịch nghiệm thu hôm nay';
-      el.style.color='#ef5350';
-    }else{
-      var diff=deadline-now;
-      var h=Math.floor(diff/3600000);
-      var m=Math.floor((diff%3600000)/60000);
-      el.textContent='⏰ Còn '+h+'h'+p2(m)+'p để báo lịch nghiệm thu ngày mai';
-      el.style.color='#ffb74d';
-    }
+    var dlNS=parseHM(GIO_HAN.gio_han_ns_mmtb);
+    var dlLDT=parseHM(GIO_HAN.gio_han_nghiem_thu);
+    var trongKhungNS = now>=(new Date(dlNS-30*60000)) && now<dlNS;
+    var trongKhungLDT = now>=(new Date(dlLDT-30*60000)) && now<dlLDT;
+    setBadge('badge-ns', trongKhungNS);
+    setBadge('badge-mmtb', trongKhungNS);
+    setBadge('badge-ldt', trongKhungLDT);
   }
   update();
-  qsCountdownTimer=setInterval(update,30000);
+  qsBadgeTimer=setInterval(update,30000);
 }
 
 // ============ MODAL CHI TIẾT THỐNG KÊ NHANH ============
@@ -1388,7 +1418,10 @@ function getTenCa(proj, ti){
 
 // Quy ước bắt buộc: loại ca CUỐI CÙNG trong danh sách cấu hình luôn được coi là "Nghỉ"
 // (xét theo VỊ TRÍ, không theo tên/mã) — để không phụ thuộc việc đặt tên.
-function nghiKey(){ return TYPES.length ? TYPES[TYPES.length-1] : null; }
+// Quy ước xác định "Nghỉ": ƯU TIÊN cờ la_nghi (admin chọn tay trong Quản lý chung, đáng tin cậy).
+// Chỉ khi chưa có cờ nào (patch9 chưa chạy) mới tạm lùi về đoán theo vị trí cuối cùng.
+var NGHI_MA = null;
+function nghiKey(){ return NGHI_MA || (TYPES.length ? TYPES[TYPES.length-1] : null); }
 function isNghiType(t){ return TYPES.length>0 && t===nghiKey(); }
 
 async function taiCauHinhCaLamViec(){
@@ -1398,6 +1431,10 @@ async function taiCauHinhCaLamViec(){
     if(caList && caList.length > 0){
       TYPES = caList.map(function(c){ return c.ma; });
       TLABELS = caList.map(function(c){ return c.ten_mac_dinh; });
+      // Ưu tiên cờ la_nghi (admin chọn tay, đáng tin cậy) — nếu chưa có cờ nào (patch9 chưa chạy
+      // hoặc admin chưa chọn), mới tạm lùi về đoán theo vị trí cuối cùng như trước.
+      var flagged = caList.find(function(c){ return c.la_nghi === true; });
+      NGHI_MA = flagged ? flagged.ma : (TYPES.length ? TYPES[TYPES.length-1] : null);
     }
     var r2 = await sc.rpc('cauhinh_lay_ten_ca_rieng');
     var rieng = r2.data || [];
@@ -3581,21 +3618,17 @@ function bchScheduleOne(cfg){
   window.BCH_QUYEN = res.data.quyen || {};
   var mapCard = { ns:'bao_cao_nhan_su', mmtb:'bao_cao_mmtb', ldt:'bao_lich_nghiem_thu' };
   Object.keys(mapCard).forEach(function(key){
-    var el = document.querySelector('.mod-card.c-' + key);
+    var el = document.querySelector('.mod-tile.c-' + key);
     if(el && !window.BCH_QUYEN[mapCard[key]]) el.style.display = 'none';
   });
 
   // Thẻ "Hậu cần" — chèn thêm bằng JS, chỉ hiện nếu có quyền, không sửa 3 thẻ tĩnh có sẵn
   if(window.BCH_QUYEN.hau_can){
     var hcCard = document.createElement('div');
-    hcCard.className = 'mod-card c-mmtb';
-    hcCard.style.cursor = 'pointer';
-    hcCard.innerHTML = '<div class="mod-icon i-mmtb">🍱</div>'
-      + '<div class="mod-body"><div class="mod-title">Hậu cần</div>'
-      + '<div class="mod-desc">Vị trí, nơi ở &amp; đăng ký cơm</div></div>'
-      + '<div class="mod-arrow">›</div>';
+    hcCard.className = 'mod-tile c-hc';
+    hcCard.innerHTML = '<div class="mod-icon">🍱</div><div class="mod-title">Hậu cần</div>';
     hcCard.addEventListener('click', function(){ location.href = 'hau-can.html'; });
-    var cardsWrap = document.querySelector('.home-cards');
+    var cardsWrap = document.querySelector('.mod-grid');
     if(cardsWrap) cardsWrap.appendChild(hcCard);
   }
 
