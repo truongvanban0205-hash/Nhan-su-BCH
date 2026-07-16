@@ -387,6 +387,19 @@
       </div>
     </div>
 
+    <label>Giờ hạn nhắc nhở <span style="color:var(--muted); font-weight:400;">(app sẽ nhấp nháy cảnh báo trong 30 phút trước mốc này)</span></label>
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; align-items:flex-end;">
+      <div>
+        <label style="font-size:12px;">Báo cáo Nhân sự / MMTB</label>
+        <input type="time" id="inputGioHanNS" style="margin-bottom:0;">
+      </div>
+      <div>
+        <label style="font-size:12px;">Báo Lịch nghiệm thu</label>
+        <input type="time" id="inputGioHanLDT" style="margin-bottom:0;">
+      </div>
+      <button class="btn small" id="btnLuuGioHan">Lưu giờ hạn</button>
+    </div>
+
     <label>Tên ca riêng theo từng dự án <span style="color:var(--muted); font-weight:400;">(để trống = dùng tên mặc định)</span></label>
     <div class="table-wrap" style="max-height:260px;">
       <table>
@@ -616,10 +629,23 @@ function renderListLoaiCa(){
   const el = document.getElementById("listLoaiCa");
   if(loaiCaCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có ca nào.</div>'; return; }
   el.innerHTML = loaiCaCache.map(c => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);">
-      <span>${c.ten_mac_dinh}</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);gap:8px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:${c.la_nghi?'#c62828':'var(--muted)'};cursor:pointer;white-space:nowrap;">
+        <input type="radio" name="loaiNghi" value="${c.id}" data-set-nghi="${c.id}" ${c.la_nghi?'checked':''}>
+        Là Nghỉ
+      </label>
+      <span style="flex:1;">${c.ten_mac_dinh}</span>
       <button class="icon-btn reject" data-del-ca="${c.id}">Xoá</button>
     </div>`).join("");
+  el.querySelectorAll("[data-set-nghi]").forEach(radio=>{
+    radio.addEventListener("change", async ()=>{
+      const id = parseInt(radio.dataset.setNghi);
+      const { error } = await sb.rpc("admin_dat_loai_nghi", { p_pass: currentAdminPass, p_id: id });
+      if(error){ showToast("Không đặt được, thử lại."); return; }
+      showToast("✓ Đã đặt \"" + loaiCaCache.find(x=>x.id===id).ten_mac_dinh + "\" là loại Nghỉ");
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
   el.querySelectorAll("[data-del-ca]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const id = parseInt(btn.dataset.delCa);
@@ -666,10 +692,26 @@ function renderCauHinhAll(){
 document.getElementById("btnCauHinhNS").addEventListener("click", async ()=>{
   await loadCauHinhNS();
   renderCauHinhAll();
+  try{
+    const { data: gh } = await sb.rpc("cauhinh_lay_gio_han");
+    if(gh){
+      document.getElementById("inputGioHanNS").value = (gh.gio_han_ns_mmtb || "16:00:00").slice(0,5);
+      document.getElementById("inputGioHanLDT").value = (gh.gio_han_nghiem_thu || "16:00:00").slice(0,5);
+    }
+  }catch(e){}
   document.getElementById("modalCauHinh").classList.add("show");
 });
 document.getElementById("btnCloseCauHinh").addEventListener("click", ()=>{
   document.getElementById("modalCauHinh").classList.remove("show");
+});
+
+document.getElementById("btnLuuGioHan").addEventListener("click", async ()=>{
+  const gioNS = document.getElementById("inputGioHanNS").value;
+  const gioLDT = document.getElementById("inputGioHanLDT").value;
+  if(!gioNS || !gioLDT){ alert("Vui lòng chọn đủ 2 mốc giờ."); return; }
+  const { error } = await sb.rpc("admin_luu_gio_han", { p_pass: currentAdminPass, p_gio_ns_mmtb: gioNS, p_gio_nghiem_thu: gioLDT });
+  if(error){ alert("Không lưu được, thử lại."); return; }
+  showToast("✓ Đã lưu giờ hạn nhắc nhở");
 });
 
 document.getElementById("btnThemDuAn").addEventListener("click", async ()=>{
