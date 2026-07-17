@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản lý tài khoản — BCH ĐA CAM LÂM - CAM RANH</title>
+<title>Quản lý tài khoản — BCH DA CAM LÂM - CAM RANH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -134,7 +134,7 @@
 <body>
 
 <div class="topbar">
-  <div class="brand">BCH ĐA CAM LÂM — <b>CAM RANH</b></div>
+  <div class="brand">BCH DA <span style="color:#58a6ff">CAM LÂM</span> — <b style="color:var(--accent)">CAM RANH</b></div>
   <button class="linkbtn" id="btnToggleAdmin">Quản lý chung</button>
 </div>
 
@@ -147,18 +147,18 @@
 
   <div id="nvStep1">
     <label>Họ và tên</label>
-    <input type="text" id="nvTen" placeholder="Ví dụ: Nguyễn Văn A">
+    <input type="text" id="nvTen" placeholder="Ví dụ: Nguyễn Văn A" onkeydown="if(event.key==='Enter')document.getElementById('nvMsnv').focus()">
     <label>Mã số nhân viên (MSNV)</label>
-    <input type="text" id="nvMsnv" placeholder="Ví dụ: 3719358" inputmode="numeric">
+    <input type="text" id="nvMsnv" placeholder="Ví dụ: 3719358" inputmode="numeric" onkeydown="if(event.key==='Enter')document.getElementById('btnNv').click()">
     <button class="btn" id="btnNv">Tra cứu</button>
   </div>
 
   <div id="nvStep2" style="display:none;">
     <p class="sub" style="margin-top:0;">Không tìm thấy bạn trong danh sách. Vui lòng nhập thêm thông tin để gửi yêu cầu đăng ký:</p>
     <label>Chức vụ</label>
-    <input type="text" id="nvChucVu" placeholder="Ví dụ: Nhân viên kỹ thuật hiện trường">
+    <input type="text" id="nvChucVu" placeholder="Ví dụ: Nhân viên kỹ thuật hiện trường" onkeydown="if(event.key==='Enter')document.getElementById('nvSdt').focus()">
     <label>Số điện thoại</label>
-    <input type="tel" id="nvSdt" placeholder="Ví dụ: 0912345678">
+    <input type="tel" id="nvSdt" placeholder="Ví dụ: 0912345678" onkeydown="if(event.key==='Enter')document.getElementById('btnDangKyMoi').click()">
     <button class="btn" id="btnDangKyMoi">Gửi đăng ký</button>
     <a class="reset" id="btnBackStep1">‹ Quay lại</a>
   </div>
@@ -177,7 +177,7 @@
 <div class="modal-overlay" id="modalPass">
   <div class="modal">
     <h3>Nhập mật khẩu quản lý chung</h3>
-    <input type="password" id="adminPassInput" placeholder="Mật khẩu">
+    <input type="password" id="adminPassInput" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')document.getElementById('btnSubmitPass').click()">
     <div class="msg bad" id="adminPassErr"></div>
     <div class="modal-actions">
       <button class="btn secondary" id="btnCancelPass">Huỷ</button>
@@ -194,7 +194,7 @@
       <p class="sub" style="margin:0;">Danh sách nhân viên &amp; phê duyệt tài khoản</p>
     </div>
     <div class="admin-actions">
-      <button class="linkbtn" id="btnThongBao">📢 Thông báo</button>
+      <button class="linkbtn" id="btnThongBao">🔔 Quản lý Thông báo</button>
       <button class="linkbtn" id="btnCauHinhHC">Cấu hình Hậu cần</button>
       <button class="linkbtn" id="btnCauHinhNS">Cấu hình Nhân sự</button>
       <button class="linkbtn" id="btnAddModule">+ Thêm quyền</button>
@@ -304,21 +304,54 @@
   </div>
 </div>
 
-<footer>BCH ĐA CAM LÂM — CAM RANH · Hệ thống quản lý tài khoản nội bộ</footer>
+<footer>BCH DA CAM LÂM — CAM RANH · Hệ thống quản lý tài khoản nội bộ</footer>
 
 <!-- ============ MODAL THÔNG BÁO CHUNG ============ -->
 <div class="modal-overlay" id="modalThongBao">
-  <div class="modal">
-    <h3>📢 Thông báo chung</h3>
-    <p class="sub" style="margin-top:-8px;">Hiện cho mọi người khi họ mở app (trang báo cáo / Hậu cần).</p>
-    <div id="tbHienTai" style="font-size:13px; color:var(--muted); margin-bottom:12px;"></div>
-    <label>Nội dung thông báo mới</label>
-    <textarea id="tbNoiDung" rows="4" placeholder="Ví dụ: Thứ 7 này BCH họp giao ban lúc 8h sáng tại văn phòng."
-      style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--panel2); color:var(--text); font-family:inherit; font-size:14px; margin-bottom:16px; resize:vertical;"></textarea>
-    <div class="modal-actions">
-      <button class="btn danger" id="btnXoaThongBao">Xoá thông báo hiện tại</button>
-      <button class="btn" id="btnDangThongBao">Đăng thông báo</button>
+  <div class="modal" style="max-width:560px;">
+    <h3>🔔 Quản lý Thông báo</h3>
+    <p class="sub" style="margin-top:-8px;">Chỉnh ở đây, mọi trang báo cáo tự cập nhật theo — không cần sửa từng trang.</p>
+
+    <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
+      <div style="font-weight:800; font-size:13px; margin-bottom:2px;">📋 Nhân sự &amp; MMTB</div>
+      <p class="sub" style="margin:0 0 10px; font-size:12px;">Giờ này dùng chung cho: khoá bảng nhập liệu (cần mật khẩu để sửa sau giờ này) và chấm cảnh báo nhấp nháy trước 30 phút.</p>
+      <div style="display:flex; gap:10px; align-items:flex-end;">
+        <div style="flex:1;">
+          <label style="font-size:12px;">Giờ khoá / hết hạn báo cáo</label>
+          <input type="time" id="inputGioHanNS" style="margin-bottom:0;">
+        </div>
+      </div>
     </div>
+
+    <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
+      <div style="font-weight:800; font-size:13px; margin-bottom:2px;">📅 Lịch nghiệm thu</div>
+      <p class="sub" style="margin:0 0 10px; font-size:12px;">Chấm cảnh báo nhấp nháy trước 30 phút so với giờ này.</p>
+      <div style="display:flex; gap:10px; align-items:flex-end;">
+        <div style="flex:1;">
+          <label style="font-size:12px;">Giờ hạn báo lịch</label>
+          <input type="time" id="inputGioHanLDT" style="margin-bottom:0;">
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:right; margin-bottom:20px;">
+      <button class="btn small" id="btnLuuGioHan">💾 Lưu giờ hạn</button>
+    </div>
+
+    <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px;">
+      <div style="font-weight:800; font-size:13px; margin-bottom:2px;">📢 Thông báo chung</div>
+      <p class="sub" style="margin:0 0 10px; font-size:12px;">Hiện cho mọi người khi họ mở app (trang báo cáo / Hậu cần), dạng banner ở đầu trang.</p>
+      <div id="tbHienTai" style="font-size:13px; color:var(--muted); margin-bottom:12px;"></div>
+      <label style="font-size:12px;">Nội dung thông báo mới</label>
+      <textarea id="tbNoiDung" rows="3" placeholder="Ví dụ: Thứ 7 này BCH họp giao ban lúc 8h sáng tại văn phòng."
+        style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-family:inherit; font-size:14px; margin-bottom:12px; resize:vertical;"></textarea>
+      <div id="tbErrMsg" class="msg bad" style="display:none;"></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn danger small" id="btnXoaThongBao" style="flex:1;">Xoá thông báo hiện tại</button>
+        <button class="btn small" id="btnDangThongBao" style="flex:1;">Đăng thông báo</button>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn secondary" id="btnCloseThongBao">Đóng</button>
     </div>
@@ -335,7 +368,7 @@
         <label>Vị trí làm việc</label>
         <div id="hcListViTri" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:140px; overflow-y:auto; margin-bottom:8px;"></div>
         <div style="display:flex; gap:6px;">
-          <input type="text" id="hcInputViTri" placeholder="Thêm vị trí..." style="margin-bottom:0;">
+          <input type="text" id="hcInputViTri" placeholder="Thêm vị trí..." style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.querySelector('[data-add-hc=\"vi_tri\"]').click()">
           <button class="btn small" data-add-hc="vi_tri">Thêm</button>
         </div>
       </div>
@@ -343,7 +376,7 @@
         <label>Nơi ở</label>
         <div id="hcListNoiO" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:140px; overflow-y:auto; margin-bottom:8px;"></div>
         <div style="display:flex; gap:6px;">
-          <input type="text" id="hcInputNoiO" placeholder="Thêm nơi ở..." style="margin-bottom:0;">
+          <input type="text" id="hcInputNoiO" placeholder="Thêm nơi ở..." style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.querySelector('[data-add-hc=\"noi_o\"]').click()">
           <button class="btn small" data-add-hc="noi_o">Thêm</button>
         </div>
       </div>
@@ -351,7 +384,7 @@
         <label>Face ID</label>
         <div id="hcListFaceId" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:100px; overflow-y:auto; margin-bottom:8px;"></div>
         <div style="display:flex; gap:6px;">
-          <input type="text" id="hcInputFaceId" placeholder="Thêm lựa chọn..." style="margin-bottom:0;">
+          <input type="text" id="hcInputFaceId" placeholder="Thêm lựa chọn..." style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.querySelector('[data-add-hc=\"face_id\"]').click()">
           <button class="btn small" data-add-hc="face_id">Thêm</button>
         </div>
       </div>
@@ -373,7 +406,7 @@
         <label>Danh sách Dự án</label>
         <div id="listDuAn" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:180px; overflow-y:auto; margin-bottom:8px;"></div>
         <div style="display:flex; gap:6px;">
-          <input type="text" id="inputDuAnMoi" placeholder="Tên dự án mới" style="margin-bottom:0;">
+          <input type="text" id="inputDuAnMoi" placeholder="Tên dự án mới" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.getElementById('btnThemDuAn').click()">
           <button class="btn small" id="btnThemDuAn">Thêm</button>
         </div>
       </div>
@@ -381,23 +414,10 @@
         <label>Danh sách Loại ca (áp dụng chung mọi dự án)</label>
         <div id="listLoaiCa" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:180px; overflow-y:auto; margin-bottom:8px;"></div>
         <div style="display:flex; gap:6px;">
-          <input type="text" id="inputCaMoi" placeholder="Tên ca mới (vd: Ca 3)" style="margin-bottom:0;">
+          <input type="text" id="inputCaMoi" placeholder="Tên ca mới (vd: Ca 3)" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.getElementById('btnThemCa').click()">
           <button class="btn small" id="btnThemCa">Thêm</button>
         </div>
       </div>
-    </div>
-
-    <label>Giờ hạn nhắc nhở <span style="color:var(--muted); font-weight:400;">(app sẽ nhấp nháy cảnh báo trong 30 phút trước mốc này)</span></label>
-    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; align-items:flex-end;">
-      <div>
-        <label style="font-size:12px;">Báo cáo Nhân sự / MMTB</label>
-        <input type="time" id="inputGioHanNS" style="margin-bottom:0;">
-      </div>
-      <div>
-        <label style="font-size:12px;">Báo Lịch nghiệm thu</label>
-        <input type="time" id="inputGioHanLDT" style="margin-bottom:0;">
-      </div>
-      <button class="btn small" id="btnLuuGioHan">Lưu giờ hạn</button>
     </div>
 
     <label>Tên ca riêng theo từng dự án <span style="color:var(--muted); font-weight:400;">(để trống = dùng tên mặc định)</span></label>
@@ -692,26 +712,10 @@ function renderCauHinhAll(){
 document.getElementById("btnCauHinhNS").addEventListener("click", async ()=>{
   await loadCauHinhNS();
   renderCauHinhAll();
-  try{
-    const { data: gh } = await sb.rpc("cauhinh_lay_gio_han");
-    if(gh){
-      document.getElementById("inputGioHanNS").value = (gh.gio_han_ns_mmtb || "16:00:00").slice(0,5);
-      document.getElementById("inputGioHanLDT").value = (gh.gio_han_nghiem_thu || "16:00:00").slice(0,5);
-    }
-  }catch(e){}
   document.getElementById("modalCauHinh").classList.add("show");
 });
 document.getElementById("btnCloseCauHinh").addEventListener("click", ()=>{
   document.getElementById("modalCauHinh").classList.remove("show");
-});
-
-document.getElementById("btnLuuGioHan").addEventListener("click", async ()=>{
-  const gioNS = document.getElementById("inputGioHanNS").value;
-  const gioLDT = document.getElementById("inputGioHanLDT").value;
-  if(!gioNS || !gioLDT){ alert("Vui lòng chọn đủ 2 mốc giờ."); return; }
-  const { error } = await sb.rpc("admin_luu_gio_han", { p_pass: currentAdminPass, p_gio_ns_mmtb: gioNS, p_gio_nghiem_thu: gioLDT });
-  if(error){ alert("Không lưu được, thử lại."); return; }
-  showToast("✓ Đã lưu giờ hạn nhắc nhở");
 });
 
 document.getElementById("btnThemDuAn").addEventListener("click", async ()=>{
@@ -790,7 +794,7 @@ document.querySelectorAll("[data-add-hc]").forEach(btn=>{
   });
 });
 
-/* ================= THÔNG BÁO CHUNG ================= */
+/* ================= QUẢN LÝ THÔNG BÁO (gộp: giờ hạn + thông báo chung) ================= */
 async function loadThongBaoHienTai(){
   const { data } = await sb.rpc("lay_thong_bao_moi_nhat");
   const el = document.getElementById("tbHienTai");
@@ -803,7 +807,15 @@ async function loadThongBaoHienTai(){
 
 document.getElementById("btnThongBao").addEventListener("click", async ()=>{
   document.getElementById("tbNoiDung").value = "";
+  document.getElementById("tbErrMsg").style.display = "none";
   await loadThongBaoHienTai();
+  try{
+    const { data: gh } = await sb.rpc("cauhinh_lay_gio_han");
+    if(gh){
+      document.getElementById("inputGioHanNS").value = (gh.gio_han_ns_mmtb || "08:00:00").slice(0,5);
+      document.getElementById("inputGioHanLDT").value = (gh.gio_han_nghiem_thu || "16:00:00").slice(0,5);
+    }
+  }catch(e){}
   document.getElementById("modalThongBao").classList.add("show");
 });
 document.getElementById("btnCloseThongBao").addEventListener("click", ()=>{
@@ -812,20 +824,33 @@ document.getElementById("btnCloseThongBao").addEventListener("click", ()=>{
 
 document.getElementById("btnDangThongBao").addEventListener("click", async ()=>{
   const noiDung = document.getElementById("tbNoiDung").value.trim();
+  const errEl = document.getElementById("tbErrMsg");
+  errEl.style.display = "none";
   if(!noiDung){ alert("Vui lòng nhập nội dung thông báo."); return; }
   const { error } = await sb.rpc("admin_dang_thong_bao", { p_pass: currentAdminPass, p_noi_dung: noiDung });
-  if(error){ alert("Không đăng được, vui lòng thử lại."); return; }
+  if(error){ errEl.textContent = "Không đăng được: " + error.message; errEl.style.display = "block"; return; }
   document.getElementById("tbNoiDung").value = "";
   await loadThongBaoHienTai();
   showToast("✓ Đã đăng thông báo mới.");
 });
 
 document.getElementById("btnXoaThongBao").addEventListener("click", async ()=>{
-  if(!confirm("Xoá thông báo đang hiện? Mọi người sẽ không thấy banner này nữa.")) return;
-  const { error } = await sb.rpc("admin_xoa_thong_bao", { p_pass: currentAdminPass });
-  if(error){ alert("Không xoá được."); return; }
+  if(!confirm("Xoá thông báo đang hiện? Mọi người sẽ không thấy banner này nữa (cần tải lại trang mới thấy hết banner ở các trang đang mở sẵn).")) return;
+  const errEl = document.getElementById("tbErrMsg");
+  errEl.style.display = "none";
+  const { data, error } = await sb.rpc("admin_xoa_thong_bao", { p_pass: currentAdminPass });
+  if(error){ errEl.textContent = "Không xoá được: " + error.message; errEl.style.display = "block"; return; }
   await loadThongBaoHienTai();
-  showToast("✓ Đã xoá thông báo.");
+  showToast(data > 0 ? ("✓ Đã xoá " + data + " thông báo.") : "Không có thông báo nào để xoá.");
+});
+
+document.getElementById("btnLuuGioHan").addEventListener("click", async ()=>{
+  const gioNS = document.getElementById("inputGioHanNS").value;
+  const gioLDT = document.getElementById("inputGioHanLDT").value;
+  if(!gioNS || !gioLDT){ alert("Vui lòng chọn đủ 2 mốc giờ."); return; }
+  const { error } = await sb.rpc("admin_luu_gio_han", { p_pass: currentAdminPass, p_gio_ns_mmtb: gioNS, p_gio_nghiem_thu: gioLDT });
+  if(error){ alert("Không lưu được: " + error.message); return; }
+  showToast("✓ Đã lưu giờ hạn nhắc nhở");
 });
 
 document.getElementById("btnToggleAdmin").addEventListener("click", ()=>{
