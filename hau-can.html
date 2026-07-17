@@ -242,6 +242,7 @@ const LOGIN_PAGE = "quan-ly-tai-khoan.html";
 
 let saved = null;
 let tuyChon = { vi_tri: [], noi_o: [], face_id: [] };
+let duAnGocDaLuu = null; // Dự án làm việc đã lưu gần nhất — dùng để phát hiện thay đổi dự án
 
 // 34 tỉnh/thành phố sau sáp nhập (có hiệu lực từ 1/7/2025) — không còn cấp Huyện
 const DANH_SACH_TINH = [
@@ -535,6 +536,47 @@ function getNoiCapCccdValue(){
   return document.getElementById("selNoiCapCccd").value;
 }
 
+// ============ Xử lý khi thay đổi "Dự án làm việc" ============
+// TH1: đang là Cam Ranh → đổi sang dự án khác: tự động xóa sạch Vị trí/Nơi ở/Face ID/Ngày đăng ký KTX (không hỏi).
+// TH2: đang là dự án khác → đổi sang Cam Ranh: bắt buộc bổ sung thêm 4 mục đó.
+function clearCamRanhUI(){
+  document.querySelectorAll('input[name="vi_tri"]').forEach(i=>i.checked=false);
+  document.querySelectorAll('input[name="noi_o"]').forEach(i=>i.checked=false);
+  document.querySelectorAll('input[name="face_id"]').forEach(i=>i.checked=false);
+  ["selKtxNgay","selKtxThang","selKtxNam"].forEach(id=>{ document.getElementById(id).value = ""; });
+  // Mở lại các mục vừa xóa để người dùng thấy rõ chúng đã trống, không còn ở trạng thái "đã cập nhật"
+  ["fViTri","fNoiO","fFaceId","fKtx"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove("collapsed");
+  });
+}
+
+async function xuLyDoiDuAn(){
+  const moi = getChecked("du_an")[0] || null;
+  const cuLaCamRanh = duAnGocDaLuu === "Cam Ranh";
+  const moiLaCamRanh = moi === "Cam Ranh";
+
+  if(cuLaCamRanh && !moiLaCamRanh){
+    // TH1 — tự động xóa ngay, không hỏi xác nhận
+    clearCamRanhUI();
+    try{ await sb.rpc("hc_xoa_du_lieu_cam_ranh", { p_msnv: saved.msnv }); }catch(e){}
+    showToast("Đã tự động xóa Vị trí/Nơi ở/Face ID/Ngày đăng ký KTX (không còn thuộc Cam Ranh).");
+  } else if(!cuLaCamRanh && moiLaCamRanh && duAnGocDaLuu !== null){
+    // TH2 — chỉ báo khi đây là THAY ĐỔI từ 1 dự án đã lưu trước đó sang Cam Ranh
+    // (bỏ qua trường hợp nhập mới lần đầu, vì wizard đã tự dẫn qua các bước này rồi)
+    showToast("Đã chuyển sang Cam Ranh — vui lòng bổ sung thêm Vị trí/Nơi ở/Face ID/Ngày đăng ký KTX.");
+  }
+
+  duAnGocDaLuu = moi;
+  refreshFieldStates();
+  buildWizardSteps();
+
+  // Nếu đang ở màn hình chính mà giờ còn thiếu mục bắt buộc theo nhánh mới → mở lại Wizard đúng bước còn thiếu
+  if(document.getElementById("appBox").style.display !== "none" && !tatCaDaXongTheoNhanh()){
+    batDauWizard();
+  }
+}
+
 async function init(){
   const raw = localStorage.getItem(LS_KEY);
   if(!raw){ location.href = LOGIN_PAGE; return; }
@@ -589,6 +631,7 @@ async function init(){
       if(ttcn.ht_thon) document.getElementById("inpHtThon").value = ttcn.ht_thon;
       setChecked("du_an", [ttcn.du_an_lam_viec]);
       setChecked("nguon", [ttcn.nguon_nhan_su]);
+      duAnGocDaLuu = ttcn.du_an_lam_viec || null;
 
       setDateTriple("selCccdNgay","selCccdThang","selCccdNam", ttcn.ngay_cap_cccd);
       if(ttcn.noi_cap_cccd){
@@ -641,6 +684,9 @@ async function init(){
       const fieldWrap = e.target.closest(".field");
       if(fieldWrap) setTimeout(()=>tryCollapse(fieldWrap.id), 150);
     });
+  });
+  document.querySelectorAll('input[name="du_an"]').forEach(r=>{
+    r.addEventListener("change", xuLyDoiDuAn);
   });
   refreshFieldStates();
   tryCollapseAllDone(); // Thu gọn sẵn các mục đã có dữ liệu từ trước khi mở lại trang
