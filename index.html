@@ -252,7 +252,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <img src="icon.png" class="home-watermark" alt="">
     <div class="home-header">
       <div>
-        <h1>BCH DA CAM LÂM<br>CAM RANH</h1>
+        <h1>BCH DA <span style="color:#42a5f5">CAM LÂM</span><br><span style="color:#ffa726">CAM RANH</span></h1>
         <div class="sub">📅 <span id="home-date"></span></div>
       </div>
       <div style="text-align:right" class="export-popover-wrap">
@@ -375,7 +375,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 <div class="rotate-banner">📱 Xoay ngang điện thoại để xem bảng tốt hơn!</div>
 
 <div id="lock-banner" class="lock-banner">
-  🔒 Đã qua 08:00 — Nhập mật khẩu để chỉnh sửa:
+  🔒 Đã qua <span id="lock-time-ns">08:00</span> — Nhập mật khẩu để chỉnh sửa:
   <input type="password" id="lock-pass" placeholder="Mật khẩu..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')unlockEdit()">
   <button class="btn btn-sm btn-or" onclick="unlockEdit()">Mở khoá</button>
 </div>
@@ -457,7 +457,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <div class="rotate-banner">📱 Xoay ngang điện thoại để xem bảng tốt hơn!</div>
 
   <div id="mmtb-lock-banner" class="lock-banner">
-    🔒 Đã qua 08:00 — Nhập mật khẩu để chỉnh sửa:
+    🔒 Đã qua <span id="lock-time-mmtb">08:00</span> — Nhập mật khẩu để chỉnh sửa:
     <input type="password" id="mmtb-lock-pass" placeholder="Mật khẩu..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')mmtbUnlockEdit()">
     <button class="btn btn-sm btn-or" onclick="mmtbUnlockEdit()">Mở khoá</button>
   </div>
@@ -815,12 +815,17 @@ function qsCheckAlert(cardId,shouldBlink){
 }
 
 // Giờ hạn nhắc nhở — admin tự cấu hình trong Quản lý chung (patch10_gio_han.sql)
-var GIO_HAN = { gio_han_ns_mmtb: '16:00:00', gio_han_nghiem_thu: '16:00:00' };
+var GIO_HAN = { gio_han_ns_mmtb: '08:00:00', gio_han_nghiem_thu: '16:00:00' };
 async function taiGioHan(){
   try{
     var r = await sc.rpc('cauhinh_lay_gio_han');
     if(r.data) GIO_HAN = r.data;
-  }catch(e){ /* giữ mặc định 16:00 nếu lỗi mạng/chưa chạy patch10 */ }
+  }catch(e){ /* giữ mặc định 08:00/16:00 nếu lỗi mạng/chưa chạy patch10 */ }
+  var gt=gioKhoaHienThi();
+  ['lock-time-ns','lock-time-mmtb'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.textContent=gt;
+  });
 }
 
 function toggleExportPopover(){
@@ -1350,7 +1355,14 @@ var prevDayData=null;
 
 function isAfterCutoff(){
   var n=new Date();
-  return n.getHours()>=8;
+  var p=(GIO_HAN.gio_han_ns_mmtb||'08:00:00').split(':');
+  var cutoff=new Date();
+  cutoff.setHours(parseInt(p[0]||8),parseInt(p[1]||0),0,0);
+  return n>=cutoff;
+}
+function gioKhoaHienThi(){
+  var p=(GIO_HAN.gio_han_ns_mmtb||'08:00:00').split(':');
+  return p[0]+':'+p[1];
 }
 
 function checkTimeLock(){
@@ -2413,15 +2425,14 @@ var autoSavedToday=false;
 
 async function checkAutoSaveAt8(){
   if(autoSavedToday||vDate)return;
-  var now=new Date();
-  if(now.getHours()<8)return;
+  if(!isAfterCutoff())return;
   try{
     var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).single();
     if(ex.data){autoSavedToday=true;return;} // đã có data hôm nay rồi, không cần làm gì
-    // Chưa có data hôm nay và đã qua 8:00 -> tự lưu bản hiện tại (copy từ hôm qua) lên server
+    // Chưa có data hôm nay và đã qua giờ khoá -> tự lưu bản hiện tại (copy từ hôm qua) lên server
     await sSave({projects:projects,cols:COLS,data:data,log:logItems});
     autoSavedToday=true;
-    toast('⏰ Đã tự động lưu dữ liệu (copy từ hôm qua) lúc 8:00!');
+    toast('⏰ Đã tự động lưu dữ liệu (copy từ hôm qua) lúc '+gioKhoaHienThi()+'!');
   }catch(e){}
 }
 
@@ -3141,14 +3152,13 @@ var mmtbAutoSavedToday=false;
 
 async function mmtbCheckAutoSaveAt8(){
   if(mmtbAutoSavedToday||mmtbVDate)return;
-  var now=new Date();
-  if(now.getHours()<8)return;
+  if(!isAfterCutoff())return;
   try{
     var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).single();
     if(ex.data){mmtbAutoSavedToday=true;return;}
     await mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
     mmtbAutoSavedToday=true;
-    toast('⏰ MMTB: Đã tự động lưu dữ liệu (copy từ hôm qua) lúc 8:00!');
+    toast('⏰ MMTB: Đã tự động lưu dữ liệu (copy từ hôm qua) lúc '+gioKhoaHienThi()+'!');
   }catch(e){}
 }
 
@@ -3535,10 +3545,17 @@ async function homeRefresh(){
 }
 
 // ============ HỆ THỐNG THÔNG BÁO PUSH ============
-var BCH_NOTIF_TIMES=[
-  {h:7, m:30, id:'ns_mmtb_730',  title:'⏰ Sắp hết giờ nhập liệu!',  body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline 8:00)'},
-  {h:15,m:30, id:'ldt_1530',     title:'📅 Sắp hết giờ báo lịch!',   body:'Còn 30 phút nữa là hết giờ báo Lịch nghiệm thu ngày mai (deadline 16:00)'}
-];
+// Giờ nhắc = giờ hạn (GIO_HAN, cấu hình trong Quản lý chung) trừ 30 phút — luôn tự khớp.
+function bchTinhLichThongBao(){
+  function parseHM(hms){ var p=(hms||'08:00:00').split(':'); return {h:parseInt(p[0]||8),m:parseInt(p[1]||0)}; }
+  function minus30(hm){ var t=hm.h*60+hm.m-30; if(t<0)t+=1440; return {h:Math.floor(t/60),m:t%60}; }
+  var ns=minus30(parseHM(GIO_HAN.gio_han_ns_mmtb));
+  var ldt=minus30(parseHM(GIO_HAN.gio_han_nghiem_thu));
+  return [
+    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'},
+    {h:ldt.h,m:ldt.m,id:'ldt_reminder',     title:'📅 Sắp hết giờ báo lịch!', body:'Còn 30 phút nữa là hết giờ báo Lịch nghiệm thu ngày mai (deadline '+(GIO_HAN.gio_han_nghiem_thu||'16:00:00').slice(0,5)+')'}
+  ];
+}
 
 function bchRequestNotif(){
   if(!('Notification' in window))return;
@@ -3552,7 +3569,7 @@ function bchRequestNotif(){
 
 function bchScheduleAllNotifs(){
   if(Notification.permission!=='granted')return;
-  BCH_NOTIF_TIMES.forEach(function(cfg){bchScheduleOne(cfg);});
+  bchTinhLichThongBao().forEach(function(cfg){bchScheduleOne(cfg);});
 }
 
 function bchScheduleOne(cfg){
@@ -3582,11 +3599,11 @@ function bchScheduleOne(cfg){
   },delay);
 }
 
-// Khởi động thông báo khi tải trang
+// Khởi động thông báo khi tải trang (việc LÊN LỊCH giờ cụ thể sẽ chờ tải xong GIO_HAN ở bootstrap chính bên dưới)
 (function(){
   if(!('Notification' in window))return;
   if(Notification.permission==='granted'){
-    bchScheduleAllNotifs();
+    // để bootstrap chính gọi bchScheduleAllNotifs() sau khi đã taiGioHan() xong, tránh dùng giờ mặc định sai
   } else if(Notification.permission!=='denied'){
     // Hiện banner bật thông báo ở trang chủ
     setTimeout(function(){
@@ -3724,6 +3741,10 @@ function bchScheduleOne(cfg){
   };
 
   await taiCauHinhCaLamViec();
+  await taiGioHan();
+  if('Notification' in window && Notification.permission==='granted'){
+    bchScheduleAllNotifs();
+  }
 
   // Khởi động: hiện trang chọn module trước
   showScreen('home');
