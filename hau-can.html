@@ -192,7 +192,7 @@
     <div class="msg" id="msgCaNhan"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="cardCamRanh">
     <h2>Cập nhật thông tin CBCNV tại Cam Ranh</h2>
     <p class="sub">Cập nhật khi có thay đổi. Hệ thống chỉ giữ lại lần cập nhật gần nhất.</p>
 
@@ -347,6 +347,7 @@ function refreshFieldStates(){
    "fThuongTru","fHienTai","fViTri","fNoiO","fFaceId","fKtx","fDuAn","fNguon"].forEach(id=>{
     markDone(id, isFieldDone(id));
   });
+  capNhatHienThiCardCamRanh();
 }
 
 // Tự bọc phần nội dung mỗi field vào 1 khối riêng để ẩn/hiện được,
@@ -534,6 +535,13 @@ function tryCollapseAllDone(){
 
 function getNoiCapCccdValue(){
   return document.getElementById("selNoiCapCccd").value;
+}
+
+// Ẩn hẳn khối "Thông tin CBCNV tại Cam Ranh" khi Dự án làm việc không phải Cam Ranh,
+// để người dùng không thấy và không nhập vào các mục Vị trí/Nơi ở/Face ID/Ngày đăng ký KTX nữa.
+function capNhatHienThiCardCamRanh(){
+  const card = document.getElementById("cardCamRanh");
+  if(card) card.style.display = isCamRanh() ? "block" : "none";
 }
 
 // ============ Xử lý khi thay đổi "Dự án làm việc" ============
