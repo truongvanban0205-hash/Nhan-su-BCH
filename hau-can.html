@@ -80,6 +80,24 @@
 
 <div id="loadingBox" class="loading">Đang tải...</div>
 
+<!-- ============ WIZARD: TỪNG BƯỚC (chỉ hiện khi chưa điền đủ) ============ -->
+<div id="wizardBox" style="display:none; width:100%; max-width:520px;">
+  <div class="card">
+    <div style="font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px;" id="wizardProgress">Bước 1/12</div>
+    <div style="height:6px;background:#e3e8ef;border-radius:4px;overflow:hidden;margin-bottom:20px;">
+      <div id="wizardBar" style="height:100%;width:0%;background:var(--accent);transition:width .25s;"></div>
+    </div>
+    <h2 id="wizardTitle" style="margin-bottom:4px;"></h2>
+    <p class="sub" id="wizardHint">Vui lòng điền/chọn đầy đủ để tiếp tục.</p>
+    <div id="wizardSlot"></div>
+    <div class="msg bad" id="wizardMsg"></div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn secondary" id="btnWizardBack" style="margin-top:0;width:auto;flex:0 0 110px;">‹ Trước</button>
+      <button class="btn save" id="btnWizardNext" style="margin-top:0;">Tiếp theo ›</button>
+    </div>
+  </div>
+</div>
+
 <div id="appBox" style="display:none; width:100%; max-width:520px;">
 
   <div class="card">
@@ -239,6 +257,7 @@ const GIOI_TINH_OPTIONS = ["Nam","Nữ"].map(v=>({gia_tri:v}));
 const HON_NHAN_OPTIONS = ["Độc thân","Đã kết hôn","Ly hôn"].map(v=>({gia_tri:v}));
 
 function showMsg(el, type, text){ el.className = "msg show " + type; el.textContent = text; }
+function hideMsg(el){ el.className = "msg"; el.textContent = ""; }
 
 function renderChips(containerId, name, options){
   const el = document.getElementById(containerId);
@@ -295,28 +314,38 @@ function setChecked(name, values){
   });
 }
 
-// Tô màu field khi đã có dữ liệu (chọn hoặc nhập xong) để phân biệt trực quan
+// Kiểm tra 1 field đã hợp lệ/đầy đủ hay chưa (dùng chung cho cả tô màu và Wizard)
+function isFieldDone(fieldId){
+  switch(fieldId){
+    case "fCccd": return document.getElementById("inpCccd").value.trim().length === 12;
+    case "fNgayCapCccd": return isDateTripleFilled("selCccdNgay","selCccdThang","selCccdNam");
+    case "fNoiCapCccd": return !!getNoiCapCccdValue();
+    case "fGioiTinh": return getChecked("gioi_tinh").length>0;
+    case "fNgaySinh": return isDateTripleFilled("selSinhNgay","selSinhThang","selSinhNam");
+    case "fHonNhan": return getChecked("hon_nhan").length>0;
+    case "fQuocTich": return document.getElementById("inpQuocTich").value.trim().length>0;
+    case "fNgayBatDau": return isDateTripleFilled("selBdNgay","selBdThang","selBdNam");
+    case "fThuongTru": return !!(document.getElementById("selTtTinh").value && document.getElementById("inpTtXa").value.trim() && document.getElementById("inpTtThon").value.trim());
+    case "fHienTai": return !!(document.getElementById("selHtTinh").value && document.getElementById("inpHtXa").value.trim() && document.getElementById("inpHtThon").value.trim());
+    case "fViTri": return getChecked("vi_tri").length>0;
+    case "fNoiO": return getChecked("noi_o").length>0;
+    case "fFaceId": return getChecked("face_id").length>0;
+    case "fKtx": return isDateTripleFilled("selKtxNgay","selKtxThang","selKtxNam");
+    case "fDuAn": return getChecked("du_an").length>0;
+    case "fNguon": return getChecked("nguon").length>0;
+    default: return false;
+  }
+}
+
 function markDone(fieldId, isDone){
   const el = document.getElementById(fieldId);
   if(el) el.classList.toggle("done", !!isDone);
 }
 function refreshFieldStates(){
-  markDone("fCccd", document.getElementById("inpCccd").value.trim().length === 12);
-  markDone("fNgayCapCccd", isDateTripleFilled("selCccdNgay","selCccdThang","selCccdNam"));
-  markDone("fNoiCapCccd", !!getNoiCapCccdValue());
-  markDone("fGioiTinh", getChecked("gioi_tinh").length>0);
-  markDone("fNgaySinh", isDateTripleFilled("selSinhNgay","selSinhThang","selSinhNam"));
-  markDone("fHonNhan", getChecked("hon_nhan").length>0);
-  markDone("fQuocTich", document.getElementById("inpQuocTich").value.trim().length>0);
-  markDone("fNgayBatDau", isDateTripleFilled("selBdNgay","selBdThang","selBdNam"));
-  markDone("fThuongTru", document.getElementById("selTtTinh").value && document.getElementById("inpTtXa").value.trim() && document.getElementById("inpTtThon").value.trim());
-  markDone("fHienTai", document.getElementById("selHtTinh").value && document.getElementById("inpHtXa").value.trim() && document.getElementById("inpHtThon").value.trim());
-  markDone("fViTri", getChecked("vi_tri").length>0);
-  markDone("fNoiO", getChecked("noi_o").length>0);
-  markDone("fFaceId", getChecked("face_id").length>0);
-  markDone("fKtx", isDateTripleFilled("selKtxNgay","selKtxThang","selKtxNam"));
-  markDone("fDuAn", getChecked("du_an").length>0);
-  markDone("fNguon", getChecked("nguon").length>0);
+  ["fCccd","fNgayCapCccd","fNoiCapCccd","fGioiTinh","fNgaySinh","fHonNhan","fQuocTich","fNgayBatDau",
+   "fThuongTru","fHienTai","fViTri","fNoiO","fFaceId","fKtx","fDuAn","fNguon"].forEach(id=>{
+    markDone(id, isFieldDone(id));
+  });
 }
 
 // Tự bọc phần nội dung mỗi field vào 1 khối riêng để ẩn/hiện được,
@@ -339,7 +368,161 @@ function initCollapsibleFields(){
   });
 }
 
-// Tự thu gọn 1 field khi đã nhập/chọn xong (gọi khi rời khỏi ô — blur/change)
+// ============ WIZARD: TỪNG BƯỚC ============
+const WIZARD_TITLES = {
+  fCccd: "Số căn cước công dân",
+  fNgayCapCccd: "Ngày tháng cấp CCCD",
+  fNoiCapCccd: "Nơi cấp CCCD",
+  fGioiTinh: "Giới tính",
+  fNgaySinh: "Ngày tháng năm sinh",
+  fHonNhan: "Tình trạng hôn nhân",
+  fQuocTich: "Quốc tịch",
+  fNgayBatDau: "Ngày bắt đầu làm việc tại dự án",
+  fThuongTru: "Địa chỉ thường trú (sau sáp nhập)",
+  fHienTai: "Địa chỉ hiện tại (sau sáp nhập)",
+  fDuAn: "Dự án làm việc",
+  fNguon: "Nguồn nhân sự",
+  fViTri: "Vị trí làm việc",
+  fNoiO: "Chỗ ở hiện tại",
+  fFaceId: "Face ID ra vào cổng",
+  fKtx: "Ngày đăng ký KTX"
+};
+const WIZARD_STEPS_M1 = ["fCccd","fNgayCapCccd","fNoiCapCccd","fGioiTinh","fNgaySinh","fHonNhan","fQuocTich","fNgayBatDau","fThuongTru","fHienTai","fDuAn","fNguon"];
+const WIZARD_STEPS_M2 = ["fViTri","fNoiO","fFaceId","fKtx"];
+
+let wizardIndex = 0;
+let wizardSteps = [];
+
+function isCamRanh(){ return getChecked("du_an")[0] === "Cam Ranh"; }
+
+function buildWizardSteps(){
+  wizardSteps = WIZARD_STEPS_M1.slice();
+  if(isCamRanh()) wizardSteps = wizardSteps.concat(WIZARD_STEPS_M2);
+}
+
+function tatCaDaXongTheoNhanh(){
+  const daXongM1 = WIZARD_STEPS_M1.every(isFieldDone);
+  if(!daXongM1) return false;
+  if(isCamRanh()) return WIZARD_STEPS_M2.every(isFieldDone);
+  return true;
+}
+
+function moveFieldBodyInto(fieldId, container){
+  const field = document.getElementById(fieldId);
+  const body = field && field.querySelector(".field-body");
+  if(body) container.appendChild(body);
+}
+function moveFieldBodyBack(fieldId){
+  const field = document.getElementById(fieldId);
+  const slot = document.getElementById("wizardSlot");
+  const body = slot.querySelector(".field-body");
+  if(field && body) field.appendChild(body);
+}
+
+async function renderWizardStep(){
+  hideMsg(document.getElementById("wizardMsg"));
+  buildWizardSteps(); // dự án có thể vừa đổi, tính lại nhánh mỗi lần render
+  if(wizardIndex >= wizardSteps.length){
+    await ketThucWizard();
+    return;
+  }
+  const fieldId = wizardSteps[wizardIndex];
+  document.getElementById("wizardTitle").textContent = WIZARD_TITLES[fieldId] || "";
+  document.getElementById("wizardProgress").textContent = `Bước ${wizardIndex+1}/${wizardSteps.length}`;
+  document.getElementById("wizardBar").style.width = Math.round(((wizardIndex)/wizardSteps.length)*100) + "%";
+  const slot = document.getElementById("wizardSlot");
+  slot.innerHTML = "";
+  moveFieldBodyInto(fieldId, slot);
+  document.getElementById("btnWizardBack").style.visibility = wizardIndex === 0 ? "hidden" : "visible";
+  document.getElementById("btnWizardNext").textContent = (wizardIndex === wizardSteps.length-1) ? "Hoàn tất ✓" : "Tiếp theo ›";
+}
+
+async function luuTungPhanMuc1(){
+  const payload = {
+    p_msnv: saved.msnv, p_ten: saved.ten, p_cccd: document.getElementById("inpCccd").value.trim() || null,
+    p_tt_tinh: document.getElementById("selTtTinh").value || null,
+    p_tt_xa: document.getElementById("inpTtXa").value.trim() || null,
+    p_tt_thon: document.getElementById("inpTtThon").value.trim() || null,
+    p_ht_tinh: document.getElementById("selHtTinh").value || null,
+    p_ht_xa: document.getElementById("inpHtXa").value.trim() || null,
+    p_ht_thon: document.getElementById("inpHtThon").value.trim() || null,
+    p_du_an: getChecked("du_an")[0] || null,
+    p_nguon: getChecked("nguon")[0] || null,
+    p_ngay_cap_cccd: getDateTriple("selCccdNgay","selCccdThang","selCccdNam"),
+    p_noi_cap_cccd: getNoiCapCccdValue() || null,
+    p_tinh_trang_hon_nhan: getChecked("hon_nhan")[0] || null,
+    p_gioi_tinh: getChecked("gioi_tinh")[0] || null,
+    p_quoc_tich: document.getElementById("inpQuocTich").value.trim() || null,
+    p_ngay_sinh: getDateTriple("selSinhNgay","selSinhThang","selSinhNam"),
+    p_ngay_bat_dau_lam_viec: getDateTriple("selBdNgay","selBdThang","selBdNam")
+  };
+  await sb.rpc("hc_luu_thong_tin_ca_nhan", payload);
+}
+async function luuTungPhanMuc2(fieldId){
+  if(fieldId === "fKtx"){
+    const ngayKtx = getDateTriple("selKtxNgay","selKtxThang","selKtxNam");
+    if(ngayKtx) await sb.rpc("hc_luu_ngay_dang_ky_ktx", { p_msnv: saved.msnv, p_ngay: ngayKtx });
+    return;
+  }
+  await sb.rpc("hc_luu_ho_so", {
+    p_msnv: saved.msnv, p_ten: saved.ten,
+    p_vi_tri: getChecked("vi_tri"), p_noi_o: getChecked("noi_o"), p_face_id: getChecked("face_id")[0] || ""
+  });
+}
+
+document.getElementById("btnWizardNext").addEventListener("click", async ()=>{
+  const fieldId = wizardSteps[wizardIndex];
+  refreshFieldStates();
+  if(!isFieldDone(fieldId)){
+    showMsg(document.getElementById("wizardMsg"), "bad", "Vui lòng nhập/chọn đầy đủ trước khi tiếp tục.");
+    return;
+  }
+  const btn = document.getElementById("btnWizardNext");
+  btn.disabled = true;
+  try{
+    if(WIZARD_STEPS_M1.includes(fieldId)) await luuTungPhanMuc1();
+    else await luuTungPhanMuc2(fieldId);
+  }catch(e){}
+  btn.disabled = false;
+  moveFieldBodyBack(fieldId);
+  wizardIndex++;
+  await renderWizardStep();
+});
+
+document.getElementById("btnWizardBack").addEventListener("click", ()=>{
+  if(wizardIndex === 0) return;
+  const fieldId = wizardSteps[wizardIndex];
+  moveFieldBodyBack(fieldId);
+  wizardIndex--;
+  renderWizardStep();
+});
+
+async function ketThucWizard(){
+  document.getElementById("wizardBar").style.width = "100%";
+  document.getElementById("wizardBox").style.display = "none";
+  document.getElementById("appBox").style.display = "block";
+  refreshFieldStates();
+  tryCollapseAllDone();
+  showToast("🎉 Đã hoàn tất cập nhật thông tin!");
+}
+
+function batDauWizard(){
+  buildWizardSteps();
+  // Tìm bước đầu tiên chưa hoàn thành để tiếp tục (không bắt làm lại từ đầu)
+  wizardIndex = wizardSteps.findIndex(id=>!isFieldDone(id));
+  if(wizardIndex === -1) wizardIndex = 0;
+  document.getElementById("appBox").style.display = "none";
+  document.getElementById("wizardBox").style.display = "block";
+  renderWizardStep();
+}
+
+function showToast(text){
+  const t = document.createElement("div");
+  t.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#2e7d32;color:#fff;padding:12px 20px;border-radius:12px;font-weight:700;font-size:13px;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.3);";
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 4500);
+}
 function tryCollapse(fieldId){
   const el = document.getElementById(fieldId);
   if(el && el.classList.contains("done")) el.classList.add("collapsed");
@@ -463,7 +646,11 @@ async function init(){
   tryCollapseAllDone(); // Thu gọn sẵn các mục đã có dữ liệu từ trước khi mở lại trang
 
   document.getElementById("loadingBox").style.display = "none";
-  document.getElementById("appBox").style.display = "block";
+  if(tatCaDaXongTheoNhanh()){
+    document.getElementById("appBox").style.display = "block";
+  } else {
+    batDauWizard();
+  }
 
   // Bảng tin nội bộ
   try{
