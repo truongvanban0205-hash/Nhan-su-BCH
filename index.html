@@ -277,7 +277,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <span style="font-size:26px;">🔔</span>
         <div style="flex:1;">
           <div style="font-weight:800;color:#fff;font-size:13px;">Bật thông báo nhắc nhở</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;">Nhắc 7:30 (NS/MMTB) và 15:30 (Nghiệm thu)</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;" id="notif-banner-times">Nhắc 7:30 (NS/MMTB) và 15:30 (Nghiệm thu)</div>
         </div>
         <button onclick="bchRequestNotif();document.getElementById('home-notif-banner').style.display='none';" style="background:#fff;color:#1565c0;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">Bật ngay</button>
       </div>
@@ -826,6 +826,13 @@ async function taiGioHan(){
     var el=document.getElementById(id);
     if(el) el.textContent=gt;
   });
+  // Đồng bộ dòng chữ giờ nhắc trên banner "Bật thông báo nhắc nhở" theo đúng giờ đã cấu hình (trừ 30 phút)
+  var lich=bchTinhLichThongBao();
+  var elBanner=document.getElementById('notif-banner-times');
+  if(elBanner && lich.length>=2){
+    function fmt(c){return p2(c.h)+':'+p2(c.m);}
+    elBanner.textContent='Nhắc '+fmt(lich[0])+' (NS/MMTB) và '+fmt(lich[1])+' (Nghiệm thu)';
+  }
 }
 
 function toggleExportPopover(){
