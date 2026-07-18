@@ -211,15 +211,6 @@
       <div class="chip-list" id="chipFaceId"></div>
     </div>
 
-    <div class="field" id="fKtx">
-      <div class="field-label">Ngày đăng ký KTX <span class="field-check">✓ Đã chọn</span></div>
-      <div class="date-triple">
-        <select id="selKtxNgay"></select>
-        <select id="selKtxThang"></select>
-        <select id="selKtxNam"></select>
-      </div>
-    </div>
-
     <button class="btn save" id="btnLuuHoSo">Lưu thông tin</button>
     <div class="msg" id="msgHoSo"></div>
   </div>
@@ -253,7 +244,7 @@ const DANH_SACH_TINH = [
   "Thái Nguyên","Thanh Hóa","Tuyên Quang","Vĩnh Long"
 ];
 const DU_AN_OPTIONS = ["Làng Vân","Cam Ranh","Phước Vĩnh Tây"].map(v=>({gia_tri:v}));
-const NGUON_OPTIONS = ["Tuyển mới","Vincons","Vinhomes"].map(v=>({gia_tri:v}));
+const NGUON_OPTIONS = ["Tuyển mới","Vincons","Vinhomes","SGC"].map(v=>({gia_tri:v}));
 const GIOI_TINH_OPTIONS = ["Nam","Nữ"].map(v=>({gia_tri:v}));
 const HON_NHAN_OPTIONS = ["Độc thân","Đã kết hôn","Ly hôn"].map(v=>({gia_tri:v}));
 
@@ -278,7 +269,7 @@ function renderTinhSelect(selId){
   });
 }
 
-// Sinh 3 ô chọn Ngày/Tháng/Năm dùng chung cho CCCD, Ngày sinh, Ngày bắt đầu làm việc, Ngày đăng ký KTX
+// Sinh 3 ô chọn Ngày/Tháng/Năm dùng chung cho CCCD, Ngày sinh, Ngày bắt đầu làm việc
 function renderDateTriple(dayId, monthId, yearId){
   const dEl = document.getElementById(dayId);
   const mEl = document.getElementById(monthId);
@@ -331,7 +322,6 @@ function isFieldDone(fieldId){
     case "fViTri": return getChecked("vi_tri").length>0;
     case "fNoiO": return getChecked("noi_o").length>0;
     case "fFaceId": return getChecked("face_id").length>0;
-    case "fKtx": return isDateTripleFilled("selKtxNgay","selKtxThang","selKtxNam");
     case "fDuAn": return getChecked("du_an").length>0;
     case "fNguon": return getChecked("nguon").length>0;
     default: return false;
@@ -344,7 +334,7 @@ function markDone(fieldId, isDone){
 }
 function refreshFieldStates(){
   ["fCccd","fNgayCapCccd","fNoiCapCccd","fGioiTinh","fNgaySinh","fHonNhan","fQuocTich","fNgayBatDau",
-   "fThuongTru","fHienTai","fViTri","fNoiO","fFaceId","fKtx","fDuAn","fNguon"].forEach(id=>{
+   "fThuongTru","fHienTai","fViTri","fNoiO","fFaceId","fDuAn","fNguon"].forEach(id=>{
     markDone(id, isFieldDone(id));
   });
   capNhatHienThiCardCamRanh();
@@ -386,11 +376,10 @@ const WIZARD_TITLES = {
   fNguon: "Nguồn nhân sự",
   fViTri: "Vị trí làm việc",
   fNoiO: "Chỗ ở hiện tại",
-  fFaceId: "Face ID ra vào cổng",
-  fKtx: "Ngày đăng ký KTX"
+  fFaceId: "Face ID ra vào cổng"
 };
 const WIZARD_STEPS_M1 = ["fCccd","fNgayCapCccd","fNoiCapCccd","fGioiTinh","fNgaySinh","fHonNhan","fQuocTich","fNgayBatDau","fThuongTru","fHienTai","fDuAn","fNguon"];
-const WIZARD_STEPS_M2 = ["fViTri","fNoiO","fFaceId","fKtx"];
+const WIZARD_STEPS_M2 = ["fViTri","fNoiO","fFaceId"];
 
 let wizardIndex = 0;
 let wizardSteps = [];
@@ -461,11 +450,6 @@ async function luuTungPhanMuc1(){
   await sb.rpc("hc_luu_thong_tin_ca_nhan", payload);
 }
 async function luuTungPhanMuc2(fieldId){
-  if(fieldId === "fKtx"){
-    const ngayKtx = getDateTriple("selKtxNgay","selKtxThang","selKtxNam");
-    if(ngayKtx) await sb.rpc("hc_luu_ngay_dang_ky_ktx", { p_msnv: saved.msnv, p_ngay: ngayKtx });
-    return;
-  }
   await sb.rpc("hc_luu_ho_so", {
     p_msnv: saved.msnv, p_ten: saved.ten,
     p_vi_tri: getChecked("vi_tri"), p_noi_o: getChecked("noi_o"), p_face_id: getChecked("face_id")[0] || ""
@@ -538,22 +522,21 @@ function getNoiCapCccdValue(){
 }
 
 // Ẩn hẳn khối "Thông tin CBCNV tại Cam Ranh" khi Dự án làm việc không phải Cam Ranh,
-// để người dùng không thấy và không nhập vào các mục Vị trí/Nơi ở/Face ID/Ngày đăng ký KTX nữa.
+// để người dùng không thấy và không nhập vào các mục Vị trí/Nơi ở/Face ID nữa.
 function capNhatHienThiCardCamRanh(){
   const card = document.getElementById("cardCamRanh");
   if(card) card.style.display = isCamRanh() ? "block" : "none";
 }
 
 // ============ Xử lý khi thay đổi "Dự án làm việc" ============
-// TH1: đang là Cam Ranh → đổi sang dự án khác: tự động xóa sạch Vị trí/Nơi ở/Face ID/Ngày đăng ký KTX (không hỏi).
-// TH2: đang là dự án khác → đổi sang Cam Ranh: bắt buộc bổ sung thêm 4 mục đó.
+// TH1: đang là Cam Ranh → đổi sang dự án khác: tự động xóa sạch Vị trí/Nơi ở/Face ID (không hỏi).
+// TH2: đang là dự án khác → đổi sang Cam Ranh: bắt buộc bổ sung thêm 3 mục đó.
 function clearCamRanhUI(){
   document.querySelectorAll('input[name="vi_tri"]').forEach(i=>i.checked=false);
   document.querySelectorAll('input[name="noi_o"]').forEach(i=>i.checked=false);
   document.querySelectorAll('input[name="face_id"]').forEach(i=>i.checked=false);
-  ["selKtxNgay","selKtxThang","selKtxNam"].forEach(id=>{ document.getElementById(id).value = ""; });
   // Mở lại các mục vừa xóa để người dùng thấy rõ chúng đã trống, không còn ở trạng thái "đã cập nhật"
-  ["fViTri","fNoiO","fFaceId","fKtx"].forEach(id=>{
+  ["fViTri","fNoiO","fFaceId"].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.classList.remove("collapsed");
   });
@@ -568,11 +551,11 @@ async function xuLyDoiDuAn(){
     // TH1 — tự động xóa ngay, không hỏi xác nhận
     clearCamRanhUI();
     try{ await sb.rpc("hc_xoa_du_lieu_cam_ranh", { p_msnv: saved.msnv }); }catch(e){}
-    showToast("Đã tự động xóa Vị trí/Nơi ở/Face ID/Ngày đăng ký KTX (không còn thuộc Cam Ranh).");
+    showToast("Đã tự động xóa Vị trí/Nơi ở/Face ID (không còn thuộc Cam Ranh).");
   } else if(!cuLaCamRanh && moiLaCamRanh && duAnGocDaLuu !== null){
     // TH2 — chỉ báo khi đây là THAY ĐỔI từ 1 dự án đã lưu trước đó sang Cam Ranh
     // (bỏ qua trường hợp nhập mới lần đầu, vì wizard đã tự dẫn qua các bước này rồi)
-    showToast("Đã chuyển sang Cam Ranh — vui lòng bổ sung thêm Vị trí/Nơi ở/Face ID/Ngày đăng ký KTX.");
+    showToast("Đã chuyển sang Cam Ranh — vui lòng bổ sung thêm Vị trí/Nơi ở/Face ID.");
   }
 
   duAnGocDaLuu = moi;
@@ -613,7 +596,6 @@ async function init(){
   renderDateTriple("selCccdNgay","selCccdThang","selCccdNam");
   renderDateTriple("selSinhNgay","selSinhThang","selSinhNam");
   renderDateTriple("selBdNgay","selBdThang","selBdNam");
-  renderDateTriple("selKtxNgay","selKtxThang","selKtxNam");
 
   initCollapsibleFields();
 
@@ -650,7 +632,6 @@ async function init(){
       if(ttcn.quoc_tich) document.getElementById("inpQuocTich").value = ttcn.quoc_tich;
       setDateTriple("selSinhNgay","selSinhThang","selSinhNam", ttcn.ngay_sinh);
       setDateTriple("selBdNgay","selBdThang","selBdNam", ttcn.ngay_bat_dau_lam_viec);
-      setDateTriple("selKtxNgay","selKtxThang","selKtxNam", ttcn.ngay_dang_ky_ktx);
     }
   }catch(e){}
 
@@ -669,7 +650,7 @@ async function init(){
   // Tô màu trạng thái ngay khi người dùng chọn/nhập bất kỳ trường nào
   ["selTtTinh","inpTtXa","inpTtThon","selHtTinh","inpHtXa","inpHtThon","inpQuocTich",
    "selCccdNgay","selCccdThang","selCccdNam","selSinhNgay","selSinhThang","selSinhNam",
-   "selBdNgay","selBdThang","selBdNam","selKtxNgay","selKtxThang","selKtxNam"].forEach(id=>{
+   "selBdNgay","selBdThang","selBdNam"].forEach(id=>{
     document.getElementById(id).addEventListener("input", refreshFieldStates);
     document.getElementById(id).addEventListener("change", refreshFieldStates);
   });
@@ -678,8 +659,7 @@ async function init(){
     selTtTinh:"fThuongTru", selHtTinh:"fHienTai", selNoiCapCccd:"fNoiCapCccd",
     selCccdNgay:"fNgayCapCccd", selCccdThang:"fNgayCapCccd", selCccdNam:"fNgayCapCccd",
     selSinhNgay:"fNgaySinh", selSinhThang:"fNgaySinh", selSinhNam:"fNgaySinh",
-    selBdNgay:"fNgayBatDau", selBdThang:"fNgayBatDau", selBdNam:"fNgayBatDau",
-    selKtxNgay:"fKtx", selKtxThang:"fKtx", selKtxNam:"fKtx"
+    selBdNgay:"fNgayBatDau", selBdThang:"fNgayBatDau", selBdNam:"fNgayBatDau"
   };
   Object.keys(collapseMap).forEach(id=>{
     document.getElementById(id).addEventListener("change", ()=>{
@@ -766,10 +746,6 @@ document.getElementById("btnLuuHoSo").addEventListener("click", async ()=>{
   const { error } = await sb.rpc("hc_luu_ho_so", {
     p_msnv: saved.msnv, p_ten: saved.ten, p_vi_tri: viTri, p_noi_o: noiO, p_face_id: faceId
   });
-  const ngayKtx = getDateTriple("selKtxNgay","selKtxThang","selKtxNam");
-  if(ngayKtx){
-    await sb.rpc("hc_luu_ngay_dang_ky_ktx", { p_msnv: saved.msnv, p_ngay: ngayKtx });
-  }
   showMsg(document.getElementById("msgHoSo"), error ? "bad" : "ok", error ? "Có lỗi, vui lòng thử lại." : "✓ Đã lưu thông tin.");
   refreshFieldStates();
 });
@@ -795,8 +771,7 @@ document.getElementById("btnXuatExcel").addEventListener("click", async ()=>{
     "Ngày bắt đầu làm việc": r.ngay_bat_dau_lam_viec || "",
     "Vị trí làm việc": (r.vi_tri||[]).join(", "),
     "Nơi ở": (r.noi_o||[]).join(", "),
-    "Face ID": r.face_id || "",
-    "Ngày đăng ký KTX": r.ngay_dang_ky_ktx || ""
+    "Face ID": r.face_id || ""
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
