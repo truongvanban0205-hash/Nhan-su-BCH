@@ -46,28 +46,49 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .home-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:70vw;max-width:420px;opacity:0.12;z-index:0;pointer-events:none;filter:saturate(1.2);}
 .home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:1;}
 .home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.25;}
+.brand-title{font-size:16px;font-weight:800;letter-spacing:0.2px;color:#fff;white-space:nowrap;}
+.greet-sub{font-size:12px;color:var(--txt-dim);margin-top:2px;order:3;}
 .home-header .sub{font-size:12px;color:var(--accent-blue);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:5px;}
-.home-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(124,77,255,0.5);overflow:hidden;background:#0a0e1a;border:2px solid rgba(124,77,255,0.3);}
+.home-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(124,77,255,0.5);overflow:hidden;background:#0a0e1a;border:2px solid rgba(124,77,255,0.3);cursor:pointer;transition:transform .15s;}
+.home-avatar:active{transform:scale(0.92);}
 .home-avatar img{width:100%;height:100%;object-fit:cover;object-position:center;}
+.export-popover-wrap{position:relative;}
+.export-popover{display:none;position:absolute;top:58px;right:0;z-index:50;background:var(--bg-card);border:1px solid var(--border-soft);
+  border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.5);padding:8px;min-width:210px;}
+.export-popover.show{display:block;}
+.export-popover button{width:100%;text-align:left;background:none;border:none;color:#fff;font-size:13px;font-weight:700;
+  padding:11px 12px;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;}
+.export-popover button:active{background:rgba(255,255,255,0.08);}
 .home-cards{display:flex;flex-direction:column;gap:16px;width:100%;max-width:420px;position:relative;z-index:1;}
-.mod-card{position:relative;background:linear-gradient(145deg,var(--bg-card),var(--bg-card2));border-radius:16px;padding:18px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;box-shadow:0 4px 20px rgba(0,0,0,0.4);border:1px solid var(--border-soft);transition:transform 0.15s;overflow:hidden;}
-.mod-card:active{transform:scale(0.98);}
-.mod-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent1),var(--accent2));opacity:0.9;}
-.mod-card::before{content:'';position:absolute;top:-30%;right:-15%;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,var(--accent1) 0%,transparent 70%);opacity:0.15;pointer-events:none;}
-.mod-card.c-ns{--accent1:#2196f3;--accent2:#64b5f6;}
-.mod-card.c-mmtb{--accent1:#ff9800;--accent2:#ffc947;}
-.mod-card.c-ldt{--accent1:#4caf50;--accent2:#81c784;}
-.mod-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;position:relative;z-index:1;}
-.mod-icon.i-ns{background:linear-gradient(145deg,rgba(33,150,243,0.18),rgba(33,150,243,0.06));box-shadow:inset 0 0 0 1.5px rgba(33,150,243,0.4),0 0 16px rgba(33,150,243,0.25);}
-.mod-icon.i-mmtb{background:linear-gradient(145deg,rgba(255,152,0,0.18),rgba(255,152,0,0.06));box-shadow:inset 0 0 0 1.5px rgba(255,152,0,0.4),0 0 16px rgba(255,152,0,0.25);}
-.mod-icon.i-ldt{background:linear-gradient(145deg,rgba(76,175,80,0.18),rgba(76,175,80,0.06));box-shadow:inset 0 0 0 1.5px rgba(76,175,80,0.4),0 0 16px rgba(76,175,80,0.25);}
-.mod-body{flex:1;position:relative;z-index:1;}
-.mod-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:3px;}
-.mod-desc{font-size:11px;color:var(--txt-dim);}
-.mod-arrow{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;position:relative;z-index:1;font-weight:800;}
-.mod-card.c-ns .mod-arrow{background:rgba(33,150,243,0.18);color:#64b5f6;}
-.mod-card.c-mmtb .mod-arrow{background:rgba(255,152,0,0.18);color:#ffc947;}
-.mod-card.c-ldt .mod-arrow{background:rgba(76,175,80,0.18);color:#81c784;}
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mod-tile{position:relative;background:linear-gradient(145deg,var(--bg-card),var(--bg-card2));border-radius:14px;padding:12px 12px;cursor:pointer;
+  display:flex;flex-direction:row;align-items:center;gap:10px;min-height:64px;
+  box-shadow:0 3px 14px rgba(0,0,0,0.35);border:1px solid var(--border-soft);transition:transform 0.15s,opacity .2s,filter .2s;overflow:hidden;}
+.mod-tile:active{transform:scale(0.96);}
+.mod-tile::after{content:'';position:absolute;top:0;bottom:0;left:0;width:3px;background:linear-gradient(180deg,var(--accent1),var(--accent2));opacity:0.9;}
+.mod-tile.c-ns{--accent1:#2196f3;--accent2:#64b5f6;}
+.mod-tile.c-mmtb{--accent1:#ff9800;--accent2:#ffc947;}
+.mod-tile.c-ldt{--accent1:#4caf50;--accent2:#81c784;}
+.mod-tile.c-hc{--accent1:#7c4dff;--accent2:#b388ff;}
+.mod-tile .mod-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;position:relative;z-index:1;}
+.mod-tile.c-ns .mod-icon{background:linear-gradient(145deg,rgba(33,150,243,0.18),rgba(33,150,243,0.06));box-shadow:inset 0 0 0 1.5px rgba(33,150,243,0.4);}
+.mod-tile.c-mmtb .mod-icon{background:linear-gradient(145deg,rgba(255,152,0,0.18),rgba(255,152,0,0.06));box-shadow:inset 0 0 0 1.5px rgba(255,152,0,0.4);}
+.mod-tile.c-ldt .mod-icon{background:linear-gradient(145deg,rgba(76,175,80,0.18),rgba(76,175,80,0.06));box-shadow:inset 0 0 0 1.5px rgba(76,175,80,0.4);}
+.mod-tile.c-hc .mod-icon{background:linear-gradient(145deg,rgba(124,77,255,0.18),rgba(124,77,255,0.06));box-shadow:inset 0 0 0 1.5px rgba(124,77,255,0.4);}
+.mod-tile .mod-title{font-size:12px;font-weight:800;color:#fff;text-align:left;line-height:1.3;position:relative;z-index:1;}
+/* Trạng thái không có quyền: mờ đi thay vì ẩn hẳn — vẫn thấy mục có tồn tại */
+.mod-tile.locked{opacity:0.4;filter:grayscale(0.6);}
+.mod-tile.locked .mod-icon{box-shadow:none;}
+.mod-tile.locked::after{background:var(--border-soft);opacity:0.6;}
+.mod-tile.locked .mod-title::after{content:' 🔒';font-size:10px;}
+.mod-badge{display:none;position:absolute;top:10px;right:10px;width:11px;height:11px;border-radius:50%;background:#ff5252;
+  box-shadow:0 0 0 rgba(255,82,82,0.6);z-index:2;}
+.mod-badge.show{display:block;animation:modBadgePulse 1.1s infinite;}
+@keyframes modBadgePulse{
+  0%{box-shadow:0 0 0 0 rgba(255,82,82,0.65);}
+  70%{box-shadow:0 0 0 8px rgba(255,82,82,0);}
+  100%{box-shadow:0 0 0 0 rgba(255,82,82,0);}
+}
 
 /* Thống kê nhanh */
 .quickstats-head{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin:24px 0 14px;position:relative;z-index:1;}
@@ -236,12 +257,15 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <div class="home-wrap">
     <img src="icon.png" class="home-watermark" alt="">
     <div class="home-header">
-      <div>
-        <h1>BCH DA CAM LÂM<br>CAM RANH</h1>
-        <div class="sub">📅 <span id="home-date"></span></div>
+      <div style="display:flex;flex-direction:column;">
+        <h1 class="brand-title" style="order:1;">BCH DA <span style="color:#42a5f5">CAM LÂM</span> - <span style="color:#ffa726">CAM RANH</span></h1>
+        <div class="sub" style="order:4;">📅 <span id="home-date"></span></div>
       </div>
-      <div style="text-align:right">
-        <div class="home-avatar" id="home-avatar"><img src="icon.png" alt="VB"></div>
+      <div style="text-align:right" class="export-popover-wrap">
+        <div class="home-avatar" id="home-avatar" onclick="toggleExportPopover()"><img src="icon.png" alt="VB"></div>
+        <div class="export-popover" id="exportPopover">
+          <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo tổng hợp (ảnh)</button>
+        </div>
       </div>
     </div>
 
@@ -259,34 +283,31 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <span style="font-size:26px;">🔔</span>
         <div style="flex:1;">
           <div style="font-weight:800;color:#fff;font-size:13px;">Bật thông báo nhắc nhở</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;">Nhắc 7:30 (NS/MMTB) và 15:30 (Nghiệm thu)</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;" id="notif-banner-times">Nhắc 7:30 (NS/MMTB) và 15:30 (Nghiệm thu)</div>
         </div>
         <button onclick="bchRequestNotif();document.getElementById('home-notif-banner').style.display='none';" style="background:#fff;color:#1565c0;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">Bật ngay</button>
       </div>
-      <div class="mod-card c-ns" onclick="showScreen('ns')">
-        <div class="mod-icon i-ns">📋</div>
-        <div class="mod-body">
-          <div class="mod-title">Báo cáo Nhân sự</div>
-          <div class="mod-desc">Nhập số liệu nhân sự hằng ngày</div>
-        </div>
-        <div class="mod-arrow">›</div>
+    <div class="mod-grid">
+      <div class="mod-tile c-ns" data-quyen="bao_cao_nhan_su" onclick="goModule('ns')">
+        <span class="mod-badge" id="badge-ns"></span>
+        <div class="mod-icon">📋</div>
+        <div class="mod-title">Báo cáo Nhân sự</div>
       </div>
-      <div class="mod-card c-mmtb" onclick="showScreen('mmtb')">
-        <div class="mod-icon i-mmtb">🚜</div>
-        <div class="mod-body">
-          <div class="mod-title">Báo cáo MMTB</div>
-          <div class="mod-desc">Máy móc thiết bị hằng ngày</div>
-        </div>
-        <div class="mod-arrow">›</div>
+      <div class="mod-tile c-mmtb" data-quyen="bao_cao_mmtb" onclick="goModule('mmtb')">
+        <span class="mod-badge" id="badge-mmtb"></span>
+        <div class="mod-icon">🚜</div>
+        <div class="mod-title">Báo cáo MMTB</div>
       </div>
-      <div class="mod-card c-ldt" onclick="showScreen('ldt')">
-        <div class="mod-icon i-ldt">📅</div>
-        <div class="mod-body">
-          <div class="mod-title">Báo Lịch nghiệm thu</div>
-          <div class="mod-desc">Đăng ký lịch nghiệm thu hằng ngày</div>
-        </div>
-        <div class="mod-arrow">›</div>
+      <div class="mod-tile c-ldt" data-quyen="bao_lich_nghiem_thu" onclick="goModule('ldt')">
+        <span class="mod-badge" id="badge-ldt"></span>
+        <div class="mod-icon">📅</div>
+        <div class="mod-title">Lịch nghiệm thu</div>
       </div>
+      <div class="mod-tile c-hc" data-quyen="hau_can" onclick="goModuleHauCan()">
+        <div class="mod-icon">🍱</div>
+        <div class="mod-title">Hậu cần</div>
+      </div>
+    </div>
     </div>
 
     <div class="quickstats-head">
@@ -294,9 +315,9 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       <span class="when">Hôm nay</span>
     </div>
 
-    <div class="qs-group">
+    <div class="qs-group" id="qs-group-ns-mmtb">
       <div class="qs-donut-row">
-        <div class="qs-donut-col">
+        <div class="qs-donut-col" id="qs-col-ns">
           <div class="qs-group-title">👥 Nhân sự</div>
           <div class="qs-donut-wrap" id="qs-ns-donut-wrap">
             <svg viewBox="0 0 120 120" id="qs-ns-donut-svg"></svg>
@@ -307,7 +328,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
           </div>
           <div class="qs-donut-legend" id="qs-ns-legend"></div>
         </div>
-        <div class="qs-donut-col">
+        <div class="qs-donut-col" id="qs-col-mmtb">
           <div class="qs-group-title">🚜 Máy móc thiết bị</div>
           <div class="qs-donut-wrap" id="qs-mmtb-donut-wrap">
             <svg viewBox="0 0 120 120" id="qs-mmtb-donut-svg"></svg>
@@ -321,7 +342,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       </div>
     </div>
 
-    <div class="qs-group">
+    <div class="qs-group" id="qs-group-ldt">
       <div class="qs-group-title">📅 Lịch nghiệm thu</div>
       <div class="quickstats-grid cols3" style="grid-template-columns:1fr;">
         <div class="qstat-card qs-clickable" style="display:flex;align-items:center;gap:12px;background:var(--bg-card);border:1px solid var(--border-soft);" onclick="qsShowDetail('ldt')">
@@ -331,10 +352,9 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       </div>
     </div>
 
-    <div class="qs-countdown-bar" id="qs-countdown">⏰ Đang tính...</div>
-
-    <button class="btn" style="width:100%;max-width:420px;background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff;justify-content:center;padding:12px;font-size:13px;margin-bottom:6px;position:relative;z-index:1;" onclick="exportFullReport()">📄 Xuất báo cáo tổng hợp (ảnh)</button>
-
+    <div class="qs-group" id="qs-group-none" style="display:none;">
+      <div style="text-align:center;color:var(--txt-dim);font-size:13px;padding:20px 0;">Bạn chưa được cấp quyền xem mục thống kê nào.</div>
+    </div>
 
   </div>
 </div>
@@ -368,7 +388,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 <div class="rotate-banner">📱 Xoay ngang điện thoại để xem bảng tốt hơn!</div>
 
 <div id="lock-banner" class="lock-banner">
-  🔒 Đã qua 08:00 — Nhập mật khẩu để chỉnh sửa:
+  🔒 Đã qua <span id="lock-time-ns">08:00</span> — Nhập mật khẩu để chỉnh sửa:
   <input type="password" id="lock-pass" placeholder="Mật khẩu..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')unlockEdit()">
   <button class="btn btn-sm btn-or" onclick="unlockEdit()">Mở khoá</button>
 </div>
@@ -450,7 +470,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <div class="rotate-banner">📱 Xoay ngang điện thoại để xem bảng tốt hơn!</div>
 
   <div id="mmtb-lock-banner" class="lock-banner">
-    🔒 Đã qua 08:00 — Nhập mật khẩu để chỉnh sửa:
+    🔒 Đã qua <span id="lock-time-mmtb">08:00</span> — Nhập mật khẩu để chỉnh sửa:
     <input type="password" id="mmtb-lock-pass" placeholder="Mật khẩu..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')mmtbUnlockEdit()">
     <button class="btn btn-sm btn-or" onclick="mmtbUnlockEdit()">Mở khoá</button>
   </div>
@@ -605,6 +625,24 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 </div>
 <script>
 // ============ SHARED: NAVIGATION & SETUP ============
+// Chặn bấm vào module chưa có quyền — báo rõ lý do thay vì im lặng hoặc phải ẩn hẳn mục đó
+function goModule(name){
+  var el = document.querySelector('.mod-tile.c-' + name);
+  if(el && el.classList.contains('locked')){
+    toast('🔒 Bạn chưa được cấp quyền vào mục này. Liên hệ Ban chỉ huy để được cấp quyền.');
+    return;
+  }
+  showScreen(name);
+}
+function goModuleHauCan(){
+  var el = document.querySelector('.mod-tile.c-hc');
+  if(el && el.classList.contains('locked')){
+    toast('🔒 Bạn chưa được cấp quyền vào mục này. Liên hệ Ban chỉ huy để được cấp quyền.');
+    return;
+  }
+  location.href = 'hau-can.html';
+}
+
 function showScreen(name){
   document.querySelectorAll('.app-screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-'+name).classList.add('active');
@@ -796,6 +834,7 @@ async function loadQuickStats(){
     }
   }catch(e){}
 
+  await taiGioHan();
   qsStartCountdown();
 }
 
@@ -806,28 +845,67 @@ function qsCheckAlert(cardId,shouldBlink){
   else el.classList.remove('qs-alert-blink');
 }
 
-var qsCountdownTimer=null;
+// Giờ hạn nhắc nhở — admin tự cấu hình trong Quản lý chung (patch10_gio_han.sql)
+var GIO_HAN = { gio_han_ns_mmtb: '08:00:00', gio_han_nghiem_thu: '16:00:00' };
+async function taiGioHan(){
+  try{
+    var r = await sc.rpc('cauhinh_lay_gio_han');
+    if(r.data) GIO_HAN = r.data;
+  }catch(e){ /* giữ mặc định 08:00/16:00 nếu lỗi mạng/chưa chạy patch10 */ }
+  var gt=gioKhoaHienThi();
+  ['lock-time-ns','lock-time-mmtb'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.textContent=gt;
+  });
+  // Đồng bộ dòng chữ giờ nhắc trên banner "Bật thông báo nhắc nhở" theo đúng giờ đã cấu hình (trừ 30 phút)
+  var lich=bchTinhLichThongBao();
+  var elBanner=document.getElementById('notif-banner-times');
+  if(elBanner && lich.length>=2){
+    function fmt(c){return p2(c.h)+':'+p2(c.m);}
+    elBanner.textContent='Nhắc '+fmt(lich[0])+' (NS/MMTB) và '+fmt(lich[1])+' (Nghiệm thu)';
+  }
+}
+
+function toggleExportPopover(){
+  var el = document.getElementById('exportPopover');
+  if(el) el.classList.toggle('show');
+}
+document.addEventListener('click', function(e){
+  var wrap = document.querySelector('.export-popover-wrap');
+  if(wrap && !wrap.contains(e.target)) document.getElementById('exportPopover').classList.remove('show');
+});
+
+// Chỉ hiện chấm nhấp nháy trong khung 30 phút trước giờ hạn — im lặng hoàn toàn ngoài khung đó
+// (không đếm giờ liên tục cả ngày, và cũng không nhắc mãi sau khi đã qua giờ hạn)
+var qsBadgeTimer=null;
 function qsStartCountdown(){
-  if(qsCountdownTimer)clearInterval(qsCountdownTimer);
+  // Tạm tắt chấm cảnh báo nhấp nháy trên module (theo yêu cầu — nhìn rối mắt) — để làm lại sau nếu cần.
+  // Toàn bộ logic cũ giữ nguyên bên dưới dạng comment, chỉ cần bỏ comment là dùng lại được ngay.
+  return;
+  /*
+  if(qsBadgeTimer)clearInterval(qsBadgeTimer);
+  function parseHM(hms){
+    var p=(hms||'16:00:00').split(':');
+    var d=new Date(); d.setHours(parseInt(p[0]||16),parseInt(p[1]||0),0,0);
+    return d;
+  }
+  function setBadge(id, active){
+    var el=document.getElementById(id);
+    if(el) el.classList.toggle('show', !!active);
+  }
   function update(){
     var now=new Date();
-    var deadline=new Date();
-    deadline.setHours(16,0,0,0);
-    var el=document.getElementById('qs-countdown');
-    if(!el)return;
-    if(now>=deadline){
-      el.textContent='⏰ Đã qua hạn báo lịch nghiệm thu hôm nay';
-      el.style.color='#ef5350';
-    }else{
-      var diff=deadline-now;
-      var h=Math.floor(diff/3600000);
-      var m=Math.floor((diff%3600000)/60000);
-      el.textContent='⏰ Còn '+h+'h'+p2(m)+'p để báo lịch nghiệm thu ngày mai';
-      el.style.color='#ffb74d';
-    }
+    var dlNS=parseHM(GIO_HAN.gio_han_ns_mmtb);
+    var dlLDT=parseHM(GIO_HAN.gio_han_nghiem_thu);
+    var trongKhungNS = now>=(new Date(dlNS-30*60000)) && now<dlNS;
+    var trongKhungLDT = now>=(new Date(dlLDT-30*60000)) && now<dlLDT;
+    setBadge('badge-ns', trongKhungNS);
+    setBadge('badge-mmtb', trongKhungNS);
+    setBadge('badge-ldt', trongKhungLDT);
   }
   update();
-  qsCountdownTimer=setInterval(update,30000);
+  qsBadgeTimer=setInterval(update,30000);
+  */
 }
 
 // ============ MODAL CHI TIẾT THỐNG KÊ NHANH ============
@@ -1320,7 +1398,14 @@ var prevDayData=null;
 
 function isAfterCutoff(){
   var n=new Date();
-  return n.getHours()>=8;
+  var p=(GIO_HAN.gio_han_ns_mmtb||'08:00:00').split(':');
+  var cutoff=new Date();
+  cutoff.setHours(parseInt(p[0]||8),parseInt(p[1]||0),0,0);
+  return n>=cutoff;
+}
+function gioKhoaHienThi(){
+  var p=(GIO_HAN.gio_han_ns_mmtb||'08:00:00').split(':');
+  return p[0]+':'+p[1];
 }
 
 function checkTimeLock(){
@@ -1388,7 +1473,10 @@ function getTenCa(proj, ti){
 
 // Quy ước bắt buộc: loại ca CUỐI CÙNG trong danh sách cấu hình luôn được coi là "Nghỉ"
 // (xét theo VỊ TRÍ, không theo tên/mã) — để không phụ thuộc việc đặt tên.
-function nghiKey(){ return TYPES.length ? TYPES[TYPES.length-1] : null; }
+// Quy ước xác định "Nghỉ": ƯU TIÊN cờ la_nghi (admin chọn tay trong Quản lý chung, đáng tin cậy).
+// Chỉ khi chưa có cờ nào (patch9 chưa chạy) mới tạm lùi về đoán theo vị trí cuối cùng.
+var NGHI_MA = null;
+function nghiKey(){ return NGHI_MA || (TYPES.length ? TYPES[TYPES.length-1] : null); }
 function isNghiType(t){ return TYPES.length>0 && t===nghiKey(); }
 
 async function taiCauHinhCaLamViec(){
@@ -1398,6 +1486,10 @@ async function taiCauHinhCaLamViec(){
     if(caList && caList.length > 0){
       TYPES = caList.map(function(c){ return c.ma; });
       TLABELS = caList.map(function(c){ return c.ten_mac_dinh; });
+      // Ưu tiên cờ la_nghi (admin chọn tay, đáng tin cậy) — nếu chưa có cờ nào (patch9 chưa chạy
+      // hoặc admin chưa chọn), mới tạm lùi về đoán theo vị trí cuối cùng như trước.
+      var flagged = caList.find(function(c){ return c.la_nghi === true; });
+      NGHI_MA = flagged ? flagged.ma : (TYPES.length ? TYPES[TYPES.length-1] : null);
     }
     var r2 = await sc.rpc('cauhinh_lay_ten_ca_rieng');
     var rieng = r2.data || [];
@@ -2376,15 +2468,14 @@ var autoSavedToday=false;
 
 async function checkAutoSaveAt8(){
   if(autoSavedToday||vDate)return;
-  var now=new Date();
-  if(now.getHours()<8)return;
+  if(!isAfterCutoff())return;
   try{
     var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).single();
     if(ex.data){autoSavedToday=true;return;} // đã có data hôm nay rồi, không cần làm gì
-    // Chưa có data hôm nay và đã qua 8:00 -> tự lưu bản hiện tại (copy từ hôm qua) lên server
+    // Chưa có data hôm nay và đã qua giờ khoá -> tự lưu bản hiện tại (copy từ hôm qua) lên server
     await sSave({projects:projects,cols:COLS,data:data,log:logItems});
     autoSavedToday=true;
-    toast('⏰ Đã tự động lưu dữ liệu (copy từ hôm qua) lúc 8:00!');
+    toast('⏰ Đã tự động lưu dữ liệu (copy từ hôm qua) lúc '+gioKhoaHienThi()+'!');
   }catch(e){}
 }
 
@@ -3104,14 +3195,13 @@ var mmtbAutoSavedToday=false;
 
 async function mmtbCheckAutoSaveAt8(){
   if(mmtbAutoSavedToday||mmtbVDate)return;
-  var now=new Date();
-  if(now.getHours()<8)return;
+  if(!isAfterCutoff())return;
   try{
     var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).single();
     if(ex.data){mmtbAutoSavedToday=true;return;}
     await mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,log:mmtbLog});
     mmtbAutoSavedToday=true;
-    toast('⏰ MMTB: Đã tự động lưu dữ liệu (copy từ hôm qua) lúc 8:00!');
+    toast('⏰ MMTB: Đã tự động lưu dữ liệu (copy từ hôm qua) lúc '+gioKhoaHienThi()+'!');
   }catch(e){}
 }
 
@@ -3498,13 +3588,20 @@ async function homeRefresh(){
 }
 
 // ============ HỆ THỐNG THÔNG BÁO PUSH ============
-var BCH_NOTIF_TIMES=[
-  {h:7, m:30, id:'ns_mmtb_730',  title:'⏰ Sắp hết giờ nhập liệu!',  body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline 8:00)'},
-  {h:15,m:30, id:'ldt_1530',     title:'📅 Sắp hết giờ báo lịch!',   body:'Còn 30 phút nữa là hết giờ báo Lịch nghiệm thu ngày mai (deadline 16:00)'}
-];
+// Giờ nhắc = giờ hạn (GIO_HAN, cấu hình trong Quản lý chung) trừ 30 phút — luôn tự khớp.
+function bchTinhLichThongBao(){
+  function parseHM(hms){ var p=(hms||'08:00:00').split(':'); return {h:parseInt(p[0]||8),m:parseInt(p[1]||0)}; }
+  function minus30(hm){ var t=hm.h*60+hm.m-30; if(t<0)t+=1440; return {h:Math.floor(t/60),m:t%60}; }
+  var ns=minus30(parseHM(GIO_HAN.gio_han_ns_mmtb));
+  var ldt=minus30(parseHM(GIO_HAN.gio_han_nghiem_thu));
+  return [
+    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'},
+    {h:ldt.h,m:ldt.m,id:'ldt_reminder',     title:'📅 Sắp hết giờ báo lịch!', body:'Còn 30 phút nữa là hết giờ báo Lịch nghiệm thu ngày mai (deadline '+(GIO_HAN.gio_han_nghiem_thu||'16:00:00').slice(0,5)+')'}
+  ];
+}
 
 function bchRequestNotif(){
-  if(!('Notification' in window))return;
+  if(!('Notification' in window) || bchIsIOS())return;
   if(Notification.permission==='granted'){bchScheduleAllNotifs();return;}
   if(Notification.permission!=='denied'){
     Notification.requestPermission().then(function(p){
@@ -3515,7 +3612,7 @@ function bchRequestNotif(){
 
 function bchScheduleAllNotifs(){
   if(Notification.permission!=='granted')return;
-  BCH_NOTIF_TIMES.forEach(function(cfg){bchScheduleOne(cfg);});
+  bchTinhLichThongBao().forEach(function(cfg){bchScheduleOne(cfg);});
 }
 
 function bchScheduleOne(cfg){
@@ -3545,11 +3642,17 @@ function bchScheduleOne(cfg){
   },delay);
 }
 
-// Khởi động thông báo khi tải trang
+// Nhận diện iOS (iPhone/iPad) — trên các máy này, dù Notification object tồn tại nhưng
+// requestPermission() không hiện hộp thoại thật (giới hạn Safari/iOS), nên banner vô ích, ẩn hẳn.
+function bchIsIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+// Khởi động thông báo khi tải trang (việc LÊN LỊCH giờ cụ thể sẽ chờ tải xong GIO_HAN ở bootstrap chính bên dưới)
 (function(){
-  if(!('Notification' in window))return;
+  if(!('Notification' in window) || bchIsIOS())return;
   if(Notification.permission==='granted'){
-    bchScheduleAllNotifs();
+    // để bootstrap chính gọi bchScheduleAllNotifs() sau khi đã taiGioHan() xong, tránh dùng giờ mặc định sai
   } else if(Notification.permission!=='denied'){
     // Hiện banner bật thông báo ở trang chủ
     setTimeout(function(){
@@ -3577,35 +3680,43 @@ function bchScheduleOne(cfg){
 
   if(!res || res.status !== 'da_duyet'){ location.href = LOGIN_PAGE; return; }
 
-  // Lưu quyền truy cập để lọc mục trên trang chủ
+  // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
   window.BCH_QUYEN = res.data.quyen || {};
-  var mapCard = { ns:'bao_cao_nhan_su', mmtb:'bao_cao_mmtb', ldt:'bao_lich_nghiem_thu' };
-  Object.keys(mapCard).forEach(function(key){
-    var el = document.querySelector('.mod-card.c-' + key);
-    if(el && !window.BCH_QUYEN[mapCard[key]]) el.style.display = 'none';
+  document.querySelectorAll('.mod-tile[data-quyen]').forEach(function(el){
+    var key = el.getAttribute('data-quyen');
+    if(!window.BCH_QUYEN[key]) el.classList.add('locked');
   });
 
-  // Thẻ "Hậu cần" — chèn thêm bằng JS, chỉ hiện nếu có quyền, không sửa 3 thẻ tĩnh có sẵn
-  if(window.BCH_QUYEN.hau_can){
-    var hcCard = document.createElement('div');
-    hcCard.className = 'mod-card c-mmtb';
-    hcCard.style.cursor = 'pointer';
-    hcCard.innerHTML = '<div class="mod-icon i-mmtb">🍱</div>'
-      + '<div class="mod-body"><div class="mod-title">Hậu cần</div>'
-      + '<div class="mod-desc">Vị trí, nơi ở &amp; đăng ký cơm</div></div>'
-      + '<div class="mod-arrow">›</div>';
-    hcCard.addEventListener('click', function(){ location.href = 'hau-can.html'; });
-    var cardsWrap = document.querySelector('.home-cards');
-    if(cardsWrap) cardsWrap.appendChild(hcCard);
-  }
+  // Thống kê nhanh: chỉ hiện khối nào tương ứng với quyền đang có
+  var coNS = !!window.BCH_QUYEN.bao_cao_nhan_su;
+  var coMMTB = !!window.BCH_QUYEN.bao_cao_mmtb;
+  var coLDT = !!window.BCH_QUYEN.bao_lich_nghiem_thu;
+  var elColNS = document.getElementById('qs-col-ns');
+  var elColMMTB = document.getElementById('qs-col-mmtb');
+  var elGroupNSMMTB = document.getElementById('qs-group-ns-mmtb');
+  var elGroupLDT = document.getElementById('qs-group-ldt');
+  if(elColNS) elColNS.style.display = coNS ? '' : 'none';
+  if(elColMMTB) elColMMTB.style.display = coMMTB ? '' : 'none';
+  if(elGroupNSMMTB) elGroupNSMMTB.style.display = (coNS || coMMTB) ? '' : 'none';
+  if(elGroupLDT) elGroupLDT.style.display = coLDT ? '' : 'none';
+  // Nếu 2 cột NS/MMTB chỉ còn 1 cột hiện, cho nó chiếm trọn hàng thay vì lệch
+  var elRow = document.querySelector('.qs-donut-row');
+  if(elRow && (coNS !== coMMTB)) elRow.style.gridTemplateColumns = '1fr';
+  var elNone = document.getElementById('qs-group-none');
+  if(elNone) elNone.style.display = (!coNS && !coMMTB && !coLDT) ? '' : 'none';
 
   // Thêm dòng tên + nút xem thông tin tài khoản + đăng xuất (chỉ chèn thêm bằng JS)
   var headerDiv = document.querySelector('.home-header > div');
   if(headerDiv){
     var who = document.createElement('div');
-    who.style.cssText = 'font-size:11px;color:#8b93a8;margin-top:4px;';
-    who.innerHTML = '👤 <a href="#" id="bch-profile-link" style="color:#8b93a8;text-decoration:underline;">' + res.data.ten + '</a> &nbsp;·&nbsp; <a href="#" style="color:#2196f3;" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
+    who.style.cssText = 'font-size:12px;margin-top:4px;order:2;';
+    who.innerHTML = '👤 <a href="#" id="bch-profile-link" style="color:#ffa726;font-weight:700;text-decoration:underline;">' + res.data.ten + '</a> &nbsp;·&nbsp; <a href="#" style="color:#2196f3;" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
     headerDiv.appendChild(who);
+
+    var greetSub = document.createElement('div');
+    greetSub.className = 'greet-sub';
+    greetSub.textContent = 'Chúc bạn một ngày làm việc vui vẻ!';
+    headerDiv.appendChild(greetSub);
 
     var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu' };
     var overlay = document.createElement('div');
@@ -3691,6 +3802,10 @@ function bchScheduleOne(cfg){
   };
 
   await taiCauHinhCaLamViec();
+  await taiGioHan();
+  if('Notification' in window && !bchIsIOS() && Notification.permission==='granted'){
+    bchScheduleAllNotifs();
+  }
 
   // Khởi động: hiện trang chọn module trước
   showScreen('home');
