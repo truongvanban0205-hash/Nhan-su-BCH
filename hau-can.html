@@ -80,24 +80,6 @@
 
 <div id="loadingBox" class="loading">Đang tải...</div>
 
-<!-- ============ WIZARD: TỪNG BƯỚC (chỉ hiện khi chưa điền đủ) ============ -->
-<div id="wizardBox" style="display:none; width:100%; max-width:520px;">
-  <div class="card">
-    <div style="font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px;" id="wizardProgress">Bước 1/12</div>
-    <div style="height:6px;background:#e3e8ef;border-radius:4px;overflow:hidden;margin-bottom:20px;">
-      <div id="wizardBar" style="height:100%;width:0%;background:var(--accent);transition:width .25s;"></div>
-    </div>
-    <h2 id="wizardTitle" style="margin-bottom:4px;"></h2>
-    <p class="sub" id="wizardHint">Vui lòng điền/chọn đầy đủ để tiếp tục.</p>
-    <div id="wizardSlot"></div>
-    <div class="msg bad" id="wizardMsg"></div>
-    <div style="display:flex;gap:10px;margin-top:20px;">
-      <button class="btn secondary" id="btnWizardBack" style="margin-top:0;width:auto;flex:0 0 110px;">‹ Trước</button>
-      <button class="btn save" id="btnWizardNext" style="margin-top:0;">Tiếp theo ›</button>
-    </div>
-  </div>
-</div>
-
 <div id="appBox" style="display:none; width:100%; max-width:520px;">
 
   <div class="card">
@@ -192,7 +174,7 @@
     <div class="msg" id="msgCaNhan"></div>
   </div>
 
-  <div class="card" id="cardCamRanh">
+  <div class="card">
     <h2>Cập nhật thông tin CBCNV tại Cam Ranh</h2>
     <p class="sub">Cập nhật khi có thay đổi. Hệ thống chỉ giữ lại lần cập nhật gần nhất.</p>
 
@@ -209,6 +191,15 @@
     <div class="field" id="fFaceId">
       <div class="field-label">Face ID ra vào cổng <span class="field-check">✓ Đã chọn</span></div>
       <div class="chip-list" id="chipFaceId"></div>
+    </div>
+
+    <div class="field" id="fKtx">
+      <div class="field-label">Ngày đăng ký KTX <span class="field-check">✓ Đã chọn</span></div>
+      <div class="date-triple">
+        <select id="selKtxNgay"></select>
+        <select id="selKtxThang"></select>
+        <select id="selKtxNam"></select>
+      </div>
     </div>
 
     <button class="btn save" id="btnLuuHoSo">Lưu thông tin</button>
@@ -233,7 +224,6 @@ const LOGIN_PAGE = "quan-ly-tai-khoan.html";
 
 let saved = null;
 let tuyChon = { vi_tri: [], noi_o: [], face_id: [] };
-let duAnGocDaLuu = null; // Dự án làm việc đã lưu gần nhất — dùng để phát hiện thay đổi dự án
 
 // 34 tỉnh/thành phố sau sáp nhập (có hiệu lực từ 1/7/2025) — không còn cấp Huyện
 const DANH_SACH_TINH = [
@@ -244,12 +234,11 @@ const DANH_SACH_TINH = [
   "Thái Nguyên","Thanh Hóa","Tuyên Quang","Vĩnh Long"
 ];
 const DU_AN_OPTIONS = ["Làng Vân","Cam Ranh","Phước Vĩnh Tây"].map(v=>({gia_tri:v}));
-const NGUON_OPTIONS = ["Tuyển mới","Vincons","Vinhomes","SGC"].map(v=>({gia_tri:v}));
+const NGUON_OPTIONS = ["Tuyển mới","Vincons","Vinhomes"].map(v=>({gia_tri:v}));
 const GIOI_TINH_OPTIONS = ["Nam","Nữ"].map(v=>({gia_tri:v}));
 const HON_NHAN_OPTIONS = ["Độc thân","Đã kết hôn","Ly hôn"].map(v=>({gia_tri:v}));
 
 function showMsg(el, type, text){ el.className = "msg show " + type; el.textContent = text; }
-function hideMsg(el){ el.className = "msg"; el.textContent = ""; }
 
 function renderChips(containerId, name, options){
   const el = document.getElementById(containerId);
@@ -269,7 +258,7 @@ function renderTinhSelect(selId){
   });
 }
 
-// Sinh 3 ô chọn Ngày/Tháng/Năm dùng chung cho CCCD, Ngày sinh, Ngày bắt đầu làm việc
+// Sinh 3 ô chọn Ngày/Tháng/Năm dùng chung cho CCCD, Ngày sinh, Ngày bắt đầu làm việc, Ngày đăng ký KTX
 function renderDateTriple(dayId, monthId, yearId){
   const dEl = document.getElementById(dayId);
   const mEl = document.getElementById(monthId);
@@ -306,38 +295,28 @@ function setChecked(name, values){
   });
 }
 
-// Kiểm tra 1 field đã hợp lệ/đầy đủ hay chưa (dùng chung cho cả tô màu và Wizard)
-function isFieldDone(fieldId){
-  switch(fieldId){
-    case "fCccd": return document.getElementById("inpCccd").value.trim().length === 12;
-    case "fNgayCapCccd": return isDateTripleFilled("selCccdNgay","selCccdThang","selCccdNam");
-    case "fNoiCapCccd": return !!getNoiCapCccdValue();
-    case "fGioiTinh": return getChecked("gioi_tinh").length>0;
-    case "fNgaySinh": return isDateTripleFilled("selSinhNgay","selSinhThang","selSinhNam");
-    case "fHonNhan": return getChecked("hon_nhan").length>0;
-    case "fQuocTich": return document.getElementById("inpQuocTich").value.trim().length>0;
-    case "fNgayBatDau": return isDateTripleFilled("selBdNgay","selBdThang","selBdNam");
-    case "fThuongTru": return !!(document.getElementById("selTtTinh").value && document.getElementById("inpTtXa").value.trim() && document.getElementById("inpTtThon").value.trim());
-    case "fHienTai": return !!(document.getElementById("selHtTinh").value && document.getElementById("inpHtXa").value.trim() && document.getElementById("inpHtThon").value.trim());
-    case "fViTri": return getChecked("vi_tri").length>0;
-    case "fNoiO": return getChecked("noi_o").length>0;
-    case "fFaceId": return getChecked("face_id").length>0;
-    case "fDuAn": return getChecked("du_an").length>0;
-    case "fNguon": return getChecked("nguon").length>0;
-    default: return false;
-  }
-}
-
+// Tô màu field khi đã có dữ liệu (chọn hoặc nhập xong) để phân biệt trực quan
 function markDone(fieldId, isDone){
   const el = document.getElementById(fieldId);
   if(el) el.classList.toggle("done", !!isDone);
 }
 function refreshFieldStates(){
-  ["fCccd","fNgayCapCccd","fNoiCapCccd","fGioiTinh","fNgaySinh","fHonNhan","fQuocTich","fNgayBatDau",
-   "fThuongTru","fHienTai","fViTri","fNoiO","fFaceId","fDuAn","fNguon"].forEach(id=>{
-    markDone(id, isFieldDone(id));
-  });
-  capNhatHienThiCardCamRanh();
+  markDone("fCccd", document.getElementById("inpCccd").value.trim().length === 12);
+  markDone("fNgayCapCccd", isDateTripleFilled("selCccdNgay","selCccdThang","selCccdNam"));
+  markDone("fNoiCapCccd", !!getNoiCapCccdValue());
+  markDone("fGioiTinh", getChecked("gioi_tinh").length>0);
+  markDone("fNgaySinh", isDateTripleFilled("selSinhNgay","selSinhThang","selSinhNam"));
+  markDone("fHonNhan", getChecked("hon_nhan").length>0);
+  markDone("fQuocTich", document.getElementById("inpQuocTich").value.trim().length>0);
+  markDone("fNgayBatDau", isDateTripleFilled("selBdNgay","selBdThang","selBdNam"));
+  markDone("fThuongTru", document.getElementById("selTtTinh").value && document.getElementById("inpTtXa").value.trim() && document.getElementById("inpTtThon").value.trim());
+  markDone("fHienTai", document.getElementById("selHtTinh").value && document.getElementById("inpHtXa").value.trim() && document.getElementById("inpHtThon").value.trim());
+  markDone("fViTri", getChecked("vi_tri").length>0);
+  markDone("fNoiO", getChecked("noi_o").length>0);
+  markDone("fFaceId", getChecked("face_id").length>0);
+  markDone("fKtx", isDateTripleFilled("selKtxNgay","selKtxThang","selKtxNam"));
+  markDone("fDuAn", getChecked("du_an").length>0);
+  markDone("fNguon", getChecked("nguon").length>0);
 }
 
 // Tự bọc phần nội dung mỗi field vào 1 khối riêng để ẩn/hiện được,
@@ -360,155 +339,7 @@ function initCollapsibleFields(){
   });
 }
 
-// ============ WIZARD: TỪNG BƯỚC ============
-const WIZARD_TITLES = {
-  fCccd: "Số căn cước công dân",
-  fNgayCapCccd: "Ngày tháng cấp CCCD",
-  fNoiCapCccd: "Nơi cấp CCCD",
-  fGioiTinh: "Giới tính",
-  fNgaySinh: "Ngày tháng năm sinh",
-  fHonNhan: "Tình trạng hôn nhân",
-  fQuocTich: "Quốc tịch",
-  fNgayBatDau: "Ngày bắt đầu làm việc tại dự án",
-  fThuongTru: "Địa chỉ thường trú (sau sáp nhập)",
-  fHienTai: "Địa chỉ hiện tại (sau sáp nhập)",
-  fDuAn: "Dự án làm việc",
-  fNguon: "Nguồn nhân sự",
-  fViTri: "Vị trí làm việc",
-  fNoiO: "Chỗ ở hiện tại",
-  fFaceId: "Face ID ra vào cổng"
-};
-const WIZARD_STEPS_M1 = ["fCccd","fNgayCapCccd","fNoiCapCccd","fGioiTinh","fNgaySinh","fHonNhan","fQuocTich","fNgayBatDau","fThuongTru","fHienTai","fDuAn","fNguon"];
-const WIZARD_STEPS_M2 = ["fViTri","fNoiO","fFaceId"];
-
-let wizardIndex = 0;
-let wizardSteps = [];
-
-function isCamRanh(){ return getChecked("du_an")[0] === "Cam Ranh"; }
-
-function buildWizardSteps(){
-  wizardSteps = WIZARD_STEPS_M1.slice();
-  if(isCamRanh()) wizardSteps = wizardSteps.concat(WIZARD_STEPS_M2);
-}
-
-function tatCaDaXongTheoNhanh(){
-  const daXongM1 = WIZARD_STEPS_M1.every(isFieldDone);
-  if(!daXongM1) return false;
-  if(isCamRanh()) return WIZARD_STEPS_M2.every(isFieldDone);
-  return true;
-}
-
-function moveFieldBodyInto(fieldId, container){
-  const field = document.getElementById(fieldId);
-  const body = field && field.querySelector(".field-body");
-  if(body) container.appendChild(body);
-}
-function moveFieldBodyBack(fieldId){
-  const field = document.getElementById(fieldId);
-  const slot = document.getElementById("wizardSlot");
-  const body = slot.querySelector(".field-body");
-  if(field && body) field.appendChild(body);
-}
-
-async function renderWizardStep(){
-  hideMsg(document.getElementById("wizardMsg"));
-  buildWizardSteps(); // dự án có thể vừa đổi, tính lại nhánh mỗi lần render
-  if(wizardIndex >= wizardSteps.length){
-    await ketThucWizard();
-    return;
-  }
-  const fieldId = wizardSteps[wizardIndex];
-  document.getElementById("wizardTitle").textContent = WIZARD_TITLES[fieldId] || "";
-  document.getElementById("wizardProgress").textContent = `Bước ${wizardIndex+1}/${wizardSteps.length}`;
-  document.getElementById("wizardBar").style.width = Math.round(((wizardIndex)/wizardSteps.length)*100) + "%";
-  const slot = document.getElementById("wizardSlot");
-  slot.innerHTML = "";
-  moveFieldBodyInto(fieldId, slot);
-  document.getElementById("btnWizardBack").style.visibility = wizardIndex === 0 ? "hidden" : "visible";
-  document.getElementById("btnWizardNext").textContent = (wizardIndex === wizardSteps.length-1) ? "Hoàn tất ✓" : "Tiếp theo ›";
-}
-
-async function luuTungPhanMuc1(){
-  const payload = {
-    p_msnv: saved.msnv, p_ten: saved.ten, p_cccd: document.getElementById("inpCccd").value.trim() || null,
-    p_tt_tinh: document.getElementById("selTtTinh").value || null,
-    p_tt_xa: document.getElementById("inpTtXa").value.trim() || null,
-    p_tt_thon: document.getElementById("inpTtThon").value.trim() || null,
-    p_ht_tinh: document.getElementById("selHtTinh").value || null,
-    p_ht_xa: document.getElementById("inpHtXa").value.trim() || null,
-    p_ht_thon: document.getElementById("inpHtThon").value.trim() || null,
-    p_du_an: getChecked("du_an")[0] || null,
-    p_nguon: getChecked("nguon")[0] || null,
-    p_ngay_cap_cccd: getDateTriple("selCccdNgay","selCccdThang","selCccdNam"),
-    p_noi_cap_cccd: getNoiCapCccdValue() || null,
-    p_tinh_trang_hon_nhan: getChecked("hon_nhan")[0] || null,
-    p_gioi_tinh: getChecked("gioi_tinh")[0] || null,
-    p_quoc_tich: document.getElementById("inpQuocTich").value.trim() || null,
-    p_ngay_sinh: getDateTriple("selSinhNgay","selSinhThang","selSinhNam"),
-    p_ngay_bat_dau_lam_viec: getDateTriple("selBdNgay","selBdThang","selBdNam")
-  };
-  await sb.rpc("hc_luu_thong_tin_ca_nhan", payload);
-}
-async function luuTungPhanMuc2(fieldId){
-  await sb.rpc("hc_luu_ho_so", {
-    p_msnv: saved.msnv, p_ten: saved.ten,
-    p_vi_tri: getChecked("vi_tri"), p_noi_o: getChecked("noi_o"), p_face_id: getChecked("face_id")[0] || ""
-  });
-}
-
-document.getElementById("btnWizardNext").addEventListener("click", async ()=>{
-  const fieldId = wizardSteps[wizardIndex];
-  refreshFieldStates();
-  if(!isFieldDone(fieldId)){
-    showMsg(document.getElementById("wizardMsg"), "bad", "Vui lòng nhập/chọn đầy đủ trước khi tiếp tục.");
-    return;
-  }
-  const btn = document.getElementById("btnWizardNext");
-  btn.disabled = true;
-  try{
-    if(WIZARD_STEPS_M1.includes(fieldId)) await luuTungPhanMuc1();
-    else await luuTungPhanMuc2(fieldId);
-  }catch(e){}
-  btn.disabled = false;
-  moveFieldBodyBack(fieldId);
-  wizardIndex++;
-  await renderWizardStep();
-});
-
-document.getElementById("btnWizardBack").addEventListener("click", ()=>{
-  if(wizardIndex === 0) return;
-  const fieldId = wizardSteps[wizardIndex];
-  moveFieldBodyBack(fieldId);
-  wizardIndex--;
-  renderWizardStep();
-});
-
-async function ketThucWizard(){
-  document.getElementById("wizardBar").style.width = "100%";
-  document.getElementById("wizardBox").style.display = "none";
-  document.getElementById("appBox").style.display = "block";
-  refreshFieldStates();
-  tryCollapseAllDone();
-  showToast("🎉 Đã hoàn tất cập nhật thông tin!");
-}
-
-function batDauWizard(){
-  buildWizardSteps();
-  // Tìm bước đầu tiên chưa hoàn thành để tiếp tục (không bắt làm lại từ đầu)
-  wizardIndex = wizardSteps.findIndex(id=>!isFieldDone(id));
-  if(wizardIndex === -1) wizardIndex = 0;
-  document.getElementById("appBox").style.display = "none";
-  document.getElementById("wizardBox").style.display = "block";
-  renderWizardStep();
-}
-
-function showToast(text){
-  const t = document.createElement("div");
-  t.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#2e7d32;color:#fff;padding:12px 20px;border-radius:12px;font-weight:700;font-size:13px;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.3);";
-  t.textContent = text;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), 4500);
-}
+// Tự thu gọn 1 field khi đã nhập/chọn xong (gọi khi rời khỏi ô — blur/change)
 function tryCollapse(fieldId){
   const el = document.getElementById(fieldId);
   if(el && el.classList.contains("done")) el.classList.add("collapsed");
@@ -519,53 +350,6 @@ function tryCollapseAllDone(){
 
 function getNoiCapCccdValue(){
   return document.getElementById("selNoiCapCccd").value;
-}
-
-// Ẩn hẳn khối "Thông tin CBCNV tại Cam Ranh" khi Dự án làm việc không phải Cam Ranh,
-// để người dùng không thấy và không nhập vào các mục Vị trí/Nơi ở/Face ID nữa.
-function capNhatHienThiCardCamRanh(){
-  const card = document.getElementById("cardCamRanh");
-  if(card) card.style.display = isCamRanh() ? "block" : "none";
-}
-
-// ============ Xử lý khi thay đổi "Dự án làm việc" ============
-// TH1: đang là Cam Ranh → đổi sang dự án khác: tự động xóa sạch Vị trí/Nơi ở/Face ID (không hỏi).
-// TH2: đang là dự án khác → đổi sang Cam Ranh: bắt buộc bổ sung thêm 3 mục đó.
-function clearCamRanhUI(){
-  document.querySelectorAll('input[name="vi_tri"]').forEach(i=>i.checked=false);
-  document.querySelectorAll('input[name="noi_o"]').forEach(i=>i.checked=false);
-  document.querySelectorAll('input[name="face_id"]').forEach(i=>i.checked=false);
-  // Mở lại các mục vừa xóa để người dùng thấy rõ chúng đã trống, không còn ở trạng thái "đã cập nhật"
-  ["fViTri","fNoiO","fFaceId"].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.classList.remove("collapsed");
-  });
-}
-
-async function xuLyDoiDuAn(){
-  const moi = getChecked("du_an")[0] || null;
-  const cuLaCamRanh = duAnGocDaLuu === "Cam Ranh";
-  const moiLaCamRanh = moi === "Cam Ranh";
-
-  if(cuLaCamRanh && !moiLaCamRanh){
-    // TH1 — tự động xóa ngay, không hỏi xác nhận
-    clearCamRanhUI();
-    try{ await sb.rpc("hc_xoa_du_lieu_cam_ranh", { p_msnv: saved.msnv }); }catch(e){}
-    showToast("Đã tự động xóa Vị trí/Nơi ở/Face ID (không còn thuộc Cam Ranh).");
-  } else if(!cuLaCamRanh && moiLaCamRanh && duAnGocDaLuu !== null){
-    // TH2 — chỉ báo khi đây là THAY ĐỔI từ 1 dự án đã lưu trước đó sang Cam Ranh
-    // (bỏ qua trường hợp nhập mới lần đầu, vì wizard đã tự dẫn qua các bước này rồi)
-    showToast("Đã chuyển sang Cam Ranh — vui lòng bổ sung thêm Vị trí/Nơi ở/Face ID.");
-  }
-
-  duAnGocDaLuu = moi;
-  refreshFieldStates();
-  buildWizardSteps();
-
-  // Nếu đang ở màn hình chính mà giờ còn thiếu mục bắt buộc theo nhánh mới → mở lại Wizard đúng bước còn thiếu
-  if(document.getElementById("appBox").style.display !== "none" && !tatCaDaXongTheoNhanh()){
-    batDauWizard();
-  }
 }
 
 async function init(){
@@ -596,6 +380,7 @@ async function init(){
   renderDateTriple("selCccdNgay","selCccdThang","selCccdNam");
   renderDateTriple("selSinhNgay","selSinhThang","selSinhNam");
   renderDateTriple("selBdNgay","selBdThang","selBdNam");
+  renderDateTriple("selKtxNgay","selKtxThang","selKtxNam");
 
   initCollapsibleFields();
 
@@ -621,7 +406,6 @@ async function init(){
       if(ttcn.ht_thon) document.getElementById("inpHtThon").value = ttcn.ht_thon;
       setChecked("du_an", [ttcn.du_an_lam_viec]);
       setChecked("nguon", [ttcn.nguon_nhan_su]);
-      duAnGocDaLuu = ttcn.du_an_lam_viec || null;
 
       setDateTriple("selCccdNgay","selCccdThang","selCccdNam", ttcn.ngay_cap_cccd);
       if(ttcn.noi_cap_cccd){
@@ -632,6 +416,7 @@ async function init(){
       if(ttcn.quoc_tich) document.getElementById("inpQuocTich").value = ttcn.quoc_tich;
       setDateTriple("selSinhNgay","selSinhThang","selSinhNam", ttcn.ngay_sinh);
       setDateTriple("selBdNgay","selBdThang","selBdNam", ttcn.ngay_bat_dau_lam_viec);
+      setDateTriple("selKtxNgay","selKtxThang","selKtxNam", ttcn.ngay_dang_ky_ktx);
     }
   }catch(e){}
 
@@ -650,7 +435,7 @@ async function init(){
   // Tô màu trạng thái ngay khi người dùng chọn/nhập bất kỳ trường nào
   ["selTtTinh","inpTtXa","inpTtThon","selHtTinh","inpHtXa","inpHtThon","inpQuocTich",
    "selCccdNgay","selCccdThang","selCccdNam","selSinhNgay","selSinhThang","selSinhNam",
-   "selBdNgay","selBdThang","selBdNam"].forEach(id=>{
+   "selBdNgay","selBdThang","selBdNam","selKtxNgay","selKtxThang","selKtxNam"].forEach(id=>{
     document.getElementById(id).addEventListener("input", refreshFieldStates);
     document.getElementById(id).addEventListener("change", refreshFieldStates);
   });
@@ -659,7 +444,8 @@ async function init(){
     selTtTinh:"fThuongTru", selHtTinh:"fHienTai", selNoiCapCccd:"fNoiCapCccd",
     selCccdNgay:"fNgayCapCccd", selCccdThang:"fNgayCapCccd", selCccdNam:"fNgayCapCccd",
     selSinhNgay:"fNgaySinh", selSinhThang:"fNgaySinh", selSinhNam:"fNgaySinh",
-    selBdNgay:"fNgayBatDau", selBdThang:"fNgayBatDau", selBdNam:"fNgayBatDau"
+    selBdNgay:"fNgayBatDau", selBdThang:"fNgayBatDau", selBdNam:"fNgayBatDau",
+    selKtxNgay:"fKtx", selKtxThang:"fKtx", selKtxNam:"fKtx"
   };
   Object.keys(collapseMap).forEach(id=>{
     document.getElementById(id).addEventListener("change", ()=>{
@@ -673,18 +459,11 @@ async function init(){
       if(fieldWrap) setTimeout(()=>tryCollapse(fieldWrap.id), 150);
     });
   });
-  document.querySelectorAll('input[name="du_an"]').forEach(r=>{
-    r.addEventListener("change", xuLyDoiDuAn);
-  });
   refreshFieldStates();
   tryCollapseAllDone(); // Thu gọn sẵn các mục đã có dữ liệu từ trước khi mở lại trang
 
   document.getElementById("loadingBox").style.display = "none";
-  if(tatCaDaXongTheoNhanh()){
-    document.getElementById("appBox").style.display = "block";
-  } else {
-    batDauWizard();
-  }
+  document.getElementById("appBox").style.display = "block";
 
   // Bảng tin nội bộ
   try{
@@ -693,8 +472,8 @@ async function init(){
       const seenKey = "bch_tb_seen_" + tb.id;
       if(!localStorage.getItem(seenKey)){
         const banner = document.createElement("div");
-        banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:#1565c0;color:#fff;padding:12px 16px;font-size:13px;font-weight:600;z-index:9998;display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.2);";
-        banner.innerHTML = '<span>📢 ' + tb.noi_dung + '</span><span style="cursor:pointer;font-weight:800;padding:0 6px;" id="bchTbClose">✕</span>';
+        banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#ff6f00,#e64a19);color:#fff;padding:12px 16px;font-size:13px;font-weight:700;z-index:9998;display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:0 2px 14px rgba(230,74,25,.5);border-bottom:2px solid #ffb300;";
+        banner.innerHTML = '<span>📢 <b>' + tb.noi_dung + '</b></span><span style="cursor:pointer;font-weight:800;padding:0 6px;flex-shrink:0;" id="bchTbClose">✕</span>';
         document.body.appendChild(banner);
         document.getElementById("bchTbClose").addEventListener("click", ()=>{
           localStorage.setItem(seenKey, "1");
@@ -746,6 +525,10 @@ document.getElementById("btnLuuHoSo").addEventListener("click", async ()=>{
   const { error } = await sb.rpc("hc_luu_ho_so", {
     p_msnv: saved.msnv, p_ten: saved.ten, p_vi_tri: viTri, p_noi_o: noiO, p_face_id: faceId
   });
+  const ngayKtx = getDateTriple("selKtxNgay","selKtxThang","selKtxNam");
+  if(ngayKtx){
+    await sb.rpc("hc_luu_ngay_dang_ky_ktx", { p_msnv: saved.msnv, p_ngay: ngayKtx });
+  }
   showMsg(document.getElementById("msgHoSo"), error ? "bad" : "ok", error ? "Có lỗi, vui lòng thử lại." : "✓ Đã lưu thông tin.");
   refreshFieldStates();
 });
@@ -771,7 +554,8 @@ document.getElementById("btnXuatExcel").addEventListener("click", async ()=>{
     "Ngày bắt đầu làm việc": r.ngay_bat_dau_lam_viec || "",
     "Vị trí làm việc": (r.vi_tri||[]).join(", "),
     "Nơi ở": (r.noi_o||[]).join(", "),
-    "Face ID": r.face_id || ""
+    "Face ID": r.face_id || "",
+    "Ngày đăng ký KTX": r.ngay_dang_ky_ktx || ""
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
