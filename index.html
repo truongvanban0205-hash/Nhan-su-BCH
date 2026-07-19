@@ -46,9 +46,8 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .home-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:70vw;max-width:420px;opacity:0.12;z-index:0;pointer-events:none;filter:saturate(1.2);}
 .home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:1;}
 .home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.25;}
-.greet-line{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.2px;}
-.greet-sub{font-size:12px;color:var(--txt-dim);margin-top:2px;}
-.brand-line{font-size:11px;font-weight:700;color:var(--txt-dim);margin-top:8px;letter-spacing:0.2px;}
+.brand-title{font-size:16px;font-weight:800;letter-spacing:0.2px;color:#fff;white-space:nowrap;}
+.greet-sub{font-size:12px;color:var(--txt-dim);margin-top:2px;order:3;}
 .home-header .sub{font-size:12px;color:var(--accent-blue);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:5px;}
 .home-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(124,77,255,0.5);overflow:hidden;background:#0a0e1a;border:2px solid rgba(124,77,255,0.3);cursor:pointer;transition:transform .15s;}
 .home-avatar:active{transform:scale(0.92);}
@@ -258,11 +257,9 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <div class="home-wrap">
     <img src="icon.png" class="home-watermark" alt="">
     <div class="home-header">
-      <div>
-        <div class="greet-line">Xin chào, <span id="greet-name">bạn</span> 👋</div>
-        <div class="greet-sub">Chúc bạn một ngày làm việc vui vẻ!</div>
-        <div class="brand-line">BCH DA <span style="color:#42a5f5">CAM LÂM</span> - <span style="color:#ffa726">CAM RANH</span></div>
-        <div class="sub">📅 <span id="home-date"></span></div>
+      <div style="display:flex;flex-direction:column;">
+        <h1 class="brand-title" style="order:1;">BCH DA <span style="color:#42a5f5">CAM LÂM</span> - <span style="color:#ffa726">CAM RANH</span></h1>
+        <div class="sub" style="order:4;">📅 <span id="home-date"></span></div>
       </div>
       <div style="text-align:right" class="export-popover-wrap">
         <div class="home-avatar" id="home-avatar" onclick="toggleExportPopover()"><img src="icon.png" alt="VB"></div>
@@ -318,9 +315,9 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       <span class="when">Hôm nay</span>
     </div>
 
-    <div class="qs-group">
+    <div class="qs-group" id="qs-group-ns-mmtb">
       <div class="qs-donut-row">
-        <div class="qs-donut-col">
+        <div class="qs-donut-col" id="qs-col-ns">
           <div class="qs-group-title">👥 Nhân sự</div>
           <div class="qs-donut-wrap" id="qs-ns-donut-wrap">
             <svg viewBox="0 0 120 120" id="qs-ns-donut-svg"></svg>
@@ -331,7 +328,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
           </div>
           <div class="qs-donut-legend" id="qs-ns-legend"></div>
         </div>
-        <div class="qs-donut-col">
+        <div class="qs-donut-col" id="qs-col-mmtb">
           <div class="qs-group-title">🚜 Máy móc thiết bị</div>
           <div class="qs-donut-wrap" id="qs-mmtb-donut-wrap">
             <svg viewBox="0 0 120 120" id="qs-mmtb-donut-svg"></svg>
@@ -345,7 +342,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       </div>
     </div>
 
-    <div class="qs-group">
+    <div class="qs-group" id="qs-group-ldt">
       <div class="qs-group-title">📅 Lịch nghiệm thu</div>
       <div class="quickstats-grid cols3" style="grid-template-columns:1fr;">
         <div class="qstat-card qs-clickable" style="display:flex;align-items:center;gap:12px;background:var(--bg-card);border:1px solid var(--border-soft);" onclick="qsShowDetail('ldt')">
@@ -355,6 +352,9 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       </div>
     </div>
 
+    <div class="qs-group" id="qs-group-none" style="display:none;">
+      <div style="text-align:center;color:var(--txt-dim);font-size:13px;padding:20px 0;">Bạn chưa được cấp quyền xem mục thống kê nào.</div>
+    </div>
 
   </div>
 </div>
@@ -879,6 +879,10 @@ document.addEventListener('click', function(e){
 // (không đếm giờ liên tục cả ngày, và cũng không nhắc mãi sau khi đã qua giờ hạn)
 var qsBadgeTimer=null;
 function qsStartCountdown(){
+  // Tạm tắt chấm cảnh báo nhấp nháy trên module (theo yêu cầu — nhìn rối mắt) — để làm lại sau nếu cần.
+  // Toàn bộ logic cũ giữ nguyên bên dưới dạng comment, chỉ cần bỏ comment là dùng lại được ngay.
+  return;
+  /*
   if(qsBadgeTimer)clearInterval(qsBadgeTimer);
   function parseHM(hms){
     var p=(hms||'16:00:00').split(':');
@@ -901,6 +905,7 @@ function qsStartCountdown(){
   }
   update();
   qsBadgeTimer=setInterval(update,30000);
+  */
 }
 
 // ============ MODAL CHI TIẾT THỐNG KÊ NHANH ============
@@ -3667,10 +3672,6 @@ function bchIsIOS(){
   var saved;
   try{ saved = JSON.parse(raw); } catch(e){ location.href = LOGIN_PAGE; return; }
 
-  // Hiện lời chào ngay bằng tên đã đăng nhập (không cần chờ RPC xong)
-  var greetEl = document.getElementById('greet-name');
-  if(greetEl && saved.ten) greetEl.textContent = saved.ten;
-
   var res;
   try{
     var r = await sc.rpc('tra_cuu', { p_ten: saved.ten, p_msnv: saved.msnv });
@@ -3686,13 +3687,36 @@ function bchIsIOS(){
     if(!window.BCH_QUYEN[key]) el.classList.add('locked');
   });
 
+  // Thống kê nhanh: chỉ hiện khối nào tương ứng với quyền đang có
+  var coNS = !!window.BCH_QUYEN.bao_cao_nhan_su;
+  var coMMTB = !!window.BCH_QUYEN.bao_cao_mmtb;
+  var coLDT = !!window.BCH_QUYEN.bao_lich_nghiem_thu;
+  var elColNS = document.getElementById('qs-col-ns');
+  var elColMMTB = document.getElementById('qs-col-mmtb');
+  var elGroupNSMMTB = document.getElementById('qs-group-ns-mmtb');
+  var elGroupLDT = document.getElementById('qs-group-ldt');
+  if(elColNS) elColNS.style.display = coNS ? '' : 'none';
+  if(elColMMTB) elColMMTB.style.display = coMMTB ? '' : 'none';
+  if(elGroupNSMMTB) elGroupNSMMTB.style.display = (coNS || coMMTB) ? '' : 'none';
+  if(elGroupLDT) elGroupLDT.style.display = coLDT ? '' : 'none';
+  // Nếu 2 cột NS/MMTB chỉ còn 1 cột hiện, cho nó chiếm trọn hàng thay vì lệch
+  var elRow = document.querySelector('.qs-donut-row');
+  if(elRow && (coNS !== coMMTB)) elRow.style.gridTemplateColumns = '1fr';
+  var elNone = document.getElementById('qs-group-none');
+  if(elNone) elNone.style.display = (!coNS && !coMMTB && !coLDT) ? '' : 'none';
+
   // Thêm dòng tên + nút xem thông tin tài khoản + đăng xuất (chỉ chèn thêm bằng JS)
   var headerDiv = document.querySelector('.home-header > div');
   if(headerDiv){
     var who = document.createElement('div');
-    who.style.cssText = 'font-size:11px;color:#8b93a8;margin-top:4px;';
-    who.innerHTML = '👤 <a href="#" id="bch-profile-link" style="color:#8b93a8;text-decoration:underline;">' + res.data.ten + '</a> &nbsp;·&nbsp; <a href="#" style="color:#2196f3;" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
+    who.style.cssText = 'font-size:12px;margin-top:4px;order:2;';
+    who.innerHTML = '👤 <a href="#" id="bch-profile-link" style="color:#ffa726;font-weight:700;text-decoration:underline;">' + res.data.ten + '</a> &nbsp;·&nbsp; <a href="#" style="color:#2196f3;" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
     headerDiv.appendChild(who);
+
+    var greetSub = document.createElement('div');
+    greetSub.className = 'greet-sub';
+    greetSub.textContent = 'Chúc bạn một ngày làm việc vui vẻ!';
+    headerDiv.appendChild(greetSub);
 
     var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu' };
     var overlay = document.createElement('div');
