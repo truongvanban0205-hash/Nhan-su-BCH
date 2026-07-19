@@ -312,31 +312,7 @@
     <h3>🔔 Quản lý Thông báo</h3>
     <p class="sub" style="margin-top:-8px;">Chỉnh ở đây, mọi trang báo cáo tự cập nhật theo — không cần sửa từng trang.</p>
 
-    <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
-      <div style="font-weight:800; font-size:13px; margin-bottom:2px;">📋 Nhân sự &amp; MMTB</div>
-      <p class="sub" style="margin:0 0 10px; font-size:12px;">Giờ này dùng chung cho: khoá bảng nhập liệu (cần mật khẩu để sửa sau giờ này) và chấm cảnh báo nhấp nháy trước 30 phút.</p>
-      <div style="display:flex; gap:10px; align-items:flex-end;">
-        <div style="flex:1;">
-          <label style="font-size:12px;">Giờ khoá / hết hạn báo cáo</label>
-          <input type="time" id="inputGioHanNS" style="margin-bottom:0;">
-        </div>
-      </div>
-    </div>
-
-    <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
-      <div style="font-weight:800; font-size:13px; margin-bottom:2px;">📅 Lịch nghiệm thu</div>
-      <p class="sub" style="margin:0 0 10px; font-size:12px;">Chấm cảnh báo nhấp nháy trước 30 phút so với giờ này.</p>
-      <div style="display:flex; gap:10px; align-items:flex-end;">
-        <div style="flex:1;">
-          <label style="font-size:12px;">Giờ hạn báo lịch</label>
-          <input type="time" id="inputGioHanLDT" style="margin-bottom:0;">
-        </div>
-      </div>
-    </div>
-
-    <div style="text-align:right; margin-bottom:20px;">
-      <button class="btn small" id="btnLuuGioHan">💾 Lưu giờ hạn</button>
-    </div>
+    <!-- Pane giờ hạn Nhân sự/MMTB + Lịch nghiệm thu tạm ẩn (tính năng chấm cảnh báo đang tắt) — làm lại sau nếu cần -->
 
     <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px;">
       <div style="font-weight:800; font-size:13px; margin-bottom:2px;">📢 Thông báo chung</div>
@@ -357,6 +333,11 @@
     </div>
   </div>
 </div>
+
+<!-- Giữ nguyên input ẩn (không xoá) để JS cũ không lỗi khi gọi tới — làm lại giao diện giờ hạn sau nếu cần -->
+<input type="hidden" id="inputGioHanNS">
+<input type="hidden" id="inputGioHanLDT">
+
 
 <!-- ============ MODAL CẤU HÌNH & DỮ LIỆU HẬU CẦN ============ -->
 <div class="modal-overlay" id="modalHauCan">
@@ -809,13 +790,7 @@ document.getElementById("btnThongBao").addEventListener("click", async ()=>{
   document.getElementById("tbNoiDung").value = "";
   document.getElementById("tbErrMsg").style.display = "none";
   await loadThongBaoHienTai();
-  try{
-    const { data: gh } = await sb.rpc("cauhinh_lay_gio_han");
-    if(gh){
-      document.getElementById("inputGioHanNS").value = (gh.gio_han_ns_mmtb || "08:00:00").slice(0,5);
-      document.getElementById("inputGioHanLDT").value = (gh.gio_han_nghiem_thu || "16:00:00").slice(0,5);
-    }
-  }catch(e){}
+  // Pane giờ hạn tạm ẩn (xem ghi chú trong HTML) — không cần tải/lưu giờ hạn ở đây nữa lúc này.
   document.getElementById("modalThongBao").classList.add("show");
 });
 document.getElementById("btnCloseThongBao").addEventListener("click", ()=>{
@@ -844,14 +819,7 @@ document.getElementById("btnXoaThongBao").addEventListener("click", async ()=>{
   showToast(data > 0 ? ("✓ Đã xoá " + data + " thông báo.") : "Không có thông báo nào để xoá.");
 });
 
-document.getElementById("btnLuuGioHan").addEventListener("click", async ()=>{
-  const gioNS = document.getElementById("inputGioHanNS").value;
-  const gioLDT = document.getElementById("inputGioHanLDT").value;
-  if(!gioNS || !gioLDT){ alert("Vui lòng chọn đủ 2 mốc giờ."); return; }
-  const { error } = await sb.rpc("admin_luu_gio_han", { p_pass: currentAdminPass, p_gio_ns_mmtb: gioNS, p_gio_nghiem_thu: gioLDT });
-  if(error){ alert("Không lưu được: " + error.message); return; }
-  showToast("✓ Đã lưu giờ hạn nhắc nhở");
-});
+// Handler "Lưu giờ hạn" tạm bỏ (nút đã ẩn khỏi giao diện cùng 2 pane giờ hạn) — làm lại sau nếu cần.
 
 document.getElementById("btnToggleAdmin").addEventListener("click", ()=>{
   document.getElementById("adminPassInput").value = "";
