@@ -45,6 +45,8 @@
   td.rowlabel input{width:100%;border:1.5px solid transparent;background:transparent;font-weight:700;font-family:inherit;font-size:12.5px;padding:6px;border-radius:6px;}
   td.rowlabel input:not(:disabled){background:#fff;border-color:var(--border);}
   td.rowlabel .delrow{cursor:pointer;color:var(--bad);font-weight:900;font-size:12px;margin-left:4px;flex-shrink:0;}
+  td.rowlabel .hidrow{cursor:pointer;font-size:13px;margin-left:6px;flex-shrink:0;}
+  td.rowlabel.row-an{opacity:.45;}
   td.rowlabel .rowflex{display:flex;align-items:center;gap:4px;}
   td input.numcell{width:70px;border:none;padding:8px 6px;text-align:center;font-family:inherit;font-size:12.5px;background:transparent;}
   td input.numcell:focus{outline:2px solid var(--accent);background:#fff;}
@@ -103,7 +105,7 @@ const LOGIN_PAGE = "quan-ly-tai-khoan.html";
 let saved = null;
 let unlocked = false;
 let dinhBienPass = '';
-let rows = [];      // [{id, ten, ten_tat, thu_tu}]
+let rows = [];      // [{id, ten, ten_tat, thu_tu, an}]
 let cols = [];       // [{id, nhan, thu_tu}]
 let values = {};     // { "chucDanhId_cotId": so_luong }
 let curNam = new Date().getFullYear();
@@ -126,13 +128,15 @@ function renderTable(){
   });
   html += '</tr></thead><tbody>';
   rows.forEach(r=>{
-    html += `<tr><td class="rowlabel"><div class="rowflex">
+    html += `<tr><td class="rowlabel ${r.an?'row-an':''}"><div class="rowflex">
       <input type="text" data-rowid="${r.id}" class="rowname" value="${r.ten}" ${unlocked?'':'disabled'}>
+      ${unlocked?`<span class="hidrow" data-hidrow="${r.id}" title="${r.an?'Hiện lại':'Ẩn khỏi báo cáo Nhân sự'}">${r.an?'👁':'🚫'}</span>`:''}
       ${unlocked?`<span class="delrow" data-delrow="${r.id}">✕</span>`:''}
       </div>
       <div class="rowflex" style="margin-top:3px;">
         <span style="font-size:11px;color:var(--muted);white-space:nowrap;">Viết tắt:</span>
         <input type="text" data-rowid-tat="${r.id}" class="rowtat" value="${r.ten_tat||''}" placeholder="VD: CV.NN" ${unlocked?'':'disabled'} style="font-size:11.5px;">
+        ${r.an?'<span style="font-size:11px;color:var(--bad);font-weight:700;">— đang ẩn</span>':''}
       </div></td>`;
     cols.forEach(c=>{
       const val = values[vKey(r.id,c.id)] ?? '';
@@ -173,6 +177,19 @@ function renderTable(){
       if(error){ showMsg('bad','Không đổi được tên cột: '+error.message); return; }
       var c = cols.find(x=>x.id==inp.dataset.colid); if(c) c.nhan = inp.value;
       showMsg('ok','✓ Đã đổi tên cột.');
+    });
+  });
+  tbl.querySelectorAll('[data-hidrow]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      var r = rows.find(x=>x.id==btn.dataset.hidrow);
+      if(!r) return;
+      const anMoi = !r.an;
+      if(anMoi && !confirm(`Ẩn chức danh "${r.ten}" khỏi báo cáo Nhân sự? (số liệu Định biên đã nhập vẫn giữ nguyên, bấm hiện lại là có ngay)`)) return;
+      const { error } = await sb.rpc('dinhbien_an_chuc_danh', { p_pass: dinhBienPass, p_id: parseInt(btn.dataset.hidrow), p_an: anMoi });
+      if(error){ showMsg('bad','Không thực hiện được: '+error.message); return; }
+      r.an = anMoi;
+      renderTable();
+      showMsg('ok', anMoi ? `✓ Đã ẩn "${r.ten}" — báo cáo Nhân sự sẽ hết cột này.` : `✓ Đã hiện lại "${r.ten}".`);
     });
   });
   tbl.querySelectorAll('[data-delrow]').forEach(btn=>{
