@@ -103,7 +103,7 @@ const LOGIN_PAGE = "quan-ly-tai-khoan.html";
 let saved = null;
 let unlocked = false;
 let dinhBienPass = '';
-let rows = [];      // [{id, ten, thu_tu}]
+let rows = [];      // [{id, ten, ten_tat, thu_tu}]
 let cols = [];       // [{id, nhan, thu_tu}]
 let values = {};     // { "chucDanhId_cotId": so_luong }
 let curNam = new Date().getFullYear();
@@ -129,6 +129,10 @@ function renderTable(){
     html += `<tr><td class="rowlabel"><div class="rowflex">
       <input type="text" data-rowid="${r.id}" class="rowname" value="${r.ten}" ${unlocked?'':'disabled'}>
       ${unlocked?`<span class="delrow" data-delrow="${r.id}">✕</span>`:''}
+      </div>
+      <div class="rowflex" style="margin-top:3px;">
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap;">Viết tắt:</span>
+        <input type="text" data-rowid-tat="${r.id}" class="rowtat" value="${r.ten_tat||''}" placeholder="VD: CV.NN" ${unlocked?'':'disabled'} style="font-size:11.5px;">
       </div></td>`;
     cols.forEach(c=>{
       const val = values[vKey(r.id,c.id)] ?? '';
@@ -145,13 +149,23 @@ function renderTable(){
     });
     inp.addEventListener('paste', handlePaste);
   });
-  tbl.querySelectorAll('.rowname').forEach(inp=>{
-    inp.addEventListener('change', async ()=>{
-      const { error } = await sb.rpc('dinhbien_sua_chuc_danh', { p_pass: dinhBienPass, p_id: parseInt(inp.dataset.rowid), p_ten_moi: inp.value });
-      if(error){ showMsg('bad','Không đổi được tên: '+error.message); return; }
-      var r = rows.find(x=>x.id==inp.dataset.rowid); if(r) r.ten = inp.value;
-      showMsg('ok','✓ Đã đổi tên chức danh — báo cáo Nhân sự sẽ tự cập nhật theo.');
+  async function luuTenChucDanh(id){
+    const nameInp = tbl.querySelector(`.rowname[data-rowid="${id}"]`);
+    const tatInp = tbl.querySelector(`.rowtat[data-rowid-tat="${id}"]`);
+    const { error } = await sb.rpc('dinhbien_sua_chuc_danh', {
+      p_pass: dinhBienPass, p_id: parseInt(id),
+      p_ten_moi: nameInp.value, p_ten_tat_moi: tatInp ? tatInp.value : null
     });
+    if(error){ showMsg('bad','Không đổi được tên: '+error.message); return; }
+    var r = rows.find(x=>x.id==id);
+    if(r){ r.ten = nameInp.value; if(tatInp && tatInp.value.trim()) r.ten_tat = tatInp.value; }
+    showMsg('ok','✓ Đã lưu tên chức danh — báo cáo Nhân sự sẽ tự cập nhật theo.');
+  }
+  tbl.querySelectorAll('.rowname').forEach(inp=>{
+    inp.addEventListener('change', ()=>luuTenChucDanh(inp.dataset.rowid));
+  });
+  tbl.querySelectorAll('.rowtat').forEach(inp=>{
+    inp.addEventListener('change', ()=>luuTenChucDanh(inp.dataset.rowidTat));
   });
   tbl.querySelectorAll('.colname').forEach(inp=>{
     inp.addEventListener('change', async ()=>{
@@ -276,9 +290,10 @@ document.getElementById('btnUnlock').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnThemHang').addEventListener('click', async ()=>{
-  const ten = prompt('Tên chức danh mới:');
+  const ten = prompt('Tên đầy đủ chức danh mới:');
   if(!ten || !ten.trim()) return;
-  const { error } = await sb.rpc('dinhbien_them_chuc_danh', { p_pass: dinhBienPass, p_ten: ten.trim() });
+  const tenTat = prompt('Tên viết tắt (hiện trong báo cáo Nhân sự — để trống thì dùng luôn tên đầy đủ):', '');
+  const { error } = await sb.rpc('dinhbien_them_chuc_danh', { p_pass: dinhBienPass, p_ten: ten.trim(), p_ten_tat: (tenTat||'').trim() || null });
   if(error){ showMsg('bad','Không thêm được: '+error.message); return; }
   await taiDuLieuNam();
   showMsg('ok', `✓ Đã thêm chức danh "${ten.trim()}" — báo cáo Nhân sự sẽ có thêm cột này ngay.`);

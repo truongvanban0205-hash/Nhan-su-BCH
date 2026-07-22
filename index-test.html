@@ -1494,9 +1494,9 @@ async function taiDinhBienChucDanh(){
   try{
     var r = await sc.rpc('dinhbien_lay_danh_sach_chuc_danh');
     if(r.data && r.data.length){
-      COLS = r.data.map(function(c){ return {k:'cd_'+c.id, n:c.ten}; });
+      COLS = r.data.map(function(c){ return {k:'cd_'+c.id, n:(c.ten_tat && c.ten_tat.trim()) ? c.ten_tat : c.ten}; });
     }
-  }catch(e){ /* lỗi mạng/chưa chạy patch15 -> giữ nguyên COLS mặc định để trang vẫn chạy được */ }
+  }catch(e){ /* lỗi mạng/chưa chạy patch16 -> giữ nguyên COLS mặc định để trang vẫn chạy được */ }
 }
 var projects=['CL-CR'];
 var data={};
