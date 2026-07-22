@@ -1540,34 +1540,20 @@ function setSS(m){document.getElementById('ss').innerHTML=m;}
 
 // Merge cột từ saved vào DEF_COLS: giữ DEF_COLS, thêm custom từ saved nếu có
 // Đồng bộ DEF_COLS (26 chức danh chuẩn) với danh mục động bên trang Định biên:
-// - đổi tên/viết tắt ở Định biên -> tự cập nhật tên hiển thị ở đây
-// - thêm chức danh mới (chưa ẩn) ở Định biên -> tự thêm cột chuẩn mới ở đây
-// - ẩn chức danh ở Định biên -> bỏ khỏi danh sách chuẩn (dữ liệu ngày cũ đã lưu vẫn hiện qua mergeCols bên dưới)
-// Có try/catch + không xoá DEF_COLS gốc nếu lỗi mạng, để không bao giờ làm sập trang khi patch15 SQL chưa chạy.
+// CHỈ cập nhật TÊN cho những chức danh đã có sẵn key trùng khớp trong DEF_COLS
+// (an toàn tuyệt đối — không thêm cột mới, không xoá cột nào, không đổi số lượng cột).
+// Có try/catch, không làm sập trang nếu lỗi mạng hoặc chưa chạy patch15 SQL.
 async function taiChucDanhChuan(){
   try{
     var r = await sc.rpc('dinhbien_lay_danh_sach_chuc_danh');
     if(!r || !r.data || !r.data.length) return;
     var byMa = {};
     r.data.forEach(function(c){ byMa[c.ma] = c; });
-    // cập nhật tên viết tắt cho các chức danh đã có sẵn trong DEF_COLS
     DEF_COLS.forEach(function(c){
       var db = byMa[c.k];
-      if(db) c.n = db.ten_tat || db.ten || c.n;
+      if(db && !db.an) c.n = db.ten_tat || db.ten || c.n;
     });
-    // bỏ khỏi DEF_COLS những chức danh đã bị ẩn ở Định biên
-    for(var i=DEF_COLS.length-1;i>=0;i--){
-      var db2 = byMa[DEF_COLS[i].k];
-      if(db2 && db2.an) DEF_COLS.splice(i,1);
-    }
-    // thêm mới các chức danh chưa ẩn mà DEF_COLS chưa có
-    var curKeys = DEF_COLS.map(function(c){return c.k;});
-    r.data.forEach(function(c){
-      if(!c.an && curKeys.indexOf(c.ma)<0){
-        DEF_COLS.push({k:c.ma, n:c.ten_tat || c.ten});
-      }
-    });
-  }catch(e){ /* im lặng bỏ qua — dùng DEF_COLS gốc nếu chưa có patch15 hoặc lỗi mạng */ }
+  }catch(e){ /* im lặng bỏ qua */ }
 }
 
 function mergeCols(savedCols){
