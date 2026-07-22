@@ -969,11 +969,13 @@ async function exportFullReport(){
   try{var r1=await sc.from('nhansu').select('data').eq('ngay',tk).single();nsToday=r1.data?r1.data.data:null;}catch(e){}
   try{var r2=await sc.from('mmtb').select('data').eq('ngay',tk).single();mmtbToday=r2.data?r2.data.data:null;}catch(e){}
 
-  // Định biên tháng hiện tại (theo đúng tháng của NGÀY đang xuất báo cáo — không phải luôn là tháng hôm nay)
+  // Định biên áp dụng cho ĐÚNG NGÀY đang xuất báo cáo (tự tìm mốc ngày gần nhất <= ngày đó)
   var dinhBienThangNay={};
   try{
-    var dbR=await sc.rpc('dinhbien_lay_gia_tri_thang',{p_thang:n.getMonth()+1,p_nam:n.getFullYear()});
-    dinhBienThangNay=dbR.data||{};
+    var dbR=await sc.rpc('dinhbien_lay_gia_tri_ngay',{p_ngay:tk});
+    var dbRaw=dbR.data||{};
+    // dbRaw trả về key là ID số (dạng text, VD "17") — đổi sang đúng mã cột "cd_17" đang dùng trong báo cáo
+    Object.keys(dbRaw).forEach(function(id){ dinhBienThangNay['cd_'+id]=dbRaw[id]; });
   }catch(e){}
 
   var nsHist=await sHist();
@@ -1453,6 +1455,8 @@ function unlockEdit(){
 }
 
 // Danh sách cột chuẩn - luôn dùng cái này làm gốc
+// DEF_COLS chỉ dùng làm DỰ PHÒNG khi mất mạng/chưa tải được Định biên — danh sách thật
+// luôn lấy động từ bảng Định biên (taiDinhBienChucDanh), sửa ở Định biên là báo cáo tự theo.
 var DEF_COLS=[
   {k:'CHT',n:'CHT'},
   {k:'CVNN',n:'CV.NN'},
@@ -1483,6 +1487,17 @@ var DEF_COLS=[
 ];
 
 var COLS=DEF_COLS.map(function(c){return {k:c.k,n:c.n};});
+
+// Tải danh sách chức danh THẬT từ Định biên — mã cột dùng "cd_<id nội bộ>" để đổi tên
+// chức danh bên Định biên không làm lệch/mất dữ liệu đã nhập (dữ liệu gắn theo ID, không theo tên).
+async function taiDinhBienChucDanh(){
+  try{
+    var r = await sc.rpc('dinhbien_lay_danh_sach_chuc_danh');
+    if(r.data && r.data.length){
+      COLS = r.data.map(function(c){ return {k:'cd_'+c.id, n:c.ten}; });
+    }
+  }catch(e){ /* lỗi mạng/chưa chạy patch15 -> giữ nguyên COLS mặc định để trang vẫn chạy được */ }
+}
 var projects=['CL-CR'];
 var data={};
 var logItems=[];
@@ -1539,36 +1554,11 @@ function ykey(){var n=new Date();n.setDate(n.getDate()-1);return n.getFullYear()
 function setSS(m){document.getElementById('ss').innerHTML=m;}
 
 // Merge cột từ saved vào DEF_COLS: giữ DEF_COLS, thêm custom từ saved nếu có
-// Đồng bộ DEF_COLS (26 chức danh chuẩn) với danh mục động bên trang Định biên:
-// CHỈ cập nhật TÊN cho những chức danh đã có sẵn key trùng khớp trong DEF_COLS
-// (an toàn tuyệt đối — không thêm cột mới, không xoá cột nào, không đổi số lượng cột).
-// Có try/catch, không làm sập trang nếu lỗi mạng hoặc chưa chạy patch15 SQL.
-async function taiChucDanhChuan(){
-  try{
-    var r = await sc.rpc('dinhbien_lay_danh_sach_chuc_danh');
-    if(!r || !r.data || !r.data.length) return;
-    var byMa = {};
-    r.data.forEach(function(c){ byMa[c.ma] = c; });
-    DEF_COLS.forEach(function(c){
-      var db = byMa[c.k];
-      if(db && !db.an) c.n = db.ten_tat || db.ten || c.n;
-    });
-  }catch(e){ /* im lặng bỏ qua */ }
-}
-
 function mergeCols(savedCols){
-  var defKeys=DEF_COLS.map(function(c){return c.k;});
-  var result=DEF_COLS.map(function(c){return {k:c.k,n:c.n};});
-  if(savedCols&&savedCols.length){
-    var seen={};
-    savedCols.forEach(function(c){
-      if(defKeys.indexOf(c.k)<0 && !seen[c.k]){
-        seen[c.k]=true;
-        result.push({k:c.k,n:c.n});
-      }
-    });
-  }
-  return result;
+  // Không còn merge với cột đã lưu trong dữ liệu cũ nữa — danh sách chức danh giờ lấy
+  // 100% động từ Định biên (COLS đã được taiDinhBienChucDanh() tải sẵn lúc khởi động app).
+  // Việc này tránh lỗi cột cũ (trước khi đổi chuẩn 26 chức danh) bị cộng dồn lẫn vào cột mới.
+  return COLS.map(function(c){return {k:c.k,n:c.n};});
 }
 
 function ensureProj(p){
@@ -2438,7 +2428,6 @@ async function checkAutoSaveAt8(){
 
 async function init(){
   setDate();
-  await taiChucDanhChuan();
   await loadData();
   checkNotif();
   checkTimeLock();
@@ -3760,6 +3749,7 @@ function bchIsIOS(){
   };
 
   await taiCauHinhCaLamViec();
+  await taiDinhBienChucDanh();
   await taiGioHan();
   if('Notification' in window && !bchIsIOS() && Notification.permission==='granted'){
     bchScheduleAllNotifs();

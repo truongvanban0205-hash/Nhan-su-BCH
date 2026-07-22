@@ -27,27 +27,28 @@
   .btn{padding:9px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;}
   .btn.secondary{background:#fff;color:var(--accent-dark);border:1.5px solid var(--accent);}
   .btn.ok{background:var(--ok);}
+  .btn.danger{background:var(--bad);}
   .btn:disabled{opacity:.5;cursor:not-allowed;}
   .lock-badge{font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;}
   .lock-badge.locked{background:#fff3e0;color:#e65100;}
   .lock-badge.unlocked{background:var(--ok-dim);color:var(--ok);}
-  label.chk{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;font-weight:600;}
   .grid-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
   table{border-collapse:collapse;width:100%;font-size:12.5px;}
   th,td{border:1px solid var(--border);padding:0;text-align:center;white-space:nowrap;}
-  th{background:var(--panel2);font-weight:700;padding:6px 8px;position:sticky;top:0;z-index:2;}
-  th.colhead .ct-actions{display:flex;gap:3px;justify-content:center;margin-top:3px;}
-  th.colhead .ct-actions button{border:none;background:transparent;cursor:pointer;font-size:11px;padding:1px 3px;border-radius:4px;}
-  th.colhead .ct-actions button:hover{background:#e3e9f0;}
-  th.colhead.an, td.an{opacity:.45;}
-  td.rowlabel{position:sticky;left:0;background:var(--panel2);z-index:1;text-align:left;padding:8px 10px;font-weight:700;min-width:230px;}
-  td.rowlabel .rl-actions{display:inline-flex;gap:4px;margin-left:6px;}
-  td.rowlabel .rl-actions button{border:none;background:transparent;cursor:pointer;font-size:11px;padding:1px 4px;border-radius:4px;}
-  td.rowlabel .rl-actions button:hover{background:#e3e9f0;}
-  th.collabel{z-index:3;min-width:230px;}
-  td input{width:70px;border:none;padding:8px 6px;text-align:center;font-family:inherit;font-size:12.5px;background:transparent;}
-  td input:focus{outline:2px solid var(--accent);background:#fff;}
-  td input:disabled{color:var(--text);background:transparent;}
+  th{background:var(--panel2);font-weight:700;padding:4px;position:sticky;top:0;z-index:2;}
+  th input{width:64px;border:1.5px solid transparent;background:transparent;text-align:center;font-weight:700;font-family:inherit;font-size:12.5px;padding:4px;border-radius:6px;}
+  th input:disabled{color:var(--text);}
+  th input:not(:disabled){background:#fff;border-color:var(--border);}
+  th .delcol{cursor:pointer;color:var(--bad);font-weight:900;font-size:11px;margin-left:2px;}
+  td.rowlabel{position:sticky;left:0;background:var(--panel2);z-index:1;text-align:left;padding:4px 6px;font-weight:700;min-width:220px;}
+  th.collabel{z-index:3;position:sticky;left:0;}
+  td.rowlabel input{width:100%;border:1.5px solid transparent;background:transparent;font-weight:700;font-family:inherit;font-size:12.5px;padding:6px;border-radius:6px;}
+  td.rowlabel input:not(:disabled){background:#fff;border-color:var(--border);}
+  td.rowlabel .delrow{cursor:pointer;color:var(--bad);font-weight:900;font-size:12px;margin-left:4px;flex-shrink:0;}
+  td.rowlabel .rowflex{display:flex;align-items:center;gap:4px;}
+  td input.numcell{width:70px;border:none;padding:8px 6px;text-align:center;font-family:inherit;font-size:12.5px;background:transparent;}
+  td input.numcell:focus{outline:2px solid var(--accent);background:#fff;}
+  td input.numcell:disabled{color:var(--text);background:transparent;}
   .msg{padding:12px 16px;border-radius:10px;font-size:13px;margin-top:12px;display:none;font-weight:600;}
   .msg.show{display:block;}
   .msg.ok{background:var(--ok-dim);color:var(--ok);border:1px solid var(--ok);}
@@ -68,23 +69,26 @@
 <div id="appBox" style="display:none;" class="wrap">
   <div class="card">
     <h2>📊 Định biên Nhân sự</h2>
-    <p class="sub">Chức danh và cột đều <b>chỉnh sửa được</b> (mở khoá để sửa/thêm/ẩn). Đổi tên không làm mất dữ liệu đã nhập vì dữ liệu lưu theo mã nội bộ cố định, không theo tên. Có thể <b>copy 1 vùng từ Excel rồi dán trực tiếp</b> — click ô góc trên-trái muốn dán, bấm Ctrl+V.</p>
+    <p class="sub">
+      Cột = mốc <b>ngày bắt đầu áp dụng</b> (VD: cột "01/01" nghĩa là định biên áp dụng từ 01/01 cho tới trước mốc cột kế tiếp).
+      Báo cáo Nhân sự tự động lấy đúng chức danh và định biên đang có ở đây — sửa ở đây, báo cáo tự cập nhật theo.
+      Có thể <b>copy 1 vùng từ Excel rồi dán trực tiếp</b> vào bảng.
+    </p>
 
     <div class="toolbar">
       <label style="font-size:13px;font-weight:700;">Năm:</label>
       <select id="selNam"></select>
       <span id="lockBadge" class="lock-badge locked">🔒 Đang xem (chưa mở khoá sửa)</span>
       <button class="btn secondary" id="btnUnlock">Mở khoá để sửa</button>
-      <button class="btn secondary" id="btnThemChucDanh" style="display:none;">+ Thêm chức danh</button>
-      <button class="btn secondary" id="btnThemCot" style="display:none;">+ Thêm cột</button>
+      <button class="btn secondary" id="btnThemHang" style="display:none;">+ Thêm chức danh</button>
+      <button class="btn secondary" id="btnThemCot" style="display:none;">+ Thêm cột ngày</button>
       <button class="btn ok" id="btnLuu" style="display:none;">💾 Lưu tất cả</button>
-      <label class="chk"><input type="checkbox" id="chkAn"> Hiện cả mục đã ẩn</label>
     </div>
 
     <div class="grid-wrap">
       <table id="dbTable"></table>
     </div>
-    <div class="hint">Mẹo: bấm 1 ô rồi Ctrl+V để dán nguyên khối dữ liệu đã copy từ Excel (nhiều dòng nhiều cột cùng lúc). Khi đã mở khoá: bấm ✎ cạnh tên để sửa, 🚫 để ẩn (không xoá hẳn, dữ liệu cũ vẫn còn).</div>
+    <div class="hint">Mẹo: bấm 1 ô số rồi Ctrl+V để dán nguyên khối dữ liệu đã copy từ Excel (nhiều dòng nhiều cột cùng lúc). Mở khoá mới sửa được tên chức danh / tên cột / thêm / xoá.</div>
     <div class="msg" id="msgDb"></div>
   </div>
 </div>
@@ -95,14 +99,13 @@ const SUPABASE_KEY = "sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const LS_KEY = "bch_nv_login";
 const LOGIN_PAGE = "quan-ly-tai-khoan.html";
-const MONTH_KEYS = ['1','2','3','4','5','6','7','8','9','10','11','12'];
 
 let saved = null;
 let unlocked = false;
 let dinhBienPass = '';
-let chucDanhList = [];  // [{ma,ten,ten_tat,thu_tu,an}] — từ dinhbien_lay_danh_sach_chuc_danh
-let cols = [];           // [{ten_cot, thu_tu, an}] — từ dinhbien_lay_danh_sach_cot
-let rowsData = {};       // { [ma]: {"1":5,...} }
+let rows = [];      // [{id, ten, thu_tu}]
+let cols = [];       // [{id, nhan, thu_tu}]
+let values = {};     // { "chucDanhId_cotId": so_luong }
 let curNam = new Date().getFullYear();
 
 function showMsg(type, text){
@@ -110,61 +113,73 @@ function showMsg(type, text){
   el.className = 'msg show ' + type;
   el.textContent = text;
 }
-
-function colLabel(c){
-  if(MONTH_KEYS.includes(c)) return 'Tháng ' + c;
-  return c;
-}
-
-function hienAn(){ return document.getElementById('chkAn').checked; }
-function chucDanhHienThi(){ return chucDanhList.filter(c=>hienAn()||!c.an); }
-function colsHienThi(){ return cols.filter(c=>hienAn()||!c.an); }
+function vKey(rowId, colId){ return rowId + '_' + colId; }
 
 function renderTable(){
   const tbl = document.getElementById('dbTable');
-  const visCols = colsHienThi();
-  const visRows = chucDanhHienThi();
-
   let html = '<thead><tr><th class="collabel">Chức danh</th>';
-  visCols.forEach(c=>{
-    const isMonth = MONTH_KEYS.includes(c.ten_cot);
-    html += `<th class="colhead ${c.an?'an':''}">${colLabel(c.ten_cot)}`;
-    if(unlocked && !isMonth){
-      html += `<div class="ct-actions">
-        <button title="Sửa tên" onclick="suaCot('${c.ten_cot.replace(/'/g,"\\'")}')">✎</button>
-        <button title="${c.an?'Hiện lại':'Ẩn cột'}" onclick="anCot('${c.ten_cot.replace(/'/g,"\\'")}', ${!c.an})">${c.an?'👁':'🚫'}</button>
-      </div>`;
-    }
-    html += `</th>`;
+  cols.forEach(c=>{
+    html += `<th><div style="display:flex;align-items:center;justify-content:center;">
+      <input type="text" data-colid="${c.id}" class="colname" value="${c.nhan}" ${unlocked?'':'disabled'}>
+      ${unlocked?`<span class="delcol" data-delcol="${c.id}">✕</span>`:''}
+    </div></th>`;
   });
   html += '</tr></thead><tbody>';
-
-  visRows.forEach(cd=>{
-    html += `<tr><td class="rowlabel ${cd.an?'an':''}">${cd.ten} <span style="color:var(--muted);font-weight:400;">(${cd.ma})</span>`;
-    if(unlocked){
-      html += `<span class="rl-actions">
-        <button title="Sửa tên" onclick="suaChucDanh('${cd.ma}')">✎</button>
-        <button title="${cd.an?'Hiện lại':'Ẩn'}" onclick="anChucDanh('${cd.ma}', ${!cd.an})">${cd.an?'👁':'🚫'}</button>
-      </span>`;
-    }
-    html += `</td>`;
-    visCols.forEach(c=>{
-      const val = (rowsData[cd.ma] && rowsData[cd.ma][c.ten_cot]) || '';
-      const isNum = MONTH_KEYS.includes(c.ten_cot);
-      html += `<td class="${(cd.an||c.an)?'an':''}"><input type="${isNum?'number':'text'}" data-row="${cd.ma}" data-col="${c.ten_cot}" value="${val}" ${unlocked?'':'disabled'}></td>`;
+  rows.forEach(r=>{
+    html += `<tr><td class="rowlabel"><div class="rowflex">
+      <input type="text" data-rowid="${r.id}" class="rowname" value="${r.ten}" ${unlocked?'':'disabled'}>
+      ${unlocked?`<span class="delrow" data-delrow="${r.id}">✕</span>`:''}
+      </div></td>`;
+    cols.forEach(c=>{
+      const val = values[vKey(r.id,c.id)] ?? '';
+      html += `<td><input type="number" class="numcell" data-rowid="${r.id}" data-colid="${c.id}" value="${val}" ${unlocked?'':'disabled'}></td>`;
     });
     html += '</tr>';
   });
   html += '</tbody>';
   tbl.innerHTML = html;
 
-  tbl.querySelectorAll('input').forEach(inp=>{
+  tbl.querySelectorAll('.numcell').forEach(inp=>{
     inp.addEventListener('change', ()=>{
-      const r = inp.dataset.row, c = inp.dataset.col;
-      if(!rowsData[r]) rowsData[r] = {};
-      rowsData[r][c] = inp.value;
+      values[vKey(inp.dataset.rowid, inp.dataset.colid)] = inp.value;
     });
     inp.addEventListener('paste', handlePaste);
+  });
+  tbl.querySelectorAll('.rowname').forEach(inp=>{
+    inp.addEventListener('change', async ()=>{
+      const { error } = await sb.rpc('dinhbien_sua_chuc_danh', { p_pass: dinhBienPass, p_id: parseInt(inp.dataset.rowid), p_ten_moi: inp.value });
+      if(error){ showMsg('bad','Không đổi được tên: '+error.message); return; }
+      var r = rows.find(x=>x.id==inp.dataset.rowid); if(r) r.ten = inp.value;
+      showMsg('ok','✓ Đã đổi tên chức danh — báo cáo Nhân sự sẽ tự cập nhật theo.');
+    });
+  });
+  tbl.querySelectorAll('.colname').forEach(inp=>{
+    inp.addEventListener('change', async ()=>{
+      const { error } = await sb.rpc('dinhbien_sua_cot', { p_pass: dinhBienPass, p_id: parseInt(inp.dataset.colid), p_nhan_moi: inp.value });
+      if(error){ showMsg('bad','Không đổi được tên cột: '+error.message); return; }
+      var c = cols.find(x=>x.id==inp.dataset.colid); if(c) c.nhan = inp.value;
+      showMsg('ok','✓ Đã đổi tên cột.');
+    });
+  });
+  tbl.querySelectorAll('[data-delrow]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      var r = rows.find(x=>x.id==btn.dataset.delrow);
+      if(!confirm(`Xoá chức danh "${r?r.ten:''}"? Toàn bộ số liệu định biên của chức danh này (mọi năm) sẽ mất luôn, và báo cáo Nhân sự sẽ mất cột này ngay lập tức.`)) return;
+      const { error } = await sb.rpc('dinhbien_xoa_chuc_danh', { p_pass: dinhBienPass, p_id: parseInt(btn.dataset.delrow) });
+      if(error){ showMsg('bad','Không xoá được: '+error.message); return; }
+      await taiDuLieuNam();
+      showMsg('ok','✓ Đã xoá chức danh.');
+    });
+  });
+  tbl.querySelectorAll('[data-delcol]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      var c = cols.find(x=>x.id==btn.dataset.delcol);
+      if(!confirm(`Xoá cột "${c?c.nhan:''}"? Số liệu định biên trong cột này sẽ mất luôn.`)) return;
+      const { error } = await sb.rpc('dinhbien_xoa_cot', { p_pass: dinhBienPass, p_id: parseInt(btn.dataset.delcol) });
+      if(error){ showMsg('bad','Không xoá được: '+error.message); return; }
+      await taiDuLieuNam();
+      showMsg('ok','✓ Đã xoá cột.');
+    });
   });
 }
 
@@ -174,46 +189,37 @@ function handlePaste(e){
   const text = (e.clipboardData || window.clipboardData).getData('text');
   if(!text) return;
   const startInput = e.target;
-  const startRowKey = startInput.dataset.row;
-  const startColKey = startInput.dataset.col;
-  const visRows = chucDanhHienThi();
-  const visCols = colsHienThi();
-  const rowIdx = visRows.findIndex(c=>c.ma===startRowKey);
-  const colIdx = visCols.findIndex(c=>c.ten_cot===startColKey);
+  const rowIdx = rows.findIndex(r=>String(r.id)===String(startInput.dataset.rowid));
+  const colIdx = cols.findIndex(c=>String(c.id)===String(startInput.dataset.colid));
   if(rowIdx<0 || colIdx<0) return;
 
   const lines = text.replace(/\r/g,'').split('\n').filter((l,i,arr)=> !(i===arr.length-1 && l===''));
   lines.forEach((line, li)=>{
     const cells = line.split('\t');
     cells.forEach((val, ci)=>{
-      const targetRow = visRows[rowIdx+li];
-      const targetCol = visCols[colIdx+ci];
+      const targetRow = rows[rowIdx+li];
+      const targetCol = cols[colIdx+ci];
       if(!targetRow || !targetCol) return;
-      const sel = `input[data-row="${targetRow.ma}"][data-col="${targetCol.ten_cot}"]`;
-      const el = document.querySelector(sel);
+      const el = document.querySelector(`input.numcell[data-rowid="${targetRow.id}"][data-colid="${targetCol.id}"]`);
       if(el){
         el.value = val.trim();
-        if(!rowsData[targetRow.ma]) rowsData[targetRow.ma] = {};
-        rowsData[targetRow.ma][targetCol.ten_cot] = val.trim();
+        values[vKey(targetRow.id, targetCol.id)] = val.trim();
       }
     });
   });
   showMsg('ok', `✓ Đã dán ${lines.length} dòng dữ liệu. Nhớ bấm "Lưu tất cả" để ghi lại.`);
 }
 
-async function taiDanhMuc(){
-  const [cdRes, colRes] = await Promise.all([
-    sb.rpc('dinhbien_lay_danh_sach_chuc_danh'),
-    sb.rpc('dinhbien_lay_danh_sach_cot')
-  ]);
-  chucDanhList = cdRes.data || [];
-  cols = colRes.data || [];
-}
-
 async function taiDuLieuNam(){
-  const { data } = await sb.rpc('dinhbien_lay_theo_nam', { p_nam: curNam });
-  rowsData = {};
-  (data || []).forEach(r=>{ rowsData[r.chuc_danh_key] = r.du_lieu || {}; });
+  const [rowRes, colRes, valRes] = await Promise.all([
+    sb.rpc('dinhbien_lay_danh_sach_chuc_danh'),
+    sb.rpc('dinhbien_lay_danh_sach_cot', { p_nam: curNam }),
+    sb.rpc('dinhbien_lay_gia_tri_nam', { p_nam: curNam })
+  ]);
+  rows = rowRes.data || [];
+  cols = colRes.data || [];
+  values = {};
+  (valRes.data || []).forEach(v=>{ values[vKey(v.chuc_danh_id, v.cot_id)] = v.so_luong; });
   renderTable();
 }
 
@@ -244,7 +250,6 @@ async function init(){
   document.getElementById('loadingBox').style.display='none';
   renderNamSelect();
   document.getElementById('appBox').style.display = 'block';
-  await taiDanhMuc();
   await taiDuLieuNam();
 }
 
@@ -252,8 +257,6 @@ document.getElementById('selNam').addEventListener('change', async (e)=>{
   curNam = parseInt(e.target.value);
   await taiDuLieuNam();
 });
-
-document.getElementById('chkAn').addEventListener('change', renderTable);
 
 document.getElementById('btnUnlock').addEventListener('click', async ()=>{
   if(unlocked) return;
@@ -265,83 +268,43 @@ document.getElementById('btnUnlock').addEventListener('click', async ()=>{
   dinhBienPass = p;
   document.getElementById('lockBadge').className = 'lock-badge unlocked';
   document.getElementById('lockBadge').textContent = '🔓 Đã mở khoá — có thể sửa';
-  document.getElementById('btnThemChucDanh').style.display = '';
+  document.getElementById('btnThemHang').style.display = '';
   document.getElementById('btnThemCot').style.display = '';
   document.getElementById('btnLuu').style.display = '';
   document.getElementById('btnUnlock').style.display = 'none';
   renderTable();
 });
 
-document.getElementById('btnThemChucDanh').addEventListener('click', async ()=>{
-  const ten = prompt('Tên đầy đủ chức danh mới (VD: Chuyên viên Môi trường):');
+document.getElementById('btnThemHang').addEventListener('click', async ()=>{
+  const ten = prompt('Tên chức danh mới:');
   if(!ten || !ten.trim()) return;
-  const tenTat = prompt('Tên viết tắt (hiện trong báo cáo Nhân sự — để trống thì dùng luôn tên đầy đủ):', '');
-  const { data, error } = await sb.rpc('dinhbien_them_chuc_danh', { p_pass: dinhBienPass, p_ten: ten.trim(), p_ten_tat: (tenTat||'').trim() || null });
-  if(error){ alert('Không thêm được: ' + error.message); return; }
-  await taiDanhMuc();
-  renderTable();
-  showMsg('ok', `✓ Đã thêm chức danh "${ten.trim()}" (mã: ${data})`);
+  const { error } = await sb.rpc('dinhbien_them_chuc_danh', { p_pass: dinhBienPass, p_ten: ten.trim() });
+  if(error){ showMsg('bad','Không thêm được: '+error.message); return; }
+  await taiDuLieuNam();
+  showMsg('ok', `✓ Đã thêm chức danh "${ten.trim()}" — báo cáo Nhân sự sẽ có thêm cột này ngay.`);
 });
-
-async function suaChucDanh(ma){
-  const cd = chucDanhList.find(c=>c.ma===ma);
-  if(!cd) return;
-  const ten = prompt('Sửa tên đầy đủ:', cd.ten);
-  if(ten===null || !ten.trim()) return;
-  const tenTat = prompt('Sửa tên viết tắt:', cd.ten_tat||cd.ten);
-  if(tenTat===null) return;
-  const { error } = await sb.rpc('dinhbien_sua_chuc_danh', { p_pass: dinhBienPass, p_ma: ma, p_ten: ten.trim(), p_ten_tat: tenTat.trim()||null });
-  if(error){ alert('Không sửa được: ' + error.message); return; }
-  await taiDanhMuc();
-  renderTable();
-  showMsg('ok', '✓ Đã cập nhật tên chức danh. Dữ liệu đã nhập vẫn giữ nguyên.');
-}
-
-async function anChucDanh(ma, anMoi){
-  const cd = chucDanhList.find(c=>c.ma===ma);
-  if(!cd) return;
-  if(anMoi && !confirm(`Ẩn chức danh "${cd.ten}"? (dữ liệu đã nhập vẫn được giữ, chỉ ẩn khỏi bảng nhập mặc định)`)) return;
-  const { error } = await sb.rpc('dinhbien_an_chuc_danh', { p_pass: dinhBienPass, p_ma: ma, p_an: anMoi });
-  if(error){ alert('Không thực hiện được: ' + error.message); return; }
-  await taiDanhMuc();
-  renderTable();
-  showMsg('ok', anMoi ? `✓ Đã ẩn "${cd.ten}"` : `✓ Đã hiện lại "${cd.ten}"`);
-}
 
 document.getElementById('btnThemCot').addEventListener('click', async ()=>{
-  const ten = prompt('Tên cột mới (VD: Cấp bậc, Ghi chú...):');
-  if(!ten || !ten.trim()) return;
-  const { error } = await sb.rpc('dinhbien_them_cot', { p_pass: dinhBienPass, p_ten_cot: ten.trim() });
-  if(error){ alert('Không thêm được cột (có thể trùng tên).'); return; }
-  await taiDanhMuc();
-  renderTable();
-  showMsg('ok', `✓ Đã thêm cột "${ten.trim()}"`);
+  const nhan = prompt('Ngày bắt đầu áp dụng (định dạng dd/mm, VD: 01/01):');
+  if(!nhan || !nhan.trim()) return;
+  if(!/^\d{1,2}\/\d{1,2}$/.test(nhan.trim())){ alert('Định dạng chưa đúng, cần kiểu dd/mm (VD: 01/01, 15/03).'); return; }
+  const { error } = await sb.rpc('dinhbien_them_cot', { p_pass: dinhBienPass, p_nhan: nhan.trim(), p_nam: curNam });
+  if(error){ showMsg('bad','Không thêm được (có thể trùng ngày): '+error.message); return; }
+  await taiDuLieuNam();
+  showMsg('ok', `✓ Đã thêm cột "${nhan.trim()}"`);
 });
 
-async function suaCot(tenCu){
-  const tenMoi = prompt('Sửa tên cột:', tenCu);
-  if(tenMoi===null || !tenMoi.trim() || tenMoi.trim()===tenCu) return;
-  const { error } = await sb.rpc('dinhbien_sua_ten_cot', { p_pass: dinhBienPass, p_ten_cu: tenCu, p_ten_moi: tenMoi.trim() });
-  if(error){ alert('Không sửa được: ' + error.message); return; }
-  await taiDanhMuc();
-  renderTable();
-  showMsg('ok', '✓ Đã đổi tên cột.');
-}
-
-async function anCot(tenCot, anMoi){
-  if(anMoi && !confirm(`Ẩn cột "${tenCot}"? (dữ liệu đã nhập trong cột này vẫn được giữ)`)) return;
-  const { error } = await sb.rpc('dinhbien_an_cot', { p_pass: dinhBienPass, p_ten_cot: tenCot, p_an: anMoi });
-  if(error){ alert('Không thực hiện được: ' + error.message); return; }
-  await taiDanhMuc();
-  renderTable();
-  showMsg('ok', anMoi ? `✓ Đã ẩn cột "${tenCot}"` : `✓ Đã hiện lại cột "${tenCot}"`);
-}
-
 document.getElementById('btnLuu').addEventListener('click', async ()=>{
-  const payload = chucDanhList.map(cd=>({ chuc_danh_key: cd.ma, du_lieu: rowsData[cd.ma] || {} }));
-  const { data, error } = await sb.rpc('dinhbien_luu_toan_bo', { p_pass: dinhBienPass, p_nam: curNam, p_rows: payload });
+  const payload = [];
+  rows.forEach(r=>{
+    cols.forEach(c=>{
+      const v = values[vKey(r.id,c.id)];
+      if(v !== undefined && v !== '') payload.push({ chuc_danh_id: r.id, cot_id: c.id, so_luong: v });
+    });
+  });
+  const { data, error } = await sb.rpc('dinhbien_luu_gia_tri', { p_pass: dinhBienPass, p_rows: payload });
   if(error){ showMsg('bad', 'Có lỗi khi lưu: ' + error.message); return; }
-  showMsg('ok', `✓ Đã lưu ${data.da_luu} chức danh cho năm ${curNam}.`);
+  showMsg('ok', `✓ Đã lưu ${data.da_luu} ô dữ liệu cho năm ${curNam}.`);
 });
 
 init();
