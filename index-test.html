@@ -1771,7 +1771,10 @@ async function mergeSave(){
     var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems;
     if(serverData){
       mergedProjects=serverData.projects||projects;
-      mergedCols=serverData.cols||COLS;
+      // Cột LUÔN lấy đúng bộ hiện tại từ Định biên (COLS) — không dùng cols cũ đã lưu trên
+      // server và không cộng dồn nữa, để sửa/thêm/xoá bên Định biên là bên này nhảy theo ngay,
+      // không bị cộng dồn cột cũ + cột mới chồng lên nhau như trước.
+      mergedCols=COLS;
       mergedData=serverData.data||{};
       mergedLog=serverData.log||[];
       // Ghi đè CHỈ những ô mình vừa sửa lên bản server mới nhất
@@ -1784,9 +1787,8 @@ async function mergeSave(){
           });
         });
       });
-      // Đảm bảo dự án/cột mới (nếu mình vừa thêm) cũng có trong merged
+      // Đảm bảo dự án mới (nếu mình vừa thêm) cũng có trong merged
       projects.forEach(function(p){if(mergedProjects.indexOf(p)<0)mergedProjects.push(p);});
-      COLS.forEach(function(c){if(!mergedCols.find(function(mc){return mc.k===c.k;}))mergedCols.push(c);});
       // Merge log: giữ log mới nhất từ cả 2 bên, không trùng
       var existingTs=mergedLog.map(function(l){return l.ts;});
       logItems.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
