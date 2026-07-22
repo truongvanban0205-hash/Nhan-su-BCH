@@ -15,10 +15,10 @@
   *{box-sizing:border-box;}
   body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:'Be Vietnam Pro',system-ui,sans-serif;
     padding:16px 12px 60px;}
-  .topbar{max-width:1200px;margin:0 auto 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+  .topbar{max-width:1300px;margin:0 auto 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
   .brand{font-size:15px;color:var(--accent-dark);font-weight:800;}
   a.back{color:var(--muted);font-size:13px;text-decoration:none;border:1px solid var(--border);padding:8px 16px;border-radius:8px;background:#fff;}
-  .wrap{max-width:1200px;margin:0 auto;}
+  .wrap{max-width:1300px;margin:0 auto;}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 4px 20px rgba(20,40,70,.08);margin-bottom:16px;}
   h2{font-size:18px;margin:0 0 4px;font-weight:800;color:var(--accent-dark);}
   .sub{color:var(--muted);font-size:13px;margin:0 0 14px;line-height:1.5;}
@@ -31,12 +31,20 @@
   .lock-badge{font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;}
   .lock-badge.locked{background:#fff3e0;color:#e65100;}
   .lock-badge.unlocked{background:var(--ok-dim);color:var(--ok);}
+  label.chk{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;font-weight:600;}
   .grid-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
   table{border-collapse:collapse;width:100%;font-size:12.5px;}
   th,td{border:1px solid var(--border);padding:0;text-align:center;white-space:nowrap;}
-  th{background:var(--panel2);font-weight:700;padding:8px 10px;position:sticky;top:0;z-index:2;}
-  td.rowlabel,th.collabel{position:sticky;left:0;background:var(--panel2);z-index:1;text-align:left;padding:8px 10px;font-weight:700;min-width:200px;}
-  th.collabel{z-index:3;}
+  th{background:var(--panel2);font-weight:700;padding:6px 8px;position:sticky;top:0;z-index:2;}
+  th.colhead .ct-actions{display:flex;gap:3px;justify-content:center;margin-top:3px;}
+  th.colhead .ct-actions button{border:none;background:transparent;cursor:pointer;font-size:11px;padding:1px 3px;border-radius:4px;}
+  th.colhead .ct-actions button:hover{background:#e3e9f0;}
+  th.colhead.an, td.an{opacity:.45;}
+  td.rowlabel{position:sticky;left:0;background:var(--panel2);z-index:1;text-align:left;padding:8px 10px;font-weight:700;min-width:230px;}
+  td.rowlabel .rl-actions{display:inline-flex;gap:4px;margin-left:6px;}
+  td.rowlabel .rl-actions button{border:none;background:transparent;cursor:pointer;font-size:11px;padding:1px 4px;border-radius:4px;}
+  td.rowlabel .rl-actions button:hover{background:#e3e9f0;}
+  th.collabel{z-index:3;min-width:230px;}
   td input{width:70px;border:none;padding:8px 6px;text-align:center;font-family:inherit;font-size:12.5px;background:transparent;}
   td input:focus{outline:2px solid var(--accent);background:#fff;}
   td input:disabled{color:var(--text);background:transparent;}
@@ -60,21 +68,23 @@
 <div id="appBox" style="display:none;" class="wrap">
   <div class="card">
     <h2>📊 Định biên Nhân sự</h2>
-    <p class="sub">26 chức danh cố định × cột linh hoạt (mặc định 12 tháng, thêm được cột tuỳ ý). Có thể <b>copy 1 vùng từ Excel rồi dán trực tiếp</b> vào bảng — click vào ô góc trên-trái muốn dán, bấm Ctrl+V.</p>
+    <p class="sub">Chức danh và cột đều <b>chỉnh sửa được</b> (mở khoá để sửa/thêm/ẩn). Đổi tên không làm mất dữ liệu đã nhập vì dữ liệu lưu theo mã nội bộ cố định, không theo tên. Có thể <b>copy 1 vùng từ Excel rồi dán trực tiếp</b> — click ô góc trên-trái muốn dán, bấm Ctrl+V.</p>
 
     <div class="toolbar">
       <label style="font-size:13px;font-weight:700;">Năm:</label>
       <select id="selNam"></select>
       <span id="lockBadge" class="lock-badge locked">🔒 Đang xem (chưa mở khoá sửa)</span>
       <button class="btn secondary" id="btnUnlock">Mở khoá để sửa</button>
+      <button class="btn secondary" id="btnThemChucDanh" style="display:none;">+ Thêm chức danh</button>
       <button class="btn secondary" id="btnThemCot" style="display:none;">+ Thêm cột</button>
       <button class="btn ok" id="btnLuu" style="display:none;">💾 Lưu tất cả</button>
+      <label class="chk"><input type="checkbox" id="chkAn"> Hiện cả mục đã ẩn</label>
     </div>
 
     <div class="grid-wrap">
       <table id="dbTable"></table>
     </div>
-    <div class="hint">Mẹo: bấm 1 ô rồi Ctrl+V để dán nguyên khối dữ liệu đã copy từ Excel (nhiều dòng nhiều cột cùng lúc).</div>
+    <div class="hint">Mẹo: bấm 1 ô rồi Ctrl+V để dán nguyên khối dữ liệu đã copy từ Excel (nhiều dòng nhiều cột cùng lúc). Khi đã mở khoá: bấm ✎ cạnh tên để sửa, 🚫 để ẩn (không xoá hẳn, dữ liệu cũ vẫn còn).</div>
     <div class="msg" id="msgDb"></div>
   </div>
 </div>
@@ -85,43 +95,14 @@ const SUPABASE_KEY = "sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const LS_KEY = "bch_nv_login";
 const LOGIN_PAGE = "quan-ly-tai-khoan.html";
-
-// 26 chức danh chuẩn — đúng thứ tự và mã khớp với báo cáo Nhân sự
-const CHUC_DANH = [
-  {k:'CHT',n:'Chỉ huy trưởng'},
-  {k:'CVNN',n:'Chuyên viên Nội nghiệp'},
-  {k:'CVHC',n:'Chuyên viên Hành chính'},
-  {k:'NVHC',n:'Nhân viên Hành chính'},
-  {k:'TNQS',n:'Trưởng nhóm Kiểm soát khối lượng'},
-  {k:'CVQS',n:'Chuyên viên Kiểm soát khối lượng'},
-  {k:'TNQC',n:'Trưởng nhóm Kiểm soát chất lượng'},
-  {k:'CVQC',n:'Chuyên viên Kiểm soát chất lượng'},
-  {k:'NVLMTN',n:'Nhân viên Lấy mẫu thí nghiệm'},
-  {k:'CVShop',n:'Chuyên viên ShopDrawing - Biện pháp thi công'},
-  {k:'TNKho',n:'Trưởng nhóm kho'},
-  {k:'CVKho',n:'Thủ kho'},
-  {k:'NVKho',n:'Nhân viên kho'},
-  {k:'DoiTruong',n:'Đội trưởng thi công'},
-  {k:'CVKTHT',n:'Chuyên viên Kỹ thuật hiện trường'},
-  {k:'TNTracDac',n:'Trưởng nhóm trắc đạc'},
-  {k:'CVTracDac',n:'Chuyên viên Trắc đạc'},
-  {k:'NVTracDac',n:'Nhân viên Trắc đạc'},
-  {k:'TNATLĐ',n:'Trưởng nhóm An toàn Lao động'},
-  {k:'CVATLĐ',n:'Chuyên viên An toàn lao động'},
-  {k:'TTCG',n:'Tổ trưởng cơ giới'},
-  {k:'CVQLTB',n:'Chuyên viên điều phối máy móc thiết bị'},
-  {k:'TruongCa',n:'Trưởng ca'},
-  {k:'NVLXLM',n:'Lái xe, lái máy'},
-  {k:'TTCNCH',n:'Tổ trưởng công nhân cơ hữu'},
-  {k:'CNCH',n:'Công nhân cơ hữu'}
-];
 const MONTH_KEYS = ['1','2','3','4','5','6','7','8','9','10','11','12'];
 
 let saved = null;
 let unlocked = false;
 let dinhBienPass = '';
-let cols = [];          // [{ten_cot, thu_tu}]
-let rowsData = {};      // { CHT: {"1":5,...}, ... }
+let chucDanhList = [];  // [{ma,ten,ten_tat,thu_tu,an}] — từ dinhbien_lay_danh_sach_chuc_danh
+let cols = [];           // [{ten_cot, thu_tu, an}] — từ dinhbien_lay_danh_sach_cot
+let rowsData = {};       // { [ma]: {"1":5,...} }
 let curNam = new Date().getFullYear();
 
 function showMsg(type, text){
@@ -135,17 +116,42 @@ function colLabel(c){
   return c;
 }
 
+function hienAn(){ return document.getElementById('chkAn').checked; }
+function chucDanhHienThi(){ return chucDanhList.filter(c=>hienAn()||!c.an); }
+function colsHienThi(){ return cols.filter(c=>hienAn()||!c.an); }
+
 function renderTable(){
   const tbl = document.getElementById('dbTable');
+  const visCols = colsHienThi();
+  const visRows = chucDanhHienThi();
+
   let html = '<thead><tr><th class="collabel">Chức danh</th>';
-  cols.forEach(c=>{ html += `<th>${colLabel(c.ten_cot)}</th>`; });
+  visCols.forEach(c=>{
+    const isMonth = MONTH_KEYS.includes(c.ten_cot);
+    html += `<th class="colhead ${c.an?'an':''}">${colLabel(c.ten_cot)}`;
+    if(unlocked && !isMonth){
+      html += `<div class="ct-actions">
+        <button title="Sửa tên" onclick="suaCot('${c.ten_cot.replace(/'/g,"\\'")}')">✎</button>
+        <button title="${c.an?'Hiện lại':'Ẩn cột'}" onclick="anCot('${c.ten_cot.replace(/'/g,"\\'")}', ${!c.an})">${c.an?'👁':'🚫'}</button>
+      </div>`;
+    }
+    html += `</th>`;
+  });
   html += '</tr></thead><tbody>';
-  CHUC_DANH.forEach(cd=>{
-    html += `<tr><td class="rowlabel">${cd.n} <span style="color:var(--muted);font-weight:400;">(${cd.k})</span></td>`;
-    cols.forEach(c=>{
-      const val = (rowsData[cd.k] && rowsData[cd.k][c.ten_cot]) || '';
+
+  visRows.forEach(cd=>{
+    html += `<tr><td class="rowlabel ${cd.an?'an':''}">${cd.ten} <span style="color:var(--muted);font-weight:400;">(${cd.ma})</span>`;
+    if(unlocked){
+      html += `<span class="rl-actions">
+        <button title="Sửa tên" onclick="suaChucDanh('${cd.ma}')">✎</button>
+        <button title="${cd.an?'Hiện lại':'Ẩn'}" onclick="anChucDanh('${cd.ma}', ${!cd.an})">${cd.an?'👁':'🚫'}</button>
+      </span>`;
+    }
+    html += `</td>`;
+    visCols.forEach(c=>{
+      const val = (rowsData[cd.ma] && rowsData[cd.ma][c.ten_cot]) || '';
       const isNum = MONTH_KEYS.includes(c.ten_cot);
-      html += `<td><input type="${isNum?'number':'text'}" data-row="${cd.k}" data-col="${c.ten_cot}" value="${val}" ${unlocked?'':'disabled'}></td>`;
+      html += `<td class="${(cd.an||c.an)?'an':''}"><input type="${isNum?'number':'text'}" data-row="${cd.ma}" data-col="${c.ten_cot}" value="${val}" ${unlocked?'':'disabled'}></td>`;
     });
     html += '</tr>';
   });
@@ -170,38 +176,44 @@ function handlePaste(e){
   const startInput = e.target;
   const startRowKey = startInput.dataset.row;
   const startColKey = startInput.dataset.col;
-  const rowIdx = CHUC_DANH.findIndex(c=>c.k===startRowKey);
-  const colIdx = cols.findIndex(c=>c.ten_cot===startColKey);
+  const visRows = chucDanhHienThi();
+  const visCols = colsHienThi();
+  const rowIdx = visRows.findIndex(c=>c.ma===startRowKey);
+  const colIdx = visCols.findIndex(c=>c.ten_cot===startColKey);
   if(rowIdx<0 || colIdx<0) return;
 
   const lines = text.replace(/\r/g,'').split('\n').filter((l,i,arr)=> !(i===arr.length-1 && l===''));
   lines.forEach((line, li)=>{
     const cells = line.split('\t');
     cells.forEach((val, ci)=>{
-      const targetRow = CHUC_DANH[rowIdx+li];
-      const targetCol = cols[colIdx+ci];
+      const targetRow = visRows[rowIdx+li];
+      const targetCol = visCols[colIdx+ci];
       if(!targetRow || !targetCol) return;
-      const sel = `input[data-row="${targetRow.k}"][data-col="${targetCol.ten_cot}"]`;
+      const sel = `input[data-row="${targetRow.ma}"][data-col="${targetCol.ten_cot}"]`;
       const el = document.querySelector(sel);
       if(el){
         el.value = val.trim();
-        if(!rowsData[targetRow.k]) rowsData[targetRow.k] = {};
-        rowsData[targetRow.k][targetCol.ten_cot] = val.trim();
+        if(!rowsData[targetRow.ma]) rowsData[targetRow.ma] = {};
+        rowsData[targetRow.ma][targetCol.ten_cot] = val.trim();
       }
     });
   });
   showMsg('ok', `✓ Đã dán ${lines.length} dòng dữ liệu. Nhớ bấm "Lưu tất cả" để ghi lại.`);
 }
 
-async function taiDuLieuNam(){
-  document.getElementById('loadingBox').style.display='none';
-  const [colRes, dataRes] = await Promise.all([
-    sb.rpc('dinhbien_lay_danh_sach_cot'),
-    sb.rpc('dinhbien_lay_theo_nam', { p_nam: curNam })
+async function taiDanhMuc(){
+  const [cdRes, colRes] = await Promise.all([
+    sb.rpc('dinhbien_lay_danh_sach_chuc_danh'),
+    sb.rpc('dinhbien_lay_danh_sach_cot')
   ]);
+  chucDanhList = cdRes.data || [];
   cols = colRes.data || [];
+}
+
+async function taiDuLieuNam(){
+  const { data } = await sb.rpc('dinhbien_lay_theo_nam', { p_nam: curNam });
   rowsData = {};
-  (dataRes.data || []).forEach(r=>{ rowsData[r.chuc_danh_key] = r.du_lieu || {}; });
+  (data || []).forEach(r=>{ rowsData[r.chuc_danh_key] = r.du_lieu || {}; });
   renderTable();
 }
 
@@ -229,8 +241,10 @@ async function init(){
     return;
   }
 
+  document.getElementById('loadingBox').style.display='none';
   renderNamSelect();
   document.getElementById('appBox').style.display = 'block';
+  await taiDanhMuc();
   await taiDuLieuNam();
 }
 
@@ -238,6 +252,8 @@ document.getElementById('selNam').addEventListener('change', async (e)=>{
   curNam = parseInt(e.target.value);
   await taiDuLieuNam();
 });
+
+document.getElementById('chkAn').addEventListener('change', renderTable);
 
 document.getElementById('btnUnlock').addEventListener('click', async ()=>{
   if(unlocked) return;
@@ -249,23 +265,80 @@ document.getElementById('btnUnlock').addEventListener('click', async ()=>{
   dinhBienPass = p;
   document.getElementById('lockBadge').className = 'lock-badge unlocked';
   document.getElementById('lockBadge').textContent = '🔓 Đã mở khoá — có thể sửa';
+  document.getElementById('btnThemChucDanh').style.display = '';
   document.getElementById('btnThemCot').style.display = '';
   document.getElementById('btnLuu').style.display = '';
   document.getElementById('btnUnlock').style.display = 'none';
   renderTable();
 });
 
+document.getElementById('btnThemChucDanh').addEventListener('click', async ()=>{
+  const ten = prompt('Tên đầy đủ chức danh mới (VD: Chuyên viên Môi trường):');
+  if(!ten || !ten.trim()) return;
+  const tenTat = prompt('Tên viết tắt (hiện trong báo cáo Nhân sự — để trống thì dùng luôn tên đầy đủ):', '');
+  const { data, error } = await sb.rpc('dinhbien_them_chuc_danh', { p_pass: dinhBienPass, p_ten: ten.trim(), p_ten_tat: (tenTat||'').trim() || null });
+  if(error){ alert('Không thêm được: ' + error.message); return; }
+  await taiDanhMuc();
+  renderTable();
+  showMsg('ok', `✓ Đã thêm chức danh "${ten.trim()}" (mã: ${data})`);
+});
+
+async function suaChucDanh(ma){
+  const cd = chucDanhList.find(c=>c.ma===ma);
+  if(!cd) return;
+  const ten = prompt('Sửa tên đầy đủ:', cd.ten);
+  if(ten===null || !ten.trim()) return;
+  const tenTat = prompt('Sửa tên viết tắt:', cd.ten_tat||cd.ten);
+  if(tenTat===null) return;
+  const { error } = await sb.rpc('dinhbien_sua_chuc_danh', { p_pass: dinhBienPass, p_ma: ma, p_ten: ten.trim(), p_ten_tat: tenTat.trim()||null });
+  if(error){ alert('Không sửa được: ' + error.message); return; }
+  await taiDanhMuc();
+  renderTable();
+  showMsg('ok', '✓ Đã cập nhật tên chức danh. Dữ liệu đã nhập vẫn giữ nguyên.');
+}
+
+async function anChucDanh(ma, anMoi){
+  const cd = chucDanhList.find(c=>c.ma===ma);
+  if(!cd) return;
+  if(anMoi && !confirm(`Ẩn chức danh "${cd.ten}"? (dữ liệu đã nhập vẫn được giữ, chỉ ẩn khỏi bảng nhập mặc định)`)) return;
+  const { error } = await sb.rpc('dinhbien_an_chuc_danh', { p_pass: dinhBienPass, p_ma: ma, p_an: anMoi });
+  if(error){ alert('Không thực hiện được: ' + error.message); return; }
+  await taiDanhMuc();
+  renderTable();
+  showMsg('ok', anMoi ? `✓ Đã ẩn "${cd.ten}"` : `✓ Đã hiện lại "${cd.ten}"`);
+}
+
 document.getElementById('btnThemCot').addEventListener('click', async ()=>{
   const ten = prompt('Tên cột mới (VD: Cấp bậc, Ghi chú...):');
   if(!ten || !ten.trim()) return;
   const { error } = await sb.rpc('dinhbien_them_cot', { p_pass: dinhBienPass, p_ten_cot: ten.trim() });
   if(error){ alert('Không thêm được cột (có thể trùng tên).'); return; }
-  await taiDuLieuNam();
+  await taiDanhMuc();
+  renderTable();
   showMsg('ok', `✓ Đã thêm cột "${ten.trim()}"`);
 });
 
+async function suaCot(tenCu){
+  const tenMoi = prompt('Sửa tên cột:', tenCu);
+  if(tenMoi===null || !tenMoi.trim() || tenMoi.trim()===tenCu) return;
+  const { error } = await sb.rpc('dinhbien_sua_ten_cot', { p_pass: dinhBienPass, p_ten_cu: tenCu, p_ten_moi: tenMoi.trim() });
+  if(error){ alert('Không sửa được: ' + error.message); return; }
+  await taiDanhMuc();
+  renderTable();
+  showMsg('ok', '✓ Đã đổi tên cột.');
+}
+
+async function anCot(tenCot, anMoi){
+  if(anMoi && !confirm(`Ẩn cột "${tenCot}"? (dữ liệu đã nhập trong cột này vẫn được giữ)`)) return;
+  const { error } = await sb.rpc('dinhbien_an_cot', { p_pass: dinhBienPass, p_ten_cot: tenCot, p_an: anMoi });
+  if(error){ alert('Không thực hiện được: ' + error.message); return; }
+  await taiDanhMuc();
+  renderTable();
+  showMsg('ok', anMoi ? `✓ Đã ẩn cột "${tenCot}"` : `✓ Đã hiện lại cột "${tenCot}"`);
+}
+
 document.getElementById('btnLuu').addEventListener('click', async ()=>{
-  const payload = CHUC_DANH.map(cd=>({ chuc_danh_key: cd.k, du_lieu: rowsData[cd.k] || {} }));
+  const payload = chucDanhList.map(cd=>({ chuc_danh_key: cd.ma, du_lieu: rowsData[cd.ma] || {} }));
   const { data, error } = await sb.rpc('dinhbien_luu_toan_bo', { p_pass: dinhBienPass, p_nam: curNam, p_rows: payload });
   if(error){ showMsg('bad', 'Có lỗi khi lưu: ' + error.message); return; }
   showMsg('ok', `✓ Đã lưu ${data.da_luu} chức danh cho năm ${curNam}.`);
