@@ -1126,7 +1126,7 @@ async function exportFullReport(){
 
   // Hàng Định biên (tháng hiện tại) + Chênh lệch — chỉ hiện khi đã có dữ liệu định biên
   if(dinhBienThangNay && Object.keys(dinhBienThangNay).length){
-    nsRows+='<tr><td style="border:2px solid #546e7a;padding:4px;background:#e3f2fd;font-weight:800;font-size:11px">Định biên</td>';
+    nsRows+='<tr><td colspan="2" style="border:2px solid #546e7a;padding:4px;background:#e3f2fd;font-weight:800;font-size:11px">Định biên</td>';
     var dbGrandTot=0;
     nsCols.forEach(function(c){
       var db=dinhBienThangNay[c.k]||0;dbGrandTot+=db;
@@ -1134,19 +1134,24 @@ async function exportFullReport(){
     });
     nsRows+='<td style="border:2px solid #546e7a;padding:3px;text-align:center;background:#e3f2fd;font-weight:800;font-size:11px">'+fN(dbGrandTot)+'</td></tr>';
 
-    nsRows+='<tr><td style="border:2px solid #546e7a;padding:4px;background:#eceff3;font-weight:800;font-size:11px">Chênh lệch</td>';
+    nsRows+='<tr><td colspan="2" style="border:2px solid #546e7a;padding:4px;background:#eceff3;font-weight:800;font-size:11px">Chênh lệch</td>';
     var clGrandTot=0;
     nsCols.forEach(function(c){
       var s2b=TYPES.reduce(function(a,t){return a+(bchTot[t][c.k]||0);},0);
       var db2=dinhBienThangNay[c.k]||0;
       var cl=s2b-db2;clGrandTot+=cl;
-      var clColor=cl<0?'#e53935':(cl>0?'#2e7d32':'#666');
-      var clText=cl>0?('+'+cl):(''+cl);
-      nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:#eceff3;font-weight:800;font-size:11px;color:'+clColor+'">'+clText+'</td>';
+      // Đủ (bằng 0): nền xanh lá nhẹ, không ghi số 0 — chỉ để dấu gạch ngang
+      // Thiếu (âm): nền đỏ nhẹ, ghi số thiếu
+      // Dư (dương): nền xanh dương nhẹ, ghi +số dư
+      var clBg = cl<0 ? '#fdecea' : (cl>0 ? '#e3f2fd' : '#e8f5e9');
+      var clColor = cl<0 ? '#c62828' : (cl>0 ? '#1565c0' : '#2e7d32');
+      var clText = cl<0 ? (''+cl) : (cl>0 ? ('+'+cl) : '-');
+      nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+clBg+';font-weight:800;font-size:11px;color:'+clColor+'">'+clText+'</td>';
     });
-    var clGColor=clGrandTot<0?'#e53935':(clGrandTot>0?'#2e7d32':'#666');
-    var clGText=clGrandTot>0?('+'+clGrandTot):(''+clGrandTot);
-    nsRows+='<td style="border:2px solid #546e7a;padding:3px;text-align:center;background:#eceff3;font-weight:800;font-size:11px;color:'+clGColor+'">'+clGText+'</td></tr>';
+    var clGBg = clGrandTot<0 ? '#fdecea' : (clGrandTot>0 ? '#e3f2fd' : '#e8f5e9');
+    var clGColor = clGrandTot<0 ? '#c62828' : (clGrandTot>0 ? '#1565c0' : '#2e7d32');
+    var clGText = clGrandTot<0 ? (''+clGrandTot) : (clGrandTot>0 ? ('+'+clGrandTot) : '-');
+    nsRows+='<td style="border:2px solid #546e7a;padding:3px;text-align:center;background:'+clGBg+';font-weight:800;font-size:11px;color:'+clGColor+'">'+clGText+'</td></tr>';
   }
 
   var mmtbHeaderCols=mList.map(function(c){return '<th style="border:1px solid #cfd5dd;padding:4px;font-size:10px">'+c.n.split('(')[0]+'</th>';}).join('');
@@ -1529,6 +1534,12 @@ async function taiCauHinhCaLamViec(){
     var r1 = await sc.rpc('cauhinh_lay_loai_ca');
     var caList = r1.data;
     if(caList && caList.length > 0){
+      // Khử trùng lặp theo mã (ma) — phòng trường hợp bảng cấu hình loại ca có dòng bị lặp,
+      // tránh cộng dồn 2 lần khi tính tổng (VD ca1 bị lặp -> tổng nhân đôi).
+      var seenMa={}; caList = caList.filter(function(c){
+        if(seenMa[c.ma])return false;
+        seenMa[c.ma]=true; return true;
+      });
       TYPES = caList.map(function(c){ return c.ma; });
       TLABELS = caList.map(function(c){ return c.ten_mac_dinh; });
       // Ưu tiên cờ la_nghi (admin chọn tay, đáng tin cậy) — nếu chưa có cờ nào (patch9 chưa chạy
