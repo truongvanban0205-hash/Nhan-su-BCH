@@ -996,10 +996,16 @@ async function exportFullReport(){
   function sumNS(d){
     if(!d)return null;
     var dt=d.data||{},projs=d.projects||[];
+    // Chỉ cộng đúng các cột thật sự thuộc về ngày đó (d.cols) — không dùng Object.values
+    // cộng bừa mọi key còn sót trong dữ liệu (key cũ từ trước khi đổi hệ chức danh), tránh
+    // bị cộng trùng khi 1 ô có cả key cũ lẫn key mới cùng trỏ tới 1 số liệu.
+    var cols=(d.cols&&d.cols.length)?d.cols:COLS;
     var t=0;
     projs.forEach(function(p){
       TYPES.forEach(function(ty){
-        if(dt[p]&&dt[p][ty])Object.values(dt[p][ty]).forEach(function(v){t+=v||0;});
+        if(dt[p]&&dt[p][ty]){
+          cols.forEach(function(c){ t+=(dt[p][ty][c.k]||0); });
+        }
       });
     });
     return t;
