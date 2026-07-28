@@ -101,11 +101,6 @@
   .status-pill.cho_duyet{background:var(--warn-dim); color:var(--warn);}
   .status-pill.tu_choi{background:var(--bad-dim); color:var(--bad);}
   .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:12px; max-height:72vh; overflow-y:auto;}
-  .col-freeze1{position:sticky; left:0; z-index:3; background:var(--panel);}
-  .col-freeze2{position:sticky; left:52px; z-index:3; background:var(--panel);}
-  .col-freeze3{position:sticky; left:150px; z-index:3; background:var(--panel);}
-  tr.pending .col-freeze1, tr.pending .col-freeze2, tr.pending .col-freeze3{background:#241d0f;}
-  th.col-freeze1, th.col-freeze2, th.col-freeze3{z-index:4;}
   .admin-filters{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
   .admin-filters input, .admin-filters select{
     padding:9px 12px; border-radius:8px; border:1px solid var(--border);
@@ -113,6 +108,31 @@
   }
   .admin-filters input{flex:1; min-width:200px;}
   .count-pill{font-size:12px; color:var(--muted); align-self:center;}
+
+  /* Danh sách nhân viên dạng thẻ — tối ưu điện thoại, tự xếp nhiều cột khi màn hình rộng */
+  .emp-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px;}
+  .emp-card{background:var(--panel2); border:1.5px solid var(--border); border-radius:14px; padding:14px;}
+  .emp-card.pending{border-color:var(--warn); background:var(--warn-dim);}
+  .emp-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;}
+  .emp-name{font-weight:800; font-size:15px; color:var(--text); line-height:1.3;}
+  .emp-sub{font-size:12px; color:var(--muted); margin-top:3px;}
+  .emp-sdt{font-size:13px; color:var(--muted); margin-bottom:12px; display:flex; align-items:center; gap:6px;}
+  .emp-perms{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+  .perm-chip{display:inline-flex; align-items:center; gap:6px; padding:9px 14px; border-radius:20px;
+    border:1.5px solid var(--border); background:var(--panel); font-size:12.5px; font-weight:600;
+    cursor:pointer; user-select:none; min-height:38px; color:var(--muted); transition:.15s;}
+  .perm-chip.on{background:var(--accent-dim); border-color:var(--accent); color:var(--accent);}
+  .perm-chip input{display:none;}
+  .emp-actions{display:flex; gap:8px;}
+  .emp-actions .btn{flex:1; min-height:44px; justify-content:center; display:flex; align-items:center;}
+  .module-manage-row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:16px;
+    padding:12px 14px; background:var(--panel2); border:1px solid var(--border); border-radius:12px;}
+  .module-manage-row .lbl{font-size:12px; color:var(--muted); font-weight:700; white-space:nowrap;}
+  .module-chip{display:inline-flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--border);
+    border-radius:20px; padding:8px 8px 8px 14px; font-size:12.5px; font-weight:600;}
+  .module-chip .del{cursor:pointer; color:var(--bad); font-weight:900; width:26px; height:26px; display:flex;
+    align-items:center; justify-content:center; border-radius:50%; flex-shrink:0;}
+  .module-chip .del:active{background:var(--bad-dim);}
   .icon-btn{background:none; border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 9px; cursor:pointer; font-size:12px; margin-right:4px; font-family:inherit;}
   .icon-btn:hover{border-color:var(--accent); color:var(--accent);}
   .icon-btn.approve{border-color:var(--ok); color:var(--ok);}
@@ -216,14 +236,8 @@
     <span class="count-pill" id="countPill"></span>
   </div>
   <div class="loading" id="adminLoading">Đang tải danh sách...</div>
-  <div class="table-wrap" id="tableWrap" style="display:none;">
-    <table>
-      <thead>
-        <tr id="tableHeadRow"></tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
+  <div class="module-manage-row" id="moduleManageRow" style="display:none;"></div>
+  <div class="emp-grid" id="tableWrap" style="display:none;"></div>
 </div>
 
 <!-- ============ MODAL SỬA / THÊM NHÂN VIÊN ============ -->
@@ -864,6 +878,7 @@ async function loadModules(){
 async function loadAdminData(){
   document.getElementById("adminLoading").style.display = "block";
   document.getElementById("tableWrap").style.display = "none";
+  document.getElementById("moduleManageRow").style.display = "none";
   await loadModules();
   const { data, error } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass });
   if(error){
@@ -873,53 +888,90 @@ async function loadAdminData(){
   employeesCache = data || [];
   renderAdminTable();
   document.getElementById("adminLoading").style.display = "none";
-  document.getElementById("tableWrap").style.display = "block";
+  document.getElementById("tableWrap").style.display = "grid";
+  document.getElementById("moduleManageRow").style.display = "flex";
+}
+
+function escapeHtml(s){
+  return String(s==null?"":s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function renderModuleManageRow(){
+  const el = document.getElementById("moduleManageRow");
+  if(!modulesCache.length){
+    el.innerHTML = `<span class="lbl">Quyền hệ thống:</span><span style="color:var(--muted); font-size:12.5px;">Chưa có quyền nào — bấm "+ Thêm quyền" ở trên.</span>`;
+    return;
+  }
+  el.innerHTML = `<span class="lbl">Quyền hệ thống:</span>` + modulesCache.map(m=>`
+    <span class="module-chip">${escapeHtml(m.nhan)}<span class="del" data-remove-module="${m.id}" title="Xoá quyền này khỏi hệ thống">✕</span></span>
+  `).join("");
+
+  el.querySelectorAll("[data-remove-module]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.removeModule);
+      const mod = modulesCache.find(m=>m.id===id);
+      if(!confirm(`Xoá quyền "${mod.nhan}" khỏi hệ thống? Mọi nhân viên đang có quyền này sẽ mất quyền đó.`)) return;
+      const { error } = await sb.rpc("admin_xoa_module", { p_pass: currentAdminPass, p_id: id });
+      if(error){ showToast("Không xoá được quyền này."); return; }
+      loadAdminData();
+    });
+  });
 }
 
 function renderAdminTable(){
-  const head = document.getElementById("tableHeadRow");
-  head.innerHTML =
-    `<th class="col-freeze1">STT</th><th class="col-freeze2">MSNV</th><th class="col-freeze3">Tên nhân viên</th><th>Chức vụ</th><th>SĐT</th>` +
-    modulesCache.map(m=>`<th>${m.nhan} <span class="icon-btn reject" style="padding:1px 6px; margin-left:4px;" data-remove-module="${m.id}" title="Xoá quyền này">✕</span></th>`).join("") +
-    `<th>Trạng thái</th><th>Thao tác</th>`;
+  renderModuleManageRow();
 
   const list = getFilteredSorted();
   document.getElementById("countPill").textContent = `${list.length} / ${employeesCache.length} người`;
 
-  const body = document.getElementById("tableBody");
-  body.innerHTML = "";
-  list.forEach((emp, idx)=>{
-    const tr = document.createElement("tr");
-    if(emp.trang_thai === "cho_duyet") tr.className = "pending";
+  const wrap = document.getElementById("tableWrap");
+  wrap.innerHTML = "";
+  if(!list.length){
+    wrap.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--muted); padding:30px 0;">Không có nhân viên nào khớp bộ lọc.</div>`;
+    return;
+  }
+
+  list.forEach((emp)=>{
+    const card = document.createElement("div");
+    card.className = "emp-card" + (emp.trang_thai === "cho_duyet" ? " pending" : "");
     const quyen = emp.quyen || {};
-    const moduleCells = modulesCache.map(m=>{
-      const checked = quyen[m.ma] ? "checked" : "";
-      return `<td style="text-align:center"><input type="checkbox" data-id="${emp.id}" data-ma="${m.ma}" class="quyen-check" ${checked}></td>`;
+
+    const permChips = modulesCache.map(m=>{
+      const on = !!quyen[m.ma];
+      return `<label class="perm-chip ${on?'on':''}">
+        <input type="checkbox" data-id="${emp.id}" data-ma="${m.ma}" class="quyen-check" ${on?'checked':''}>
+        ${on?'✓ ':''}${escapeHtml(m.nhan)}
+      </label>`;
     }).join("");
 
-    let actionCell = "";
+    let actionsHtml = "";
     if(emp.trang_thai === "cho_duyet"){
-      actionCell = `<button class="icon-btn approve" data-action="approve" data-id="${emp.id}">Duyệt</button>
-                    <button class="icon-btn reject" data-action="reject" data-id="${emp.id}">Từ chối</button>`;
+      actionsHtml = `<button class="btn approve-btn" style="background:var(--ok-dim); color:var(--ok); border:1px solid var(--ok); font-weight:700;" data-action="approve" data-id="${emp.id}">✓ Duyệt</button>
+        <button class="btn" style="background:var(--bad-dim); color:var(--bad); border:1px solid var(--bad); font-weight:700;" data-action="reject" data-id="${emp.id}">✕ Từ chối</button>`;
     } else {
-      actionCell = `<button class="icon-btn" data-action="edit" data-id="${emp.id}">Sửa</button>
-                    <button class="icon-btn reject" data-action="delete" data-id="${emp.id}">Xoá</button>`;
+      actionsHtml = `<button class="btn secondary" data-action="edit" data-id="${emp.id}">✏️ Sửa</button>
+        <button class="btn" style="background:var(--bad-dim); color:var(--bad); border:1px solid var(--bad); font-weight:700;" data-action="delete" data-id="${emp.id}">🗑️ Xoá</button>`;
     }
 
-    tr.innerHTML = `
-      <td class="col-freeze1">${idx+1}</td>
-      <td class="col-freeze2">${emp.msnv}</td>
-      <td class="col-freeze3">${emp.ten}</td>
-      <td>${emp.chuc_vu || "—"}</td>
-      <td>${emp.sdt || "—"}</td>
-      ${moduleCells}
-      <td><span class="status-pill ${emp.trang_thai}">${statusLabel(emp.trang_thai)}</span></td>
-      <td>${actionCell}</td>
+    card.innerHTML = `
+      <div class="emp-top">
+        <div>
+          <div class="emp-name">${escapeHtml(emp.ten)}</div>
+          <div class="emp-sub">MSNV: ${escapeHtml(emp.msnv)} &middot; ${escapeHtml(emp.chuc_vu || "—")}</div>
+        </div>
+        <span class="status-pill ${emp.trang_thai}">${statusLabel(emp.trang_thai)}</span>
+      </div>
+      <div class="emp-sdt">📞 ${escapeHtml(emp.sdt || "Chưa có SĐT")}</div>
+      <div class="emp-perms">${permChips || '<span style="color:var(--muted); font-size:12px;">Chưa có quyền nào trong hệ thống</span>'}</div>
+      <div class="emp-actions">${actionsHtml}</div>
     `;
-    body.appendChild(tr);
+    wrap.appendChild(card);
   });
 
-  document.querySelectorAll(".quyen-check").forEach(cb=>{
+  wrap.querySelectorAll(".quyen-check").forEach(cb=>{
     cb.addEventListener("change", async (e)=>{
       const id = parseInt(e.target.dataset.id);
       const ma = e.target.dataset.ma;
@@ -930,24 +982,12 @@ function renderAdminTable(){
         p_chuc_vu: null, p_sdt: null, p_quyen: newQuyen, p_trang_thai: null
       });
       if(error){ showToast("Không lưu được thay đổi."); e.target.checked = !e.target.checked; }
-      else emp.quyen = newQuyen;
+      else { emp.quyen = newQuyen; renderAdminTable(); }
     });
   });
 
-  document.querySelectorAll("[data-action]").forEach(btn=>{
+  wrap.querySelectorAll("[data-action]").forEach(btn=>{
     btn.addEventListener("click", ()=> handleAction(btn.dataset.action, parseInt(btn.dataset.id)));
-  });
-
-  document.querySelectorAll("[data-remove-module]").forEach(btn=>{
-    btn.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      const id = parseInt(btn.dataset.removeModule);
-      const mod = modulesCache.find(m=>m.id===id);
-      if(!confirm(`Xoá quyền "${mod.nhan}" khỏi hệ thống? Mọi nhân viên đang có quyền này sẽ mất quyền đó.`)) return;
-      const { error } = await sb.rpc("admin_xoa_module", { p_pass: currentAdminPass, p_id: id });
-      if(error){ showToast("Không xoá được quyền này."); return; }
-      loadAdminData();
-    });
   });
 }
 
