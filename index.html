@@ -954,7 +954,7 @@ var nsInited=false, mmtbInited=false, ldtInited=false;
 async function exportFullReport(){
   var pass=prompt('🔒 Mật khẩu để xuất báo cáo:');
   if(pass===null)return;
-  if(pass!==PASS){alert('❌ Sai mật khẩu!');return;}
+  if(!(await kiemTraMatKhauBaoCao(pass))){alert('❌ Sai mật khẩu!');return;}
 
   toast('⏳ Đang tạo báo cáo...');
 
@@ -1423,10 +1423,19 @@ var STAFF_LIST=[
 var SURL='https://jqwjzvucwvlwbcgxhath.supabase.co';
 var SKEY='sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv';
 var sc=supabase.createClient(SURL,SKEY);
-var PASS='Daika';
 var timeLocked=false;
 var unlockedThisSession=false;
 var prevDayData=null;
+
+// Mật khẩu "Quản lý" giờ kiểm tra qua Supabase (bảng cauhinh_bao_cao), không còn hardcode ở client.
+// Đổi mật khẩu này ở trang Quản lý chung (quan-ly-tai-khoan.html).
+async function kiemTraMatKhauBaoCao(p){
+  if(!p)return false;
+  try{
+    var r=await sc.rpc('baocao_kiem_tra_mat_khau',{p_pass:p});
+    return r.data===true;
+  }catch(e){ return false; }
+}
 
 function isAfterCutoff(){
   var n=new Date();
@@ -1448,9 +1457,9 @@ function checkTimeLock(){
   }
 }
 
-function unlockEdit(){
+async function unlockEdit(){
   var p=document.getElementById('lock-pass').value;
-  if(p!==PASS){alert('❌ Sai mật khẩu!');return;}
+  if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
   timeLocked=false;
   unlockedThisSession=true;
   if(!vDate)isEdit=true;
@@ -2069,21 +2078,22 @@ function renderCharts(){
 }
 
 // ADMIN
-function nsToggleAdmin(){
+async function nsToggleAdmin(){
   var bar=document.getElementById('ns-admin-bar');
   if(bar.classList.contains('admin-hidden')){
     var p=prompt('🔒 Mật khẩu quản lý:');
-    if(p!==PASS){if(p!==null)alert('❌ Sai mật khẩu!');return;}
+    if(p===null)return;
+    if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
     bar.classList.remove('admin-hidden');
   }else{
     bar.classList.add('admin-hidden');
   }
 }
 
-function askP(fn,lbl){
+async function askP(fn,lbl){
   var p=prompt('🔒 Mật khẩu để '+lbl+':');
   if(p===null)return;
-  if(p!==PASS){alert('❌ Sai mật khẩu!');return;}
+  if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
   fn();
 }
 
@@ -2660,9 +2670,9 @@ function mmtbCheckTimeLock(){
     document.getElementById('mmtb-lock-banner').style.display='flex';
   }
 }
-function mmtbUnlockEdit(){
+async function mmtbUnlockEdit(){
   var p=document.getElementById('mmtb-lock-pass').value;
-  if(p!==PASS){alert('❌ Sai mật khẩu!');return;}
+  if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
   mmtbTimeLocked=false;
   mmtbUnlockedSession=true;
   if(!mmtbVDate)mmtbEdit=true;
@@ -3085,11 +3095,12 @@ function mmtbRenderCharts(){
   el.innerHTML=html;
 }
 
-function mmtbToggleAdmin(){
+async function mmtbToggleAdmin(){
   var bar=document.getElementById('mmtb-admin-bar');
   if(bar.classList.contains('admin-hidden')){
     var p=prompt('🔒 Mật khẩu quản lý:');
-    if(p!==PASS){if(p!==null)alert('❌ Sai mật khẩu!');return;}
+    if(p===null)return;
+    if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
     bar.classList.remove('admin-hidden');
   }else{
     bar.classList.add('admin-hidden');
@@ -3519,11 +3530,12 @@ async function ldtExportXLRange(){
   },'xuất Excel lịch nghiệm thu theo ngày');
 }
 
-function ldtToggleAdmin(){
+async function ldtToggleAdmin(){
   var bar=document.getElementById('ldt-admin-bar');
   if(bar.classList.contains('admin-hidden')){
     var p=prompt('🔒 Mật khẩu quản lý:');
-    if(p!==PASS){if(p!==null)alert('❌ Sai mật khẩu!');return;}
+    if(p===null)return;
+    if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
     bar.classList.remove('admin-hidden');
   }else{
     bar.classList.add('admin-hidden');
