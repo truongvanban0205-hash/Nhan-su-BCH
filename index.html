@@ -293,6 +293,20 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       </div>
     </div>
 
+    <!-- Banner cài đặt app ra màn hình chính -->
+    <div id="pwaInstallBanner" style="display:none;width:100%;max-width:420px;background:linear-gradient(135deg,#1565c0,#1976d2);border-radius:14px;padding:14px 16px;margin-bottom:14px;position:relative;z-index:1;box-shadow:0 4px 16px rgba(21,101,192,0.35);">
+      <span id="pwaInstallClose" style="position:absolute;top:8px;right:10px;color:rgba(255,255,255,0.75);cursor:pointer;font-weight:800;font-size:14px;padding:4px;">✕</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:26px;flex-shrink:0;">📲</span>
+        <div style="flex:1;">
+          <div style="font-weight:800;color:#fff;font-size:13px;" id="pwaInstallTitle">Cài đặt ứng dụng</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px;" id="pwaInstallDesc">Thêm vào màn hình chính để mở nhanh như app thật.</div>
+        </div>
+        <button id="pwaInstallBtn" style="background:#fff;color:#1565c0;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;">Cài ngay</button>
+      </div>
+      <div id="pwaIosSteps" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.25);font-size:11.5px;color:#fff;line-height:1.7;"></div>
+    </div>
+
     <!-- Thanh cập nhật + làm mới (ngay dưới logo app) -->
     <div style="width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;position:relative;z-index:1;">
       <span style="font-size:11px;color:var(--txt-dim);">🕐 Cập nhật: <span id="qs-update-time">--:--</span> • <span id="qs-update-date">--/--/----</span></span>
@@ -2558,12 +2572,61 @@ async function checkAutoSaveAt8(){
   }catch(e){}
 }
 
+// ============ REALTIME NHÂN SỰ (đồng bộ tức thời giữa các thiết bị) ============
+var nsRealtimeChannel=null;
+var nsRealtimePending=false;
+
+function subscribeNSRealtime(){
+  if(nsRealtimeChannel){ try{sc.removeChannel(nsRealtimeChannel);}catch(e){} }
+  nsRealtimeChannel = sc.channel('ns_rt_'+tkey())
+    .on('postgres_changes', {event:'*', schema:'public', table:'nhansu', filter:'ngay=eq.'+tkey()}, function(payload){
+      if(vDate) return; // đang xem ngày cũ (chỉ đọc) — không áp cập nhật tức thời
+      var incoming = payload.new && payload.new.data;
+      if(!incoming) return;
+      applyNSRealtimeUpdate(incoming);
+    })
+    .subscribe();
+}
+
+function applyNSRealtimeUpdate(incoming){
+  if(incoming.projects) projects = incoming.projects;
+  var incomingData = incoming.data || {};
+  Object.keys(incomingData).forEach(function(proj){
+    ensureProj(proj);
+    TYPES.forEach(function(type){
+      if(!incomingData[proj] || !incomingData[proj][type]) return;
+      Object.keys(incomingData[proj][type]).forEach(function(k){
+        // Ô nào mình đang gõ dở (chưa lưu xong) thì bỏ qua, không cho người khác đè lên
+        if(pendingChanges[proj] && pendingChanges[proj][type] && pendingChanges[proj][type][k]!==undefined) return;
+        data[proj][type][k]=incomingData[proj][type][k];
+      });
+    });
+  });
+  if(incoming.log) logItems = incoming.log;
+
+  var activeInMt = document.activeElement && document.activeElement.closest && document.activeElement.closest('#mt');
+  if(activeInMt){
+    // Đang gõ dở trong bảng — chỉ cập nhật tổng, không vẽ lại cả bảng để khỏi mất focus/con trỏ
+    nsRealtimePending = true;
+    calcTotals();
+    renderCharts();
+  } else {
+    renderTable();
+    renderLog();
+  }
+}
+
 async function init(){
   setDate();
   await loadData();
   checkNotif();
   checkTimeLock();
   await checkAutoSaveAt8();
+  subscribeNSRealtime();
+  // Khi rời khỏi ô đang gõ mà có cập nhật realtime bị hoãn lại — vẽ lại bảng ngay lúc đó
+  document.getElementById('mt').addEventListener('focusout', function(){
+    if(nsRealtimePending){ nsRealtimePending=false; renderTable(); renderLog(); }
+  });
   setInterval(function(){
     if(!vDate&&isEdit&&Object.keys(pendingChanges).length>0){
       mergeSave();
@@ -3286,6 +3349,58 @@ async function mmtbCheckAutoSaveAt8(){
   }catch(e){}
 }
 
+// ============ REALTIME MMTB (đồng bộ tức thời giữa các thiết bị) ============
+var mmtbRealtimeChannel=null;
+var mmtbRealtimePending=false;
+
+function subscribeMMTBRealtime(){
+  if(mmtbRealtimeChannel){ try{sc.removeChannel(mmtbRealtimeChannel);}catch(e){} }
+  mmtbRealtimeChannel = sc.channel('mmtb_rt_'+mmtbTkey())
+    .on('postgres_changes', {event:'*', schema:'public', table:'mmtb', filter:'ngay=eq.'+mmtbTkey()}, function(payload){
+      if(mmtbVDate) return;
+      var incoming = payload.new && payload.new.data;
+      if(!incoming) return;
+      applyMMTBRealtimeUpdate(incoming);
+    })
+    .subscribe();
+}
+
+function applyMMTBRealtimeUpdate(incoming){
+  if(incoming.machines) mmtbMachines = mmtbMergeMachines(incoming.machines);
+  if(incoming.projects) mmtbProjects = incoming.projects;
+  mmtbEnsureData();
+
+  var incomingData = incoming.data || {};
+  Object.keys(incomingData).forEach(function(proj){
+    mmtbEnsureProj(proj);
+    MMTB_STATUS.forEach(function(s){
+      if(!incomingData[proj] || !incomingData[proj][s]) return;
+      Object.keys(incomingData[proj][s]).forEach(function(k){
+        if(mmtbPendingChanges[proj] && mmtbPendingChanges[proj][s] && mmtbPendingChanges[proj][s][k]!==undefined) return;
+        mmtbData[proj][s][k]=incomingData[proj][s][k];
+      });
+    });
+  });
+  if(incoming.notes){
+    Object.keys(incoming.notes).forEach(function(k){
+      if(mmtbPendingNotesChanges[k]!==undefined) return;
+      mmtbNotes[k]=incoming.notes[k];
+    });
+  }
+  if(incoming.log) mmtbLog = incoming.log;
+
+  var activeInMt = document.activeElement && document.activeElement.closest && document.activeElement.closest('#mmtb-mt');
+  if(activeInMt){
+    mmtbRealtimePending = true;
+    mmtbCalcTotals();
+    mmtbRenderCharts();
+  } else {
+    mmtbRenderTable();
+    mmtbRenderLog();
+    mmtbRenderCharts();
+  }
+}
+
 async function mmtbInit(){
   var n=new Date();
   var days=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
@@ -3293,6 +3408,10 @@ async function mmtbInit(){
   await mmtbLoadData();
   mmtbCheckTimeLock();
   await mmtbCheckAutoSaveAt8();
+  subscribeMMTBRealtime();
+  document.getElementById('mmtb-mt').addEventListener('focusout', function(){
+    if(mmtbRealtimePending){ mmtbRealtimePending=false; mmtbRenderTable(); mmtbRenderLog(); mmtbRenderCharts(); }
+  });
   setInterval(function(){if(!mmtbVDate&&mmtbEdit&&Object.keys(mmtbPendingChanges).length>0){mmtbMergeSave();}},15000);
   setInterval(function(){if(!mmtbVDate)mmtbCheckTimeLock();},30000);
   setInterval(function(){if(!mmtbVDate)mmtbCheckAutoSaveAt8();},60000);
@@ -3642,6 +3761,34 @@ async function ldtToggleAdmin(){
   }
 }
 
+// ============ REALTIME LỊCH NGHIỆM THU (đồng bộ tức thời giữa các thiết bị) ============
+var ldtRealtimeChannel=null;
+var ldtRealtimePending=false;
+
+function subscribeLDTRealtime(){
+  if(ldtRealtimeChannel){ try{sc.removeChannel(ldtRealtimeChannel);}catch(e){} }
+  ldtRealtimeChannel = sc.channel('ldt_rt_'+ldtTkey())
+    .on('postgres_changes', {event:'*', schema:'public', table:'ldt', filter:'ngay=eq.'+ldtTkey()}, function(payload){
+      if(ldtVDate) return;
+      var incoming = payload.new && payload.new.data;
+      if(!incoming) return;
+      applyLDTRealtimeUpdate(incoming);
+    })
+    .subscribe();
+}
+
+function applyLDTRealtimeUpdate(incoming){
+  ldtSchedules = incoming.schedules || ldtSchedules;
+  ldtLog = incoming.log || ldtLog;
+  var activeInMt = document.activeElement && document.activeElement.closest && document.activeElement.closest('#ldt-mt');
+  if(activeInMt){
+    ldtRealtimePending = true;
+    return;
+  }
+  ldtRenderTable();
+  ldtRenderLog();
+}
+
 async function ldtInit(){
   var n=new Date();
   var days=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
@@ -3651,6 +3798,10 @@ async function ldtInit(){
   tomorrow.setDate(tomorrow.getDate()+1);
   document.getElementById('ldt-f-ngay').value=tomorrow.getFullYear()+'-'+p2(tomorrow.getMonth()+1)+'-'+p2(tomorrow.getDate());
   await ldtLoadData();
+  subscribeLDTRealtime();
+  document.getElementById('ldt-mt').addEventListener('focusout', function(){
+    if(ldtRealtimePending){ ldtRealtimePending=false; ldtRenderTable(); ldtRenderLog(); }
+  });
   setInterval(function(){if(!ldtVDate)ldtSetSS('✅ Đã cập nhật');},15000);
 }
 
@@ -3729,6 +3880,69 @@ function bchScheduleOne(cfg){
 function bchIsIOS(){
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
+
+// ============ CÀI ĐẶT APP RA MÀN HÌNH CHÍNH (PWA install) ============
+var PWA_DISMISS_KEY = 'bch_pwa_install_dismissed_until';
+var deferredInstallPrompt = null;
+
+function pwaIsStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function pwaDismissedRecently(){
+  var until = localStorage.getItem(PWA_DISMISS_KEY);
+  return until && Date.now() < parseInt(until);
+}
+
+// Android/Chrome: trình duyệt tự bắn sự kiện này khi đủ điều kiện cài đặt — chặn lại để tự hiện banner của mình
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  pwaMaybeShowBanner();
+});
+window.addEventListener('appinstalled', function(){
+  var el = document.getElementById('pwaInstallBanner');
+  if(el) el.style.display = 'none';
+});
+
+function pwaMaybeShowBanner(){
+  if(pwaIsStandalone()) return; // đã cài rồi, đang mở như app luôn thì khỏi mời nữa
+  if(pwaDismissedRecently()) return;
+  var el = document.getElementById('pwaInstallBanner');
+  if(!el) return;
+
+  if(bchIsIOS()){
+    // iOS/Safari không cho cài tự động bằng code — chỉ hướng dẫn từng bước
+    document.getElementById('pwaInstallBtn').textContent = 'Xem hướng dẫn';
+    document.getElementById('pwaInstallBtn').onclick = function(){
+      var steps = document.getElementById('pwaIosSteps');
+      var showing = steps.style.display !== 'none';
+      if(showing){ steps.style.display='none'; return; }
+      steps.innerHTML =
+        '1️⃣ Bấm biểu tượng Chia sẻ <b>⬆️</b> ở thanh dưới màn hình Safari<br>'
+        +'2️⃣ Kéo xuống, chọn <b>"Thêm vào MH chính"</b> (Add to Home Screen)<br>'
+        +'3️⃣ Bấm <b>"Thêm"</b> ở góc trên bên phải là xong';
+      steps.style.display='block';
+    };
+    el.style.display='block';
+  } else if(deferredInstallPrompt){
+    document.getElementById('pwaInstallBtn').textContent = 'Cài ngay';
+    document.getElementById('pwaInstallBtn').onclick = async function(){
+      el.style.display='none';
+      deferredInstallPrompt.prompt();
+      try{ await deferredInstallPrompt.userChoice; }catch(e){}
+      deferredInstallPrompt = null;
+    };
+    el.style.display='block';
+  }
+  // Android nhưng trình duyệt chưa bắn beforeinstallprompt (chưa đủ điều kiện) → im lặng, chờ sự kiện tới sẽ tự hiện
+}
+
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id === 'pwaInstallClose'){
+    document.getElementById('pwaInstallBanner').style.display='none';
+    localStorage.setItem(PWA_DISMISS_KEY, String(Date.now() + 7*24*60*60*1000)); // ẩn 7 ngày rồi mới mời lại
+  }
+});
 
 // Khởi động thông báo khi tải trang (việc LÊN LỊCH giờ cụ thể sẽ chờ tải xong GIO_HAN ở bootstrap chính bên dưới)
 (function(){
@@ -3892,6 +4106,7 @@ function bchIsIOS(){
 
   // Khởi động: hiện trang chọn module trước
   showScreen('home');
+  pwaMaybeShowBanner();
 })();
 </script>
 <script>
