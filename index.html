@@ -486,9 +486,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <button class="admin-toggle-btn" onclick="nsToggleAdmin()" id="ns-admin-toggle">🔒 Quản lý</button>
   <div class="admin-bar admin-hidden" id="ns-admin-bar">
     <span class="admin-lbl">🔒 Quản lý:</span>
-    <button class="btn btn-sm btn-or" onclick="doAddProj()">＋ Dự án</button>
-    <button class="btn btn-sm btn-or" onclick="doRenameProj()">✏️ Đổi tên DA</button>
-    <button class="btn btn-sm btn-re" onclick="doDelProj()">✕ Xoá DA</button>
+    <button class="btn btn-sm btn-or" onclick="alert('Thêm/Đổi tên/Ẩn-hiện Dự án giờ làm ở trang Quản lý chung → Cấu hình Nhân sự.')">✏️ Sửa Dự án ở Quản lý chung</button>
     <button class="btn btn-sm btn-or" onclick="doAddCol()">＋ Chức danh</button>
     <button class="btn btn-sm btn-re" onclick="doDelCol()">✕ Xoá chức danh</button>
     <button class="btn btn-sm btn-pu" onclick="exportXLRange()">📦 Xuất Excel theo ngày</button>
@@ -1627,7 +1625,7 @@ async function taiDinhBienChucDanh(){
     }
   }catch(e){ /* lỗi mạng/chưa chạy patch -> giữ nguyên COLS mặc định để trang vẫn chạy được */ }
 }
-var projects=['CL-CR'];
+var projects=['Dự án 1','Dự án 2','Dự án 3','Dự án 4','Dự án 5'];
 var data={};
 var logItems=[];
 var curUser='';
@@ -1680,6 +1678,22 @@ async function taiCauHinhCaLamViec(){
     });
   }catch(e){
     // Nếu lỗi mạng/Supabase, giữ nguyên mặc định ca1/ca2/nghỉ để trang vẫn chạy được
+  }
+}
+
+// Danh sách Dự án giờ lấy 100% động từ bảng cấu hình chung (cauhinh_du_an) — sửa tên/ẩn-hiện
+// làm ở trang Quản lý chung (quan-ly-tai-khoan.html), báo cáo Nhân sự chỉ đọc theo, không tự quản lý nữa.
+async function taiCauHinhDuAn(){
+  try{
+    var r = await sc.rpc('cauhinh_lay_du_an');
+    var list = r.data;
+    if(list && list.length){
+      list = list.filter(function(d){ return !d.an; });
+      list.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
+      if(list.length) projects = list.map(function(d){ return d.ten; });
+    }
+  }catch(e){
+    // Lỗi mạng/Supabase -> giữ nguyên danh sách dự án mặc định để trang vẫn chạy được
   }
 }
 
@@ -1767,7 +1781,8 @@ async function loadData(){
   try{
     var td=await sLoad(tkey());
     if(td){
-      projects=td.projects||['CL-CR'];
+      // projects LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (đã tải sẵn ở taiCauHinhDuAn()) —
+      // không dùng projects cũ đã lưu trên server, để sửa/ẩn-hiện dự án ở Quản lý chung là nhảy theo ngay.
       COLS=mergeCols(td.cols);
       data=td.data||{};
       logItems=td.log||[];
@@ -1792,7 +1807,6 @@ async function loadData(){
     }
     if(prev){
       var yd=prev.data||{};
-      projects=yd.projects||['CL-CR'];
       COLS=mergeCols(yd.cols);
       data=copyFromYest(yd.data||{},projects);
       prevDayData=yd.data||{};
@@ -1804,7 +1818,6 @@ async function loadData(){
     }
   }catch(e){console.error(e);}
   COLS=DEF_COLS.map(function(c){return {k:c.k,n:c.n};});
-  projects=['CL-CR'];
   data=initData();
   logItems=[];
   setSS('🆕 Dữ liệu mới');
@@ -1903,9 +1916,10 @@ async function mergeSave(){
     // Lấy bản mới nhất từ server
     var ex=await sc.from('nhansu').select('id,data').eq('ngay',tkey()).single();
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
+    // Dự án LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (biến projects, đã tải sẵn ở taiCauHinhDuAn())
+    // — không dùng projects cũ đã lưu trên server nữa, giống hệt cách xử lý COLS bên dưới.
     var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems;
     if(serverData){
-      mergedProjects=serverData.projects||projects;
       // Cột LUÔN lấy đúng bộ hiện tại từ Định biên (COLS) — không dùng cols cũ đã lưu trên
       // server và không cộng dồn nữa, để sửa/thêm/xoá bên Định biên là bên này nhảy theo ngay,
       // không bị cộng dồn cột cũ + cột mới chồng lên nhau như trước.
@@ -1922,8 +1936,6 @@ async function mergeSave(){
           });
         });
       });
-      // Đảm bảo dự án mới (nếu mình vừa thêm) cũng có trong merged
-      projects.forEach(function(p){if(mergedProjects.indexOf(p)<0)mergedProjects.push(p);});
       // Merge log: giữ log mới nhất từ cả 2 bên, không trùng
       var existingTs=mergedLog.map(function(l){return l.ts;});
       logItems.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
@@ -2211,50 +2223,8 @@ async function askP(fn,lbl){
   fn();
 }
 
-function doAddProj(){
-  askP(function(){
-    var name=prompt('Tên dự án mới:');
-    if(!name||!name.trim())return;
-    var n=name.trim();
-    if(projects.indexOf(n)>=0){alert('Đã có rồi!');return;}
-    projects.push(n);
-    ensureProj(n);
-    renderTable();saveStructure();
-    toast('✅ Đã thêm: '+n);
-  },'thêm dự án');
-}
-
-function doRenameProj(){
-  askP(function(){
-    if(!projects.length){alert('Chưa có dự án!');return;}
-    var list=projects.map(function(p,i){return (i+1)+'. '+p;}).join('\n');
-    var idx=parseInt(prompt('Chọn số thứ tự dự án cần đổi tên:\n'+list))-1;
-    if(isNaN(idx)||idx<0||idx>=projects.length)return;
-    var oldName=projects[idx];
-    var newName=prompt('Tên mới cho "'+oldName+'":');
-    if(!newName||!newName.trim())return;
-    newName=newName.trim();
-    projects[idx]=newName;
-    if(data[oldName]){data[newName]=data[oldName];delete data[oldName];}
-    renderTable();saveStructure();
-    toast('✅ Đã đổi: '+oldName+' → '+newName);
-  },'đổi tên dự án');
-}
-
-function doDelProj(){
-  askP(function(){
-    if(!projects.length){alert('Chưa có dự án!');return;}
-    var list=projects.map(function(p,i){return (i+1)+'. '+p;}).join('\n');
-    var idx=parseInt(prompt('Chọn số thứ tự dự án cần xoá:\n'+list))-1;
-    if(isNaN(idx)||idx<0||idx>=projects.length)return;
-    var name=projects[idx];
-    if(!confirm('Xoá dự án "'+name+'"?'))return;
-    projects.splice(idx,1);
-    delete data[name];
-    renderTable();saveStructure();
-    toast('🗑️ Đã xoá: '+name);
-  },'xoá dự án');
-}
+// doAddProj/doRenameProj/doDelProj đã bỏ — Dự án giờ quản lý 100% ở trang Quản lý chung
+// (quan-ly-tai-khoan.html: Cấu hình Nhân sự → Dự án & Ca làm việc), báo cáo Nhân sự chỉ đọc theo.
 
 function doAddCol(){
   askP(function(){
@@ -2589,7 +2559,7 @@ function subscribeNSRealtime(){
 }
 
 function applyNSRealtimeUpdate(incoming){
-  if(incoming.projects) projects = incoming.projects;
+  // projects không còn lấy từ payload realtime nữa — luôn do cauhinh_du_an quyết định (taiCauHinhDuAn()).
   var incomingData = incoming.data || {};
   Object.keys(incomingData).forEach(function(proj){
     ensureProj(proj);
@@ -4098,6 +4068,7 @@ document.addEventListener('click', function(e){
   };
 
   await taiCauHinhCaLamViec();
+  await taiCauHinhDuAn();
   await taiDinhBienChucDanh();
   await taiGioHan();
   if('Notification' in window && !bchIsIOS() && Notification.permission==='granted'){

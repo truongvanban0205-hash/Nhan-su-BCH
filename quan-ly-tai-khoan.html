@@ -649,10 +649,34 @@ function renderListDuAn(){
   const el = document.getElementById("listDuAn");
   if(duAnCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có dự án nào.</div>'; return; }
   el.innerHTML = duAnCache.map(d => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);">
-      <span>${d.ten}</span>
-      <button class="icon-btn reject" data-del-duan="${d.id}">Xoá</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border); ${d.an?'opacity:.5;':''}">
+      <span>${d.ten}${d.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${d.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
+      <span style="white-space:nowrap;">
+        <button class="icon-btn" data-rename-duan="${d.id}">✏️ Đổi tên</button>
+        <button class="icon-btn" data-toggle-duan="${d.id}">${d.an?'👁️ Hiện':'🙈 Ẩn'}</button>
+        ${d.mac_dinh?'':`<button class="icon-btn reject" data-del-duan="${d.id}">Xoá</button>`}
+      </span>
     </div>`).join("");
+  el.querySelectorAll("[data-rename-duan]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.renameDuan);
+      const d = duAnCache.find(x=>x.id===id);
+      const ten = prompt(`Tên mới cho "${d.ten}":`, d.ten);
+      if(!ten || !ten.trim()) return;
+      const { error } = await sb.rpc("admin_doi_ten_du_an", { p_pass: currentAdminPass, p_id: id, p_ten_moi: ten.trim() });
+      if(error){ alert("Không đổi tên được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+  el.querySelectorAll("[data-toggle-duan]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.toggleDuan);
+      const d = duAnCache.find(x=>x.id===id);
+      const { error } = await sb.rpc("admin_an_hien_du_an", { p_pass: currentAdminPass, p_id: id, p_an: !d.an });
+      if(error){ alert("Không thao tác được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
   el.querySelectorAll("[data-del-duan]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const id = parseInt(btn.dataset.delDuan);
@@ -669,13 +693,17 @@ function renderListLoaiCa(){
   const el = document.getElementById("listLoaiCa");
   if(loaiCaCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có ca nào.</div>'; return; }
   el.innerHTML = loaiCaCache.map(c => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);gap:8px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);gap:8px; ${c.an?'opacity:.5;':''}">
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:${c.la_nghi?'#c62828':'var(--muted)'};cursor:pointer;white-space:nowrap;">
         <input type="radio" name="loaiNghi" value="${c.id}" data-set-nghi="${c.id}" ${c.la_nghi?'checked':''}>
         Là Nghỉ
       </label>
-      <span style="flex:1;">${c.ten_mac_dinh}</span>
-      <button class="icon-btn reject" data-del-ca="${c.id}">Xoá</button>
+      <span style="flex:1;">${c.ten_mac_dinh}${c.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${c.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
+      <span style="white-space:nowrap;">
+        <button class="icon-btn" data-rename-ca="${c.id}">✏️</button>
+        <button class="icon-btn" data-toggle-ca="${c.id}">${c.an?'👁️':'🙈'}</button>
+        ${c.mac_dinh?'':`<button class="icon-btn reject" data-del-ca="${c.id}">Xoá</button>`}
+      </span>
     </div>`).join("");
   el.querySelectorAll("[data-set-nghi]").forEach(radio=>{
     radio.addEventListener("change", async ()=>{
@@ -683,6 +711,26 @@ function renderListLoaiCa(){
       const { error } = await sb.rpc("admin_dat_loai_nghi", { p_pass: currentAdminPass, p_id: id });
       if(error){ showToast("Không đặt được, thử lại."); return; }
       showToast("✓ Đã đặt \"" + loaiCaCache.find(x=>x.id===id).ten_mac_dinh + "\" là loại Nghỉ");
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+  el.querySelectorAll("[data-rename-ca]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.renameCa);
+      const c = loaiCaCache.find(x=>x.id===id);
+      const ten = prompt(`Tên mới cho "${c.ten_mac_dinh}":`, c.ten_mac_dinh);
+      if(!ten || !ten.trim()) return;
+      const { error } = await sb.rpc("admin_doi_ten_ca", { p_pass: currentAdminPass, p_id: id, p_ten_moi: ten.trim() });
+      if(error){ alert("Không đổi tên được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+  el.querySelectorAll("[data-toggle-ca]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.toggleCa);
+      const c = loaiCaCache.find(x=>x.id===id);
+      const { error } = await sb.rpc("admin_an_hien_ca", { p_pass: currentAdminPass, p_id: id, p_an: !c.an });
+      if(error){ alert("Không thao tác được."); return; }
       await loadCauHinhNS(); renderCauHinhAll();
     });
   });
