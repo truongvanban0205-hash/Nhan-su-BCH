@@ -1657,18 +1657,23 @@ async function taiCauHinhCaLamViec(){
     var r1 = await sc.rpc('cauhinh_lay_loai_ca');
     var caList = r1.data;
     if(caList && caList.length > 0){
+      // Lọc bỏ ca đang ẨN — giống hệt cách taiCauHinhDuAn() đang lọc dự án ẩn.
+      caList = caList.filter(function(c){ return !c.an; });
       // Khử trùng lặp theo mã (ma) — phòng trường hợp bảng cấu hình loại ca có dòng bị lặp,
       // tránh cộng dồn 2 lần khi tính tổng (VD ca1 bị lặp -> tổng nhân đôi).
       var seenMa={}; caList = caList.filter(function(c){
         if(seenMa[c.ma])return false;
         seenMa[c.ma]=true; return true;
       });
-      TYPES = caList.map(function(c){ return c.ma; });
-      TLABELS = caList.map(function(c){ return c.ten_mac_dinh; });
-      // Ưu tiên cờ la_nghi (admin chọn tay, đáng tin cậy) — nếu chưa có cờ nào (patch9 chưa chạy
-      // hoặc admin chưa chọn), mới tạm lùi về đoán theo vị trí cuối cùng như trước.
-      var flagged = caList.find(function(c){ return c.la_nghi === true; });
-      NGHI_MA = flagged ? flagged.ma : (TYPES.length ? TYPES[TYPES.length-1] : null);
+      caList.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
+      if(caList.length){
+        TYPES = caList.map(function(c){ return c.ma; });
+        TLABELS = caList.map(function(c){ return c.ten_mac_dinh; });
+        // Ưu tiên cờ la_nghi (admin chọn tay, đáng tin cậy) — nếu chưa có cờ nào (patch9 chưa chạy
+        // hoặc admin chưa chọn), mới tạm lùi về đoán theo vị trí cuối cùng như trước.
+        var flagged = caList.find(function(c){ return c.la_nghi === true; });
+        NGHI_MA = flagged ? flagged.ma : (TYPES.length ? TYPES[TYPES.length-1] : null);
+      }
     }
     var r2 = await sc.rpc('cauhinh_lay_ten_ca_rieng');
     var rieng = r2.data || [];
