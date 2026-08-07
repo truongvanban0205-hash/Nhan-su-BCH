@@ -1714,12 +1714,16 @@ async function taiCauHinhDuAn(){
 
 // Cầu nối 1 lần: vớt lại dữ liệu đang "kẹt" dưới TÊN dự án cũ (trước khi có khoá theo ID)
 // sang đúng khoá ID hiện tại, để không bị mất số liệu trong lần chuyển đổi này.
+// Xoá luôn khoá tên cũ sau khi copy xong để không bị dư rác trong dữ liệu lưu về sau.
 function migrateLegacyProjKeys(dt){
   if(!dt) return dt;
   projects.forEach(function(idKey){
-    if(!dt[idKey]){
-      var nm = PROJ_NAME[idKey];
-      if(nm && dt[nm]) dt[idKey]=dt[nm];
+    var nm = PROJ_NAME[idKey];
+    if(!dt[idKey] && nm && dt[nm]){
+      dt[idKey]=dt[nm];
+    }
+    if(nm && dt[nm] && nm!==idKey){
+      delete dt[nm];
     }
   });
   return dt;
