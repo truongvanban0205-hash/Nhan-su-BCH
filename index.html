@@ -865,7 +865,7 @@ async function loadQuickStats(){
         if(nk && dt[p]&&dt[p][nk]){
           var pn=0;
           Object.values(dt[p][nk]).forEach(function(v){pn+=v||0;});
-          if(pn>0)nghiList.push({proj:p,n:pn});
+          if(pn>0)nghiList.push({proj:projName(p),n:pn});
         }
       });
       var dilam=0; TYPES.forEach(function(t){ if(!isNghiType(t)) dilam+=tongTheoLoai[t]; });
@@ -1192,7 +1192,7 @@ async function exportFullReport(){
       var bg = isNghi ? '#ffebee' : '#e3f2fd';
       var lbl = getTenCa(proj, ti);
       nsRows+='<tr>';
-      if(ti===0)nsRows+='<td rowspan="'+rowspanN+'" style="border:1px solid #ccc;padding:4px;font-weight:800;background:#fff;vertical-align:middle">'+proj+'</td>';
+      if(ti===0)nsRows+='<td rowspan="'+rowspanN+'" style="border:1px solid #ccc;padding:4px;font-weight:800;background:#fff;vertical-align:middle">'+projName(proj)+'</td>';
       nsRows+='<td style="border:1px solid #ccc;padding:4px;background:'+bg+';font-weight:600;font-size:11px">'+lbl+'</td>';
       var rowT=0;
       nsCols.forEach(function(c){
@@ -1625,7 +1625,7 @@ async function taiDinhBienChucDanh(){
     }
   }catch(e){ /* lỗi mạng/chưa chạy patch -> giữ nguyên COLS mặc định để trang vẫn chạy được */ }
 }
-var projects=['Dự án 1','Dự án 2','Dự án 3','Dự án 4','Dự án 5'];
+var projects=['duan_1','duan_2','duan_3','duan_4','duan_5'];
 var data={};
 var logItems=[];
 var curUser='';
@@ -1639,7 +1639,8 @@ var TEN_RIENG_MAP={}; // {ten_du_an: {ma_ca: ten_rieng}}
 
 function getTenCa(proj, ti){
   var ma = TYPES[ti];
-  if(TEN_RIENG_MAP[proj] && TEN_RIENG_MAP[proj][ma]) return TEN_RIENG_MAP[proj][ma];
+  var pname = projName(proj);
+  if(TEN_RIENG_MAP[pname] && TEN_RIENG_MAP[pname][ma]) return TEN_RIENG_MAP[pname][ma];
   return TLABELS[ti];
 }
 
@@ -1683,6 +1684,10 @@ async function taiCauHinhCaLamViec(){
 
 // Danh sách Dự án giờ lấy 100% động từ bảng cấu hình chung (cauhinh_du_an) — sửa tên/ẩn-hiện
 // làm ở trang Quản lý chung (quan-ly-tai-khoan.html), báo cáo Nhân sự chỉ đọc theo, không tự quản lý nữa.
+// QUAN TRỌNG: từ giờ dữ liệu (data[...]) lưu theo KHOÁ CỐ ĐỊNH "duan_<id>" (id không đổi khi đổi tên),
+// projName() dùng để tra TÊN HIỂN THỊ mới nhất — đổi tên dự án bao nhiêu lần cũng không mất số liệu.
+var PROJ_NAME={duan_1:'Dự án 1',duan_2:'Dự án 2',duan_3:'Dự án 3',duan_4:'Dự án 4',duan_5:'Dự án 5'};
+function projName(k){ return PROJ_NAME[k] || k; }
 async function taiCauHinhDuAn(){
   try{
     var r = await sc.rpc('cauhinh_lay_du_an');
@@ -1690,11 +1695,28 @@ async function taiCauHinhDuAn(){
     if(list && list.length){
       list = list.filter(function(d){ return !d.an; });
       list.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
-      if(list.length) projects = list.map(function(d){ return d.ten; });
+      if(list.length){
+        projects = list.map(function(d){ return 'duan_'+d.id; });
+        var nm={}; list.forEach(function(d){ nm['duan_'+d.id]=d.ten; });
+        PROJ_NAME = nm;
+      }
     }
   }catch(e){
     // Lỗi mạng/Supabase -> giữ nguyên danh sách dự án mặc định để trang vẫn chạy được
   }
+}
+
+// Cầu nối 1 lần: vớt lại dữ liệu đang "kẹt" dưới TÊN dự án cũ (trước khi có khoá theo ID)
+// sang đúng khoá ID hiện tại, để không bị mất số liệu trong lần chuyển đổi này.
+function migrateLegacyProjKeys(dt){
+  if(!dt) return dt;
+  projects.forEach(function(idKey){
+    if(!dt[idKey]){
+      var nm = PROJ_NAME[idKey];
+      if(nm && dt[nm]) dt[idKey]=dt[nm];
+    }
+  });
+  return dt;
 }
 
 function p2(x){return String(x).padStart(2,'0');}
@@ -1735,11 +1757,13 @@ function initData(){
 function copyFromYest(src,projs){
   var d={};
   projs.forEach(function(p){
+    // Cầu nối: nếu hôm qua dữ liệu còn lưu dưới TÊN cũ (chưa kịp chuyển sang khoá ID) thì vẫn lấy được.
+    var s = src[p] || src[projName(p)] || {};
     d[p]={};
     TYPES.forEach(function(t){
       d[p][t]={};
       COLS.forEach(function(c){
-        d[p][t][c.k]=(src[p]&&src[p][t])?src[p][t][c.k]||0:0;
+        d[p][t][c.k]=(s[t])?s[t][c.k]||0:0;
       });
     });
   });
@@ -1784,7 +1808,7 @@ async function loadData(){
       // projects LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (đã tải sẵn ở taiCauHinhDuAn()) —
       // không dùng projects cũ đã lưu trên server, để sửa/ẩn-hiện dự án ở Quản lý chung là nhảy theo ngay.
       COLS=mergeCols(td.cols);
-      data=td.data||{};
+      data=migrateLegacyProjKeys(td.data||{});
       logItems=td.log||[];
       projects.forEach(function(p){ensureProj(p);});
       // Load ngày trước để so sánh mũi tên
@@ -2013,7 +2037,7 @@ function renderTable(){
       var txtColor = isNghi ? 'color:#b71c1c !important;font-weight:700;' : '';
       h+='<tr style="background:'+bg+';'+txtColor+'">';
       if(ti===0){
-        h+='<td class="stk s0" rowspan="'+rowspanN+'" style="vertical-align:middle;font-weight:800;background:#fff">'+proj+'</td>';
+        h+='<td class="stk s0" rowspan="'+rowspanN+'" style="vertical-align:middle;font-weight:800;background:#fff">'+projName(proj)+'</td>';
       }
       h+='<td class="stk s1" style="background:'+bg+';'+txtColor+'">'+getTenCa(proj,ti)+'</td>';
       COLS.forEach(function(c){
@@ -2367,7 +2391,7 @@ function exportXL(){
   projects.forEach(function(proj){
     ensureProj(proj);
     TYPES.forEach(function(type,ti){
-      var r=[ti===0?proj:'',TLABELS[ti]];
+      var r=[ti===0?projName(proj):'',TLABELS[ti]];
       var rt=0;
       COLS.forEach(function(c){var v=data[proj][type][c.k]||0;r.push(v);rt+=v;});
       r.push(rt);rows.push(r);
@@ -2451,7 +2475,7 @@ async function exportXLRange(){
       var sheetRows=[['BÁO CÁO NHÂN SỰ BCH CL-CR/VAL - NGÀY '+ds],[],hdr];
       pjs.forEach(function(proj){
         TYPES.forEach(function(type,ti){
-          var r=[ti===0?proj:'',TLABELS[ti]];
+          var r=[ti===0?projName(proj):'',TLABELS[ti]];
           var rt=0;
           cls.forEach(function(c){var v=(dt[proj]&&dt[proj][type]?dt[proj][type][c.k]||0:0);r.push(v);rt+=v;});
           r.push(rt);sheetRows.push(r);
