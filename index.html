@@ -1948,7 +1948,7 @@ async function mergeSave(){
       // server và không cộng dồn nữa, để sửa/thêm/xoá bên Định biên là bên này nhảy theo ngay,
       // không bị cộng dồn cột cũ + cột mới chồng lên nhau như trước.
       mergedCols=COLS;
-      mergedData=serverData.data||{};
+      mergedData=migrateLegacyProjKeys(serverData.data||{});
       mergedLog=serverData.log||[];
       // Ghi đè CHỈ những ô mình vừa sửa lên bản server mới nhất
       Object.keys(pendingChanges).forEach(function(p){
@@ -2584,7 +2584,7 @@ function subscribeNSRealtime(){
 
 function applyNSRealtimeUpdate(incoming){
   // projects không còn lấy từ payload realtime nữa — luôn do cauhinh_du_an quyết định (taiCauHinhDuAn()).
-  var incomingData = incoming.data || {};
+  var incomingData = migrateLegacyProjKeys(incoming.data || {});
   Object.keys(incomingData).forEach(function(proj){
     ensureProj(proj);
     TYPES.forEach(function(type){
