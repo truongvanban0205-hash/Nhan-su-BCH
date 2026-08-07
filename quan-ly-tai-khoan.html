@@ -305,6 +305,20 @@
   </div>
 </div>
 
+<!-- ============ MODAL ĐỔI TÊN (hỗ trợ xuống dòng tuỳ ý — Enter để xuống dòng) ============ -->
+<div class="modal-overlay" id="modalRenameText">
+  <div class="modal">
+    <h3 id="renameTextTitle">Đổi tên</h3>
+    <label>Nhấn Enter để xuống dòng khi cần ghi chú thêm</label>
+    <textarea id="renameTextArea" rows="4"
+      style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-family:inherit; font-size:14px; margin-bottom:12px; resize:vertical;"></textarea>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCancelRenameText">Huỷ</button>
+      <button class="btn" id="btnSaveRenameText">Lưu</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ MODAL GIỜ KHOÁ & MẬT KHẨU BÁO CÁO (index.html) ============ -->
 <div class="modal-overlay" id="modalKhoaBaoCao">
   <div class="modal" style="max-width:440px;">
@@ -645,12 +659,38 @@ async function loadCauHinhNS(){
   tenCaRiengCache = r3.data || [];
 }
 
+// Modal đổi tên hỗ trợ xuống dòng tuỳ ý (Enter = xuống dòng) — thay cho prompt() chỉ nhập được 1 dòng.
+// Trả về Promise: resolve(text) nếu bấm Lưu, resolve(null) nếu Huỷ.
+function renameTextModal(title, defaultText){
+  return new Promise(function(resolve){
+    var overlay = document.getElementById("modalRenameText");
+    var ta = document.getElementById("renameTextArea");
+    document.getElementById("renameTextTitle").textContent = title;
+    ta.value = defaultText || "";
+    overlay.classList.add("show");
+    setTimeout(function(){ ta.focus(); ta.select(); }, 50);
+    function cleanup(){
+      overlay.classList.remove("show");
+      btnSave.removeEventListener("click", onSave);
+      btnCancel.removeEventListener("click", onCancel);
+    }
+    var btnSave = document.getElementById("btnSaveRenameText");
+    var btnCancel = document.getElementById("btnCancelRenameText");
+    function onSave(){ var v = ta.value; cleanup(); resolve(v); }
+    function onCancel(){ cleanup(); resolve(null); }
+    btnSave.addEventListener("click", onSave);
+    btnCancel.addEventListener("click", onCancel);
+  });
+}
+// Hiển thị tên có xuống dòng (\n) thành <br> khi render ra danh sách
+function nl2br(s){ return String(s==null?"":s).split("\n").join("<br>"); }
+
 function renderListDuAn(){
   const el = document.getElementById("listDuAn");
   if(duAnCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có dự án nào.</div>'; return; }
   el.innerHTML = duAnCache.map(d => `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border); ${d.an?'opacity:.5;':''}">
-      <span>${d.ten}${d.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${d.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
+      <span>${nl2br(d.ten)}${d.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${d.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
       <span style="white-space:nowrap;">
         <button class="icon-btn" data-rename-duan="${d.id}">✏️ Đổi tên</button>
         <button class="icon-btn" data-toggle-duan="${d.id}">${d.an?'👁️ Hiện':'🙈 Ẩn'}</button>
@@ -661,9 +701,9 @@ function renderListDuAn(){
     btn.addEventListener("click", async ()=>{
       const id = parseInt(btn.dataset.renameDuan);
       const d = duAnCache.find(x=>x.id===id);
-      const ten = prompt(`Tên mới cho "${d.ten}":`, d.ten);
-      if(!ten || !ten.trim()) return;
-      const { error } = await sb.rpc("admin_doi_ten_du_an", { p_pass: currentAdminPass, p_id: id, p_ten_moi: ten.trim() });
+      const ten = await renameTextModal(`Đổi tên dự án`, d.ten);
+      if(ten===null || !ten.trim()) return;
+      const { error } = await sb.rpc("admin_doi_ten_du_an", { p_pass: currentAdminPass, p_id: id, p_ten_moi: ten });
       if(error){ alert("Không đổi tên được."); return; }
       await loadCauHinhNS(); renderCauHinhAll();
     });
@@ -698,7 +738,7 @@ function renderListLoaiCa(){
         <input type="radio" name="loaiNghi" value="${c.id}" data-set-nghi="${c.id}" ${c.la_nghi?'checked':''}>
         Là Nghỉ
       </label>
-      <span style="flex:1;">${c.ten_mac_dinh}${c.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${c.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
+      <span style="flex:1;">${nl2br(c.ten_mac_dinh)}${c.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${c.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
       <span style="white-space:nowrap;">
         <button class="icon-btn" data-rename-ca="${c.id}">✏️</button>
         <button class="icon-btn" data-toggle-ca="${c.id}">${c.an?'👁️':'🙈'}</button>
@@ -718,9 +758,9 @@ function renderListLoaiCa(){
     btn.addEventListener("click", async ()=>{
       const id = parseInt(btn.dataset.renameCa);
       const c = loaiCaCache.find(x=>x.id===id);
-      const ten = prompt(`Tên mới cho "${c.ten_mac_dinh}":`, c.ten_mac_dinh);
-      if(!ten || !ten.trim()) return;
-      const { error } = await sb.rpc("admin_doi_ten_ca", { p_pass: currentAdminPass, p_id: id, p_ten_moi: ten.trim() });
+      const ten = await renameTextModal(`Đổi tên ca`, c.ten_mac_dinh);
+      if(ten===null || !ten.trim()) return;
+      const { error } = await sb.rpc("admin_doi_ten_ca", { p_pass: currentAdminPass, p_id: id, p_ten_moi: ten });
       if(error){ alert("Không đổi tên được."); return; }
       await loadCauHinhNS(); renderCauHinhAll();
     });
