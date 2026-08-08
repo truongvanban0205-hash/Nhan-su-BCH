@@ -475,6 +475,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
 <div id="vb" class="vbanner" style="display:none">
   <span id="vl">👁️ Đang xem ngày cũ (chỉ đọc)</span>
+  <button id="vbEditBtn" onclick="unlockHistEdit()" class="btn btn-or btn-sm">🔓 Sửa ngày này</button>
   <button onclick="backToday()" class="btn btn-bl btn-sm">← Về hôm nay</button>
 </div>
 
@@ -544,6 +545,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
   <div id="mmtb-vb" class="vbanner" style="display:none">
     <span id="mmtb-vl">👁️ Đang xem ngày cũ (chỉ đọc)</span>
+    <button id="mmtbVbEditBtn" onclick="mmtbUnlockHistEdit()" class="btn btn-or btn-sm">🔓 Sửa ngày này</button>
     <button onclick="mmtbBackToday()" class="btn btn-bl btn-sm">← Về hôm nay</button>
   </div>
 
@@ -1880,16 +1882,20 @@ function setUser(){
   var n=document.getElementById('uname').value.trim();
   if(!n){alert('Nhập tên trước!');return;}
   curUser=n;
+  if(vDate){
+    document.getElementById('ust').textContent='✅ '+n;
+    return; // Đang xem/sửa ngày cũ — không đụng tới trạng thái khoá/mở đang có (do unlockHistEdit quản lý)
+  }
   if(isAfterCutoff()&&timeLocked){
     isEdit=false;
     document.getElementById('ust').textContent='✅ '+n+' (chỉ xem)';
     document.getElementById('lock-banner').style.display='flex';
   } else {
-    isEdit=!vDate;
+    isEdit=true;
     document.getElementById('ust').textContent='✅ '+n;
   }
   // Ghi log đăng nhập
-  if(!vDate){
+  {
     var now=new Date();
     var time=p2(now.getHours())+':'+p2(now.getMinutes());
     logItems.unshift({time:time,u:curUser,p:'— đăng nhập —',ts:now.toISOString(),login:true});
@@ -1926,7 +1932,7 @@ function niBlur(el){
 var pendingChanges={}; // {proj: {type: {col: value}}}
 
 function updVal(p,type,k,val){
-  if(!isEdit||vDate)return;
+  if(!isEdit)return;
   ensureProj(p);
   var v=Math.max(0,parseInt(val)||0);
   data[p][type][k]=v;
@@ -1963,10 +1969,11 @@ async function saveStructure(){
 }
 
 async function mergeSave(){
+  var targetKey = vDate || tkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
   setSS('⏳ Đang lưu...');
   try{
     // Lấy bản mới nhất từ server
-    var ex=await sc.from('nhansu').select('id,data').eq('ngay',tkey()).single();
+    var ex=await sc.from('nhansu').select('id,data').eq('ngay',targetKey).single();
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
     // Dự án LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (biến projects, đã tải sẵn ở taiCauHinhDuAn())
     // — không dùng projects cũ đã lưu trên server nữa, giống hệt cách xử lý COLS bên dưới.
@@ -1995,9 +2002,9 @@ async function mergeSave(){
     }
     var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog};
     if(ex.data){
-      await sc.from('nhansu').update({data:payload}).eq('ngay',tkey());
+      await sc.from('nhansu').update({data:payload}).eq('ngay',targetKey);
     }else{
-      await sc.from('nhansu').insert({ngay:tkey(),data:payload});
+      await sc.from('nhansu').insert({ngay:targetKey,data:payload});
     }
     // Cập nhật lại biến cục bộ theo bản đã merge (để không bị lệch UI)
     projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;
@@ -2009,8 +2016,9 @@ async function mergeSave(){
 
 async function saveData(){
   if(!curUser&&!vDate){alert('Nhập tên trước khi lưu!');return;}
+  if(vDate&&!isEdit){alert('Đang ở chế độ chỉ đọc — bấm "🔓 Sửa ngày này" và nhập mật khẩu trước khi lưu.');return;}
   await mergeSave();
-  toast('💾 Đã lưu & đồng bộ!');
+  toast(vDate?'💾 Đã lưu sửa đổi ngày cũ!':'💾 Đã lưu & đồng bộ!');
   if(curTab===2)await renderDayList();
 }
 
@@ -2044,7 +2052,7 @@ function renderLog(){
 
 function renderTable(){
   var iv=!!vDate;
-  var dis=(!isEdit||iv)?'disabled':'';
+  var dis=(!isEdit)?'disabled':'';
   var h='<thead><tr>';
   h+='<th class="stk s0" rowspan="2">Dự án</th>';
   h+='<th class="stk s1" rowspan="2">Ca làm việc</th>';
@@ -2370,6 +2378,7 @@ async function renderDayList(){
   }).join('');
 }
 
+var histEditKey=null;
 async function viewDay(key){
   var rows=await sHist();
   var row=null;
@@ -2377,20 +2386,42 @@ async function viewDay(key){
   if(!row)return;
   var h=row.data||{};
   vDate=key;
-  projects=h.projects||['CL-CR'];
+  histEditKey=null;
   COLS=mergeCols(h.cols);
-  data=h.data||{};
+  data=migrateLegacyProjKeys(h.data||{});
   logItems=h.log||[];
   isEdit=false;
   var pts=key.split('-');
   document.getElementById('vb').style.display='flex';
   document.getElementById('vl').textContent='👁️ Đang xem ngày '+pts[2]+'/'+pts[1]+'/'+pts[0]+' (chỉ đọc)';
+  document.getElementById('vbEditBtn').style.display='inline-block';
+  document.getElementById('vbEditBtn').textContent='🔓 Sửa ngày này';
   document.getElementById('ust').textContent='';
   renderTable();renderLog();
 }
 
+function unlockHistEdit(){
+  if(isEdit){ // đã mở khoá rồi -> bấm lần nữa để khoá lại (quay về chỉ đọc)
+    isEdit=false;
+    var pts=vDate.split('-');
+    document.getElementById('vl').textContent='👁️ Đang xem ngày '+pts[2]+'/'+pts[1]+'/'+pts[0]+' (chỉ đọc)';
+    document.getElementById('vbEditBtn').textContent='🔓 Sửa ngày này';
+    renderTable();
+    return;
+  }
+  askP(function(){
+    isEdit=true;
+    histEditKey=vDate;
+    var pts=vDate.split('-');
+    document.getElementById('vl').textContent='✏️ Đang SỬA ngày '+pts[2]+'/'+pts[1]+'/'+pts[0]+' — nhớ bấm Lưu khi xong';
+    document.getElementById('vbEditBtn').textContent='🔒 Khoá lại';
+    renderTable();
+  },'sửa dữ liệu ngày cũ');
+}
+
 async function backToday(){
   vDate=null;
+  histEditKey=null;
   document.getElementById('vb').style.display='none';
   curUser='';isEdit=false;
   document.getElementById('uname').value='';
@@ -2901,7 +2932,7 @@ function mmtbNiBlur(el){
 function mmtbFmtN(v){return v===0?'-':(v<10?'0'+v:String(v));}
 
 function mmtbUpdVal(proj,status,k,val){
-  if(!mmtbEdit||mmtbVDate)return;
+  if(!mmtbEdit)return;
   mmtbEnsureProj(proj);
   var v=Math.max(0,parseInt(val)||0);
   mmtbData[proj][status][k]=v;
@@ -2914,7 +2945,7 @@ function mmtbUpdVal(proj,status,k,val){
   mmtbSchSave();
 }
 function mmtbUpdNote(k,val){
-  if(!mmtbEdit||mmtbVDate)return;
+  if(!mmtbEdit)return;
   mmtbNotes[k]=val;
   mmtbPendingNotesChanges[k]=val;
   mmtbSchSave();
@@ -2944,9 +2975,10 @@ async function mmtbSaveStructure(){
 }
 
 async function mmtbMergeSave(){
+  var targetKey = mmtbVDate || mmtbTkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
   mmtbSetSS('⏳ Đang lưu...');
   try{
-    var ex=await sc.from('mmtb').select('id,data').eq('ngay',mmtbTkey()).single();
+    var ex=await sc.from('mmtb').select('id,data').eq('ngay',targetKey).single();
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
     var mergedMachines=mmtbMachines, mergedProjects=mmtbProjects, mergedData=mmtbData, mergedNotes=mmtbNotes, mergedLog=mmtbLog;
     if(serverData){
@@ -2975,9 +3007,9 @@ async function mmtbMergeSave(){
     }
     var payload={machines:mergedMachines,projects:mergedProjects,data:mergedData,notes:mergedNotes,log:mergedLog};
     if(ex.data){
-      await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey());
+      await sc.from('mmtb').update({data:payload}).eq('ngay',targetKey);
     }else{
-      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:payload});
+      await sc.from('mmtb').insert({ngay:targetKey,data:payload});
     }
     mmtbMachines=mergedMachines;mmtbProjects=mergedProjects;mmtbData=mergedData;mmtbNotes=mergedNotes;mmtbLog=mergedLog;
     mmtbPendingChanges={};
@@ -2989,8 +3021,9 @@ async function mmtbMergeSave(){
 
 async function mmtbSaveData(){
   if(!mmtbUser&&!mmtbVDate){alert('Nhập tên trước khi lưu!');return;}
+  if(mmtbVDate&&!mmtbEdit){alert('Đang ở chế độ chỉ đọc — bấm "🔓 Sửa ngày này" và nhập mật khẩu trước khi lưu.');return;}
   await mmtbMergeSave();
-  toast('💾 MMTB: Đã lưu!');
+  toast(mmtbVDate?'💾 Đã lưu sửa đổi ngày cũ!':'💾 MMTB: Đã lưu!');
   if(mmtbCurTab===2)await mmtbRenderDayList();
 }
 
@@ -3016,7 +3049,7 @@ function mmtbRenderLog(){
 
 function mmtbRenderTable(){
   var iv=!!mmtbVDate;
-  var dis=(!mmtbEdit||iv)?'disabled':'';
+  var dis=(!mmtbEdit)?'disabled':'';
   mmtbEnsureData();
   var h='<thead><tr>';
   h+='<th rowspan="2" style="min-width:32px">STT</th>';
@@ -3247,7 +3280,26 @@ async function mmtbViewDay(key){
   var pts=key.split('-');
   document.getElementById('mmtb-vb').style.display='flex';
   document.getElementById('mmtb-vl').textContent='👁️ Đang xem ngày '+pts[2]+'/'+pts[1]+'/'+pts[0]+' (chỉ đọc)';
+  document.getElementById('mmtbVbEditBtn').style.display='inline-block';
+  document.getElementById('mmtbVbEditBtn').textContent='🔓 Sửa ngày này';
   mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();
+}
+function mmtbUnlockHistEdit(){
+  if(mmtbEdit){
+    mmtbEdit=false;
+    var pts=mmtbVDate.split('-');
+    document.getElementById('mmtb-vl').textContent='👁️ Đang xem ngày '+pts[2]+'/'+pts[1]+'/'+pts[0]+' (chỉ đọc)';
+    document.getElementById('mmtbVbEditBtn').textContent='🔓 Sửa ngày này';
+    mmtbRenderTable();
+    return;
+  }
+  askP(function(){
+    mmtbEdit=true;
+    var pts=mmtbVDate.split('-');
+    document.getElementById('mmtb-vl').textContent='✏️ Đang SỬA ngày '+pts[2]+'/'+pts[1]+'/'+pts[0]+' — nhớ bấm Lưu khi xong';
+    document.getElementById('mmtbVbEditBtn').textContent='🔒 Khoá lại';
+    mmtbRenderTable();
+  },'sửa dữ liệu MMTB ngày cũ');
 }
 async function mmtbBackToday(){
   mmtbVDate=null;
