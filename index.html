@@ -1731,7 +1731,21 @@ function migrateLegacyProjKeys(dt){
 }
 
 function p2(x){return String(x).padStart(2,'0');}
-function tkey(){var n=new Date();return n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());}
+// Ngày "hôm nay" giờ lấy CHUẨN từ server (gio_chuan_vn()) — không phụ thuộc đồng hồ máy/điện thoại
+// đang chạy sai giờ. SERVER_TODAY được tải 1 lần lúc mở app (layGioChuan()), tự làm mới định kỳ.
+var SERVER_TODAY=null;
+async function layGioChuan(){
+  try{
+    var r = await sc.rpc('gio_chuan_vn');
+    if(r.data) SERVER_TODAY = r.data;
+  }catch(e){
+    // Lỗi mạng -> tạm dùng giờ máy làm dự phòng, còn hơn không chạy được
+  }
+}
+function tkey(){
+  if(SERVER_TODAY) return SERVER_TODAY;
+  var n=new Date();return n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());
+}
 function ykey(){var n=new Date();n.setDate(n.getDate()-1);return n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());}
 function setSS(m){document.getElementById('ss').innerHTML=m;}
 
@@ -1814,6 +1828,9 @@ async function sDelAll(){await sc.from('nhansu').delete().neq('ngay','__x__');}
 async function loadData(){
   setSS('🔄 Đang tải...');
   try{
+    // Đảm bảo dữ liệu hôm nay đã tồn tại đúng chuẩn ở SERVER trước khi đọc — server tự copy từ
+    // ngày gần nhất nếu chưa có, dùng đúng giờ Việt Nam, an toàn dù nhiều máy cùng mở lúc đầu ngày.
+    try{ await sc.rpc('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
     var td=await sLoad(tkey());
     if(td){
       // projects LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (đã tải sẵn ở taiCauHinhDuAn()) —
@@ -2563,6 +2580,7 @@ function setDate(){
 }
 
 var autoSavedToday=false;
+var lastLoadedDate=null;
 
 async function checkAutoSaveAt8(){
   if(autoSavedToday||vDate)return;
@@ -2623,6 +2641,7 @@ function applyNSRealtimeUpdate(incoming){
 
 async function init(){
   setDate();
+  lastLoadedDate=tkey();
   await loadData();
   checkNotif();
   checkTimeLock();
@@ -2643,6 +2662,23 @@ async function init(){
   setInterval(function(){
     if(!vDate)checkAutoSaveAt8();
   },60000);
+  // Phát hiện SANG NGÀY MỚI khi tab vẫn đang mở liên tục (không tắt/mở lại trang) — dùng giờ CHUẨN
+  // từ server (layGioChuan()), không phụ thuộc đồng hồ máy. Kiểm tra mỗi 20 giây, hễ server báo đã
+  // sang ngày mới là tự tải lại đúng chuẩn (server đã tự copy sẵn từ ngày gần nhất).
+  setInterval(async function(){
+    if(vDate) return; // đang xem ngày cũ (chỉ đọc) thì không can thiệp
+    await layGioChuan();
+    if(tkey()!==lastLoadedDate){
+      lastLoadedDate=tkey();
+      autoSavedToday=false; timeLocked=false; unlockedThisSession=false;
+      setDate();
+      loadData().then(function(){
+        checkTimeLock();
+        checkAutoSaveAt8();
+        subscribeNSRealtime();
+      });
+    }
+  },20000);
 }
 // ============ MODULE MMTB ============
 var DEF_MACHINES=[
@@ -2669,13 +2705,14 @@ var mmtbVDate=null;
 var mmtbAst=null;
 var mmtbCurTab=1;
 var mmtbTimeLocked=false;
+var mmtbLastLoadedDate=null;
 var mmtbUnlockedSession=false;
 var mmtbLineChart=null;
 var mmtbPieChart=null;
 var mmtbPendingChanges={};
 var mmtbPendingNotesChanges={};
 
-function mmtbTkey(){var n=new Date();return n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());}
+function mmtbTkey(){ return tkey(); }
 function mmtbYkey(){var n=new Date();n.setDate(n.getDate()-1);return n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());}
 function mmtbSetSS(m){document.getElementById('mmtb-ss').innerHTML=m;}
 
@@ -2777,6 +2814,8 @@ async function mmtbSDelAll(){await sc.from('mmtb').delete().neq('ngay','__x__');
 async function mmtbLoadData(){
   mmtbSetSS('🔄 Đang tải...');
   try{
+    // Đảm bảo dữ liệu hôm nay đã tồn tại đúng chuẩn ở SERVER trước khi đọc (giống hệt Nhân sự).
+    try{ await sc.rpc('dam_bao_du_lieu_hom_nay_mmtb'); }catch(e){}
     var td=await mmtbSLoad(mmtbTkey());
     if(td){
       mmtbMachines=mmtbMergeMachines(td.machines);
@@ -3410,6 +3449,7 @@ async function mmtbInit(){
   var n=new Date();
   var days=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
   document.getElementById('mmtb-dp').textContent=days[n.getDay()]+', ngày '+p2(n.getDate())+' tháng '+p2(n.getMonth()+1)+' năm '+n.getFullYear();
+  mmtbLastLoadedDate=tkey();
   await mmtbLoadData();
   mmtbCheckTimeLock();
   await mmtbCheckAutoSaveAt8();
@@ -3420,6 +3460,20 @@ async function mmtbInit(){
   setInterval(function(){if(!mmtbVDate&&mmtbEdit&&Object.keys(mmtbPendingChanges).length>0){mmtbMergeSave();}},15000);
   setInterval(function(){if(!mmtbVDate)mmtbCheckTimeLock();},30000);
   setInterval(function(){if(!mmtbVDate)mmtbCheckAutoSaveAt8();},60000);
+  // Phát hiện SANG NGÀY MỚI khi tab để mở liên tục — y hệt cơ chế bên Nhân sự, dùng giờ chuẩn server.
+  setInterval(async function(){
+    if(mmtbVDate) return;
+    await layGioChuan();
+    if(tkey()!==mmtbLastLoadedDate){
+      mmtbLastLoadedDate=tkey();
+      mmtbAutoSavedToday=false; mmtbTimeLocked=false; mmtbUnlockedSession=false;
+      mmtbLoadData().then(function(){
+        mmtbCheckTimeLock();
+        mmtbCheckAutoSaveAt8();
+        subscribeMMTBRealtime();
+      });
+    }
+  },20000);
 }
 
 // ============ MODULE LỊCH NGHIỆM THU ============
@@ -4102,6 +4156,7 @@ document.addEventListener('click', function(e){
     }
   };
 
+  await layGioChuan();
   await taiCauHinhCaLamViec();
   await taiCauHinhDuAn();
   await taiDinhBienChucDanh();
