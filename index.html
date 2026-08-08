@@ -1637,6 +1637,7 @@ var ast=null;
 var curTab=1;
 var TYPES=['ca1','ca2','nghi'];
 var TLABELS=['Ca 1','Ca 2','Nghỉ'];
+var LIVE_TYPES=null, LIVE_TLABELS=null; // sao lưu bộ ca HIỆN TẠI — dùng để khôi phục sau khi xem lịch sử
 var TEN_RIENG_MAP={}; // {ten_du_an: {ma_ca: ten_rieng}}
 
 function getTenCa(proj, ti){
@@ -1975,10 +1976,30 @@ async function mergeSave(){
     // Lấy bản mới nhất từ server
     var ex=await sc.from('nhansu').select('id,data').eq('ngay',targetKey).single();
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
-    // Dự án LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (biến projects, đã tải sẵn ở taiCauHinhDuAn())
-    // — không dùng projects cũ đã lưu trên server nữa, giống hệt cách xử lý COLS bên dưới.
     var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems;
-    if(serverData){
+    if(vDate){
+      // ĐANG SỬA NGÀY CŨ: giữ NGUYÊN cấu trúc (dự án/chức danh/loại ca) đúng như ngày đó đã lưu —
+      // TUYỆT ĐỐI không đối chiếu/dọn theo cấu hình hiện tại (khác thời điểm), chỉ ghi đè đúng ô
+      // vừa sửa lên nguyên trạng, để không làm mất/về 0 phần còn lại của ngày cũ.
+      if(serverData){
+        mergedProjects = serverData.projects || projects;
+        mergedCols = serverData.cols || COLS;
+        mergedData = serverData.data || {};
+        mergedLog = serverData.log || [];
+        Object.keys(pendingChanges).forEach(function(p){
+          if(!mergedData[p])mergedData[p]={};
+          Object.keys(pendingChanges[p]).forEach(function(type){
+            if(!mergedData[p][type])mergedData[p][type]={};
+            Object.keys(pendingChanges[p][type]).forEach(function(k){
+              mergedData[p][type][k]=pendingChanges[p][type][k];
+            });
+          });
+        });
+        var existingTsH=mergedLog.map(function(l){return l.ts;});
+        logItems.forEach(function(l){if(existingTsH.indexOf(l.ts)<0)mergedLog.unshift(l);});
+        mergedLog=mergedLog.slice(0,50);
+      }
+    } else if(serverData){
       // Cột LUÔN lấy đúng bộ hiện tại từ Định biên (COLS) — không dùng cols cũ đã lưu trên
       // server và không cộng dồn nữa, để sửa/thêm/xoá bên Định biên là bên này nhảy theo ngay,
       // không bị cộng dồn cột cũ + cột mới chồng lên nhau như trước.
@@ -2387,8 +2408,24 @@ async function viewDay(key){
   var h=row.data||{};
   vDate=key;
   histEditKey=null;
-  COLS=mergeCols(h.cols);
-  data=migrateLegacyProjKeys(h.data||{});
+  // XEM LỊCH SỬ: giữ NGUYÊN cấu trúc của đúng ngày đó (chức danh, dự án, loại ca) — TUYỆT ĐỐI
+  // không trộn/lọc theo cấu hình hiện tại (Định biên, Quản lý chung có thể đã đổi khác từ đó tới
+  // nay), nếu không sẽ làm mất/về 0 dữ liệu ngày cũ như đã xảy ra.
+  COLS = (h.cols && h.cols.length) ? h.cols : COLS;
+  data = h.data || {};
+  projects = (h.projects && h.projects.length) ? h.projects : Object.keys(data);
+  // Loại ca: suy ra đúng từ chính dữ liệu ngày đó (mã ca có thể đã đổi số lượng/tên theo thời gian).
+  var typesFound = [];
+  Object.keys(data).forEach(function(p){
+    Object.keys(data[p]||{}).forEach(function(t){ if(typesFound.indexOf(t)<0) typesFound.push(t); });
+  });
+  if(typesFound.length){
+    TYPES = typesFound;
+    TLABELS = typesFound.map(function(t){
+      var idx = LIVE_TYPES ? LIVE_TYPES.indexOf(t) : -1;
+      return idx>=0 ? LIVE_TLABELS[idx] : t; // mã lạ không còn trong cấu hình hiện tại -> hiện tạm mã gốc
+    });
+  }
   logItems=h.log||[];
   isEdit=false;
   var pts=key.split('-');
@@ -2422,6 +2459,7 @@ function unlockHistEdit(){
 async function backToday(){
   vDate=null;
   histEditKey=null;
+  if(LIVE_TYPES){ TYPES=LIVE_TYPES.slice(); TLABELS=LIVE_TLABELS.slice(); }
   document.getElementById('vb').style.display='none';
   curUser='';isEdit=false;
   document.getElementById('uname').value='';
@@ -2981,7 +3019,29 @@ async function mmtbMergeSave(){
     var ex=await sc.from('mmtb').select('id,data').eq('ngay',targetKey).single();
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
     var mergedMachines=mmtbMachines, mergedProjects=mmtbProjects, mergedData=mmtbData, mergedNotes=mmtbNotes, mergedLog=mmtbLog;
-    if(serverData){
+    if(mmtbVDate){
+      // ĐANG SỬA NGÀY CŨ: giữ NGUYÊN cấu trúc (máy/dự án) đúng như ngày đó đã lưu, chỉ ghi đè ô vừa sửa.
+      if(serverData){
+        mergedMachines = serverData.machines || mmtbMachines;
+        mergedProjects = serverData.projects || mmtbProjects;
+        mergedData = serverData.data || {};
+        mergedNotes = serverData.notes || {};
+        mergedLog = serverData.log || [];
+        Object.keys(mmtbPendingChanges).forEach(function(proj){
+          if(!mergedData[proj])mergedData[proj]={};
+          Object.keys(mmtbPendingChanges[proj]).forEach(function(status){
+            if(!mergedData[proj][status])mergedData[proj][status]={};
+            Object.keys(mmtbPendingChanges[proj][status]).forEach(function(k){
+              mergedData[proj][status][k]=mmtbPendingChanges[proj][status][k];
+            });
+          });
+        });
+        Object.keys(mmtbPendingNotesChanges).forEach(function(k){ mergedNotes[k]=mmtbPendingNotesChanges[k]; });
+        var existingTsH=mergedLog.map(function(l){return l.ts;});
+        mmtbLog.forEach(function(l){if(existingTsH.indexOf(l.ts)<0)mergedLog.unshift(l);});
+        mergedLog=mergedLog.slice(0,50);
+      }
+    } else if(serverData){
       mergedMachines=serverData.machines||mmtbMachines;
       mergedProjects=serverData.projects||mmtbProjects;
       mergedData=serverData.data||{};
@@ -4210,6 +4270,7 @@ document.addEventListener('click', function(e){
 
   await layGioChuan();
   await taiCauHinhCaLamViec();
+  LIVE_TYPES=TYPES.slice(); LIVE_TLABELS=TLABELS.slice();
   await taiCauHinhDuAn();
   await taiDinhBienChucDanh();
   await taiGioHan();
