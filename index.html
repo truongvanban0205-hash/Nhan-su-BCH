@@ -558,9 +558,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <button class="admin-toggle-btn" onclick="mmtbToggleAdmin()" id="mmtb-admin-toggle">🔒 Quản lý</button>
     <div class="admin-bar admin-hidden" id="mmtb-admin-bar">
       <span class="admin-lbl">🔒 Quản lý:</span>
-      <button class="btn btn-sm btn-or" onclick="mmtbAddProj()">＋ Dự án</button>
-      <button class="btn btn-sm btn-or" onclick="mmtbRenameProj()">✏️ Đổi tên DA</button>
-      <button class="btn btn-sm btn-re" onclick="mmtbDelProj()">✕ Xoá DA</button>
+      <button class="btn btn-sm btn-or" onclick="alert('Thêm/Đổi tên/Ẩn-hiện Dự án giờ làm ở trang Quản lý chung → Cấu hình Nhân sự.')">✏️ Sửa Dự án ở Quản lý chung</button>
       <button class="btn btn-sm btn-or" onclick="mmtbRenameMachine()">✏️ Đổi tên máy</button>
       <button class="btn btn-sm btn-re" onclick="mmtbDelMachine()">✕ Xoá loại máy</button>
       <button class="btn btn-sm btn-pu" onclick="mmtbExportXLRange()">📦 Xuất Excel theo ngày</button>
@@ -924,7 +922,7 @@ async function loadQuickStats(){
           Object.entries(pdata.huhong).forEach(function(en){
             if(en[1]>0){
               var m=machs.find(function(x){return x.k===en[0];});
-              hhList.push({name:(m?m.n:en[0])+' ('+proj+')',n:en[1]});
+              hhList.push({name:(m?m.n:en[0])+' ('+projName(proj)+')',n:en[1]});
             }
             hh+=en[1]||0;
           });
@@ -1702,12 +1700,14 @@ async function taiCauHinhDuAn(){
     var r = await sc.rpc('cauhinh_lay_du_an');
     var list = r.data;
     if(list && list.length){
-      list = list.filter(function(d){ return !d.an; });
-      list.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
-      if(list.length){
-        projects = list.map(function(d){ return 'duan_'+d.id; });
-        var nm={}; list.forEach(function(d){ nm['duan_'+d.id]=d.ten; });
-        PROJ_NAME = nm;
+      // Tên hiển thị lấy từ TOÀN BỘ danh sách (kể cả đang ẩn) — để dữ liệu lịch sử cũ nhắc tới
+      // 1 dự án đã bị ẩn sau này vẫn hiện đúng tên, không hiện mã thô "duan_12".
+      var nm={}; list.forEach(function(d){ nm['duan_'+d.id]=d.ten; });
+      PROJ_NAME = nm;
+      var active = list.filter(function(d){ return !d.an; });
+      active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
+      if(active.length){
+        projects = active.map(function(d){ return 'duan_'+d.id; });
       }
     }
   }catch(e){
@@ -1715,10 +1715,29 @@ async function taiCauHinhDuAn(){
   }
 }
 
-// Cầu nối 1 lần: vớt lại dữ liệu đang "kẹt" dưới TÊN dự án cũ (trước khi có khoá theo ID)
-// sang đúng khoá ID hiện tại, để không bị mất số liệu trong lần chuyển đổi này.
-// CHỈ xoá khoá kiểu TÊN CŨ (không đúng dạng "duan_<id>") — tuyệt đối KHÔNG đụng tới bất kỳ
-// khoá "duan_<id>" nào khác (kể cả dự án đang ẨN, vì ẩn ≠ xoá, dữ liệu ẩn vẫn phải giữ nguyên).
+// MMTB dùng CHUNG đúng 1 bảng cấu hình dự án với Nhân sự (cauhinh_du_an) — cùng 1 danh sách,
+// cùng tên hiển thị (PROJ_NAME), tránh lặp lại việc quản lý riêng lẻ từng module như trước đây.
+async function taiCauHinhDuAnMMTB(){
+  try{
+    var r = await sc.rpc('cauhinh_lay_du_an');
+    var list = r.data;
+    if(list && list.length){
+      list.forEach(function(d){ PROJ_NAME['duan_'+d.id]=d.ten; });
+      var active = list.filter(function(d){ return !d.an; });
+      active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
+      if(active.length){
+        mmtbProjects = active.map(function(d){ return 'duan_'+d.id; });
+      }
+    }
+  }catch(e){
+    // Lỗi mạng/Supabase -> giữ nguyên danh sách dự án hiện có để trang vẫn chạy được
+  }
+}
+
+// Cầu nối: vớt lại dữ liệu đang "kẹt" dưới TÊN dự án cũ (trước khi có khoá theo ID)
+// sang đúng khoá ID hiện tại, nếu tên khớp thì copy sang. KHÔNG xoá bất kỳ khoá nào khác —
+// trước đây có đoạn tự xoá mọi khoá "lạ" mỗi lần lưu, đây chính là nguyên nhân gây mất dữ liệu
+// (tên không khớp tuyệt đối là bị xoá âm thầm, không cảnh báo) — đã bỏ hẳn phần đó.
 function migrateLegacyProjKeys(dt){
   if(!dt) return dt;
   projects.forEach(function(idKey){
@@ -1727,8 +1746,19 @@ function migrateLegacyProjKeys(dt){
       if(nm && dt[nm]) dt[idKey]=dt[nm];
     }
   });
-  Object.keys(dt).forEach(function(k){
-    if(!/^duan_\d+$/.test(k)) delete dt[k];
+  return dt;
+}
+// Y HỆT bản trên nhưng dùng cho MMTB (mmtbProjects) — MMTB vừa được gộp dùng chung cauhinh_du_an,
+// nên dữ liệu MMTB các ngày trước đó (lưu theo TÊN dự án cũ) cũng cần cầu nối này, nếu không sẽ
+// dính lại đúng lỗi "về 0" như Nhân sự đã gặp — vì render/copy sẽ tìm theo khoá "duan_<id>" mới
+// trong khi dữ liệu cũ còn nằm dưới tên chữ.
+function mmtbMigrateLegacyProjKeys(dt){
+  if(!dt) return dt;
+  mmtbProjects.forEach(function(idKey){
+    if(!dt[idKey]){
+      var nm = PROJ_NAME[idKey];
+      if(nm && dt[nm]) dt[idKey]=dt[nm];
+    }
   });
   return dt;
 }
@@ -2464,6 +2494,7 @@ async function backToday(){
   curUser='';isEdit=false;
   document.getElementById('uname').value='';
   document.getElementById('ust').textContent='';
+  await taiCauHinhDuAn(); // khôi phục lại đúng danh sách dự án HIỆN TẠI (viewDay() đã tạm đổi sang của ngày cũ)
   await loadData();
 }
 
@@ -2832,7 +2863,7 @@ function mmtbCopyFromYest(src){
   var d={};
   mmtbProjects.forEach(function(proj){
     d[proj]={};
-    var srcProj=src[proj]||{};
+    var srcProj=src[proj]||src[projName(proj)]||{};
     MMTB_STATUS.forEach(function(s){
       d[proj][s]={};
       mmtbMachines.forEach(function(m){
@@ -2888,8 +2919,9 @@ async function mmtbLoadData(){
     var td=await mmtbSLoad(mmtbTkey());
     if(td){
       mmtbMachines=mmtbMergeMachines(td.machines);
-      mmtbProjects=td.projects||['CL-CR'];
-      mmtbData=td.data||{};
+      // mmtbProjects LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (đã tải sẵn ở taiCauHinhDuAnMMTB())
+      // — không dùng projects cũ đã lưu trên server, để sửa/ẩn-hiện dự án ở Quản lý chung nhảy theo ngay.
+      mmtbData=mmtbMigrateLegacyProjKeys(td.data||{});
       mmtbNotes=td.notes||{};
       mmtbLog=td.log||[];
       mmtbEnsureData();
@@ -2904,7 +2936,6 @@ async function mmtbLoadData(){
     if(prev){
       var yd=prev.data||{};
       mmtbMachines=mmtbMergeMachines(yd.machines);
-      mmtbProjects=yd.projects||['CL-CR'];
       mmtbData=mmtbCopyFromYest(yd.data||{});
       mmtbNotes=mmtbCopyNotesFromYest(yd.notes);
       mmtbLog=[];
@@ -2915,7 +2946,6 @@ async function mmtbLoadData(){
     }
   }catch(e){console.error(e);}
   mmtbMachines=DEF_MACHINES.map(function(c){return {k:c.k,n:c.n};});
-  mmtbProjects=['CL-CR'];
   mmtbData=mmtbInitData();
   mmtbNotes={};
   mmtbEnsureNotes();
@@ -3042,9 +3072,11 @@ async function mmtbMergeSave(){
         mergedLog=mergedLog.slice(0,50);
       }
     } else if(serverData){
+      // projects LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (mmtbProjects đã tải sẵn) — không dùng
+      // lại projects cũ đã lưu trên server nữa, để đổi tên/ẩn-hiện dự án ở Quản lý chung nhảy theo ngay.
       mergedMachines=serverData.machines||mmtbMachines;
-      mergedProjects=serverData.projects||mmtbProjects;
-      mergedData=serverData.data||{};
+      mergedProjects=mmtbProjects;
+      mergedData=mmtbMigrateLegacyProjKeys(serverData.data||{});
       mergedNotes=serverData.notes||{};
       mergedLog=serverData.log||[];
       Object.keys(mmtbPendingChanges).forEach(function(proj){
@@ -3060,7 +3092,6 @@ async function mmtbMergeSave(){
         mergedNotes[k]=mmtbPendingNotesChanges[k];
       });
       mmtbMachines.forEach(function(m){if(!mergedMachines.find(function(mm){return mm.k===m.k;}))mergedMachines.push(m);});
-      mmtbProjects.forEach(function(p){if(mergedProjects.indexOf(p)<0)mergedProjects.push(p);});
       var existingTs=mergedLog.map(function(l){return l.ts;});
       mmtbLog.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
       mergedLog=mergedLog.slice(0,50);
@@ -3115,7 +3146,7 @@ function mmtbRenderTable(){
   h+='<th rowspan="2" style="min-width:32px">STT</th>';
   h+='<th rowspan="2" style="min-width:130px">Tên máy</th>';
   mmtbProjects.forEach(function(proj){
-    h+='<th colspan="3" style="background:#e65100">'+proj+'</th>';
+    h+='<th colspan="3" style="background:#e65100">'+projName(proj)+'</th>';
   });
   h+='<th rowspan="2" style="background:#ffeb3b;color:#333;min-width:42px">Tổng</th>';
   h+='<th rowspan="2" style="min-width:120px">Ghi chú</th>';
@@ -3231,53 +3262,8 @@ function mmtbDelMachine(){
   },'xoá loại máy');
 }
 
-function mmtbAddProj(){
-  askP(function(){
-    var name=prompt('Tên dự án mới:');
-    if(!name||!name.trim())return;
-    var n=name.trim();
-    if(mmtbProjects.indexOf(n)>=0){alert('Đã có rồi!');return;}
-    mmtbProjects.push(n);
-    mmtbEnsureProj(n);
-    mmtbRenderTable();mmtbRenderCharts();
-    mmtbSaveStructure();
-    toast('✅ Đã thêm dự án: '+n);
-  },'thêm dự án MMTB');
-}
-
-function mmtbRenameProj(){
-  askP(function(){
-    if(!mmtbProjects.length){alert('Chưa có dự án!');return;}
-    var list=mmtbProjects.map(function(p,i){return (i+1)+'. '+p;}).join('\n');
-    var idx=parseInt(prompt('Chọn số thứ tự dự án cần đổi tên:\n'+list))-1;
-    if(isNaN(idx)||idx<0||idx>=mmtbProjects.length)return;
-    var oldName=mmtbProjects[idx];
-    var newName=prompt('Tên mới cho "'+oldName+'":');
-    if(!newName||!newName.trim())return;
-    newName=newName.trim();
-    mmtbProjects[idx]=newName;
-    if(mmtbData[oldName]){mmtbData[newName]=mmtbData[oldName];delete mmtbData[oldName];}
-    mmtbRenderTable();mmtbRenderCharts();
-    mmtbSaveStructure();
-    toast('✅ Đã đổi: '+oldName+' → '+newName);
-  },'đổi tên dự án MMTB');
-}
-
-function mmtbDelProj(){
-  askP(function(){
-    if(mmtbProjects.length<=1){alert('Phải còn ít nhất 1 dự án!');return;}
-    var list=mmtbProjects.map(function(p,i){return (i+1)+'. '+p;}).join('\n');
-    var idx=parseInt(prompt('Chọn số thứ tự dự án cần xoá:\n'+list))-1;
-    if(isNaN(idx)||idx<0||idx>=mmtbProjects.length)return;
-    var name=mmtbProjects[idx];
-    if(!confirm('Xoá dự án "'+name+'"?'))return;
-    mmtbProjects.splice(idx,1);
-    delete mmtbData[name];
-    mmtbRenderTable();mmtbRenderCharts();
-    mmtbSaveStructure();
-    toast('🗑️ Đã xoá dự án: '+name);
-  },'xoá dự án MMTB');
-}
+// mmtbAddProj/mmtbRenameProj/mmtbDelProj đã bỏ — Dự án giờ quản lý 100% ở trang Quản lý chung,
+// dùng chung 1 bảng cấu hình (cauhinh_du_an) với Nhân sự, tránh lệch dữ liệu như trước.
 
 function mmtbReset(){
   askP(function(){
@@ -3332,8 +3318,11 @@ async function mmtbViewDay(key){
   if(!row)return;
   var h=row.data||{};
   mmtbVDate=key;
+  // XEM LỊCH SỬ: giữ NGUYÊN danh sách dự án/máy móc của đúng ngày đó — TUYỆT ĐỐI không dùng
+  // danh sách dự án hiện tại (mmtbProjects sống), nếu không sẽ về 0 hết y như lỗi Nhân sự đã gặp.
   mmtbMachines=mmtbMergeMachines(h.machines);
   mmtbData=h.data||{};
+  mmtbProjects=(h.projects && h.projects.length)?h.projects:Object.keys(mmtbData);
   mmtbNotes=h.notes||{};
   mmtbLog=h.log||[];
   mmtbEdit=false;
@@ -3367,6 +3356,7 @@ async function mmtbBackToday(){
   mmtbUser='';mmtbEdit=false;
   document.getElementById('mmtb-uname').value='';
   document.getElementById('mmtb-ust').textContent='';
+  await taiCauHinhDuAnMMTB(); // khôi phục lại đúng danh sách dự án HIỆN TẠI (mmtbViewDay() đã tạm đổi sang của ngày cũ)
   await mmtbLoadData();
 }
 function mmtbAskDelOne(key){
@@ -3433,7 +3423,8 @@ function mmtbExportXL(){
   var ds=p2(now.getDate())+'/'+p2(now.getMonth()+1)+'/'+now.getFullYear();
   var hdr=['STT','Tên máy','Hoạt động','Hư hỏng','Lưu kho','Tổng','Ghi chú'];
   mmtbProjects.forEach(function(proj){
-    var rows=[['BÁO CÁO MMTB - '+proj+' - NGÀY '+ds],[],hdr];
+    var tenDA=projName(proj);
+    var rows=[['BÁO CÁO MMTB - '+tenDA+' - NGÀY '+ds],[],hdr];
     mmtbMachines.forEach(function(m,idx){
       var r=[idx+1,m.n];
       var t=0;
@@ -3443,7 +3434,7 @@ function mmtbExportXL(){
       rows.push(r);
     });
     var ws=XLSX.utils.aoa_to_sheet(rows);
-    var sheetName=(proj.length>25?proj.slice(0,25):proj)+'_'+p2(now.getDate())+p2(now.getMonth()+1);
+    var sheetName=(tenDA.length>25?tenDA.slice(0,25):tenDA)+'_'+p2(now.getDate())+p2(now.getMonth()+1);
     XLSX.utils.book_append_sheet(wb,ws,sheetName);
   });
   XLSX.writeFile(wb,'MMTB_BCH_'+now.getFullYear()+p2(now.getMonth()+1)+p2(now.getDate())+'.xlsx');
@@ -3474,7 +3465,8 @@ async function mmtbExportXLRange(){
       var dt=h.data||{};
       projs.forEach(function(proj){
         var pdata=dt[proj]||{};
-        var sheetRows=[['BÁO CÁO MMTB - '+proj+' - NGÀY '+ds],[],hdr];
+        var tenDA=projName(proj);
+        var sheetRows=[['BÁO CÁO MMTB - '+tenDA+' - NGÀY '+ds],[],hdr];
         machs.forEach(function(m,idx){
           var r=[idx+1,m.n];var t=0;
           MMTB_STATUS.forEach(function(s){var v=(pdata[s]&&pdata[s][m.k])||0;r.push(v);t+=v;});
@@ -3482,7 +3474,7 @@ async function mmtbExportXLRange(){
           sheetRows.push(r);
         });
         var ws=XLSX.utils.aoa_to_sheet(sheetRows);
-        var sname=(proj.length>15?proj.slice(0,15):proj)+'_'+pts[2]+pts[1];
+        var sname=(tenDA.length>15?tenDA.slice(0,15):tenDA)+'_'+pts[2]+pts[1];
         XLSX.utils.book_append_sheet(wb,ws,sname);
       });
     });
@@ -3523,10 +3515,11 @@ function subscribeMMTBRealtime(){
 
 function applyMMTBRealtimeUpdate(incoming){
   if(incoming.machines) mmtbMachines = mmtbMergeMachines(incoming.machines);
-  if(incoming.projects) mmtbProjects = incoming.projects;
+  // mmtbProjects không còn lấy từ payload realtime nữa — luôn do cauhinh_du_an quyết định
+  // (taiCauHinhDuAnMMTB()), y hệt cách Nhân sự đã sửa — tránh 1 thiết bị cũ đẩy đè dự án sai lên.
   mmtbEnsureData();
 
-  var incomingData = incoming.data || {};
+  var incomingData = mmtbMigrateLegacyProjKeys(incoming.data || {});
   Object.keys(incomingData).forEach(function(proj){
     mmtbEnsureProj(proj);
     MMTB_STATUS.forEach(function(s){
@@ -3562,6 +3555,7 @@ async function mmtbInit(){
   var days=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
   document.getElementById('mmtb-dp').textContent=days[n.getDay()]+', ngày '+p2(n.getDate())+' tháng '+p2(n.getMonth()+1)+' năm '+n.getFullYear();
   mmtbLastLoadedDate=tkey();
+  await taiCauHinhDuAnMMTB();
   await mmtbLoadData();
   mmtbCheckTimeLock();
   await mmtbCheckAutoSaveAt8();
