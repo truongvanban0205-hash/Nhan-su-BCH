@@ -1704,7 +1704,8 @@ async function taiCauHinhDuAn(){
       // 1 dự án đã bị ẩn sau này vẫn hiện đúng tên, không hiện mã thô "duan_12".
       var nm={}; list.forEach(function(d){ nm['duan_'+d.id]=d.ten; });
       PROJ_NAME = nm;
-      var active = list.filter(function(d){ return !d.an; });
+      // Nhân sự lọc theo an_nhansu — ẩn/hiện riêng cho từng module, độc lập với MMTB.
+      var active = list.filter(function(d){ return !d.an_nhansu; });
       active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
       if(active.length){
         projects = active.map(function(d){ return 'duan_'+d.id; });
@@ -1717,13 +1718,14 @@ async function taiCauHinhDuAn(){
 
 // MMTB dùng CHUNG đúng 1 bảng cấu hình dự án với Nhân sự (cauhinh_du_an) — cùng 1 danh sách,
 // cùng tên hiển thị (PROJ_NAME), tránh lặp lại việc quản lý riêng lẻ từng module như trước đây.
+// Riêng ẨN/HIỆN thì tách biệt (an_mmtb) — 1 dự án có thể ẩn ở Nhân sự nhưng vẫn hiện ở MMTB.
 async function taiCauHinhDuAnMMTB(){
   try{
     var r = await sc.rpc('cauhinh_lay_du_an');
     var list = r.data;
     if(list && list.length){
       list.forEach(function(d){ PROJ_NAME['duan_'+d.id]=d.ten; });
-      var active = list.filter(function(d){ return !d.an; });
+      var active = list.filter(function(d){ return !d.an_mmtb; });
       active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
       if(active.length){
         mmtbProjects = active.map(function(d){ return 'duan_'+d.id; });

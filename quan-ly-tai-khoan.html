@@ -689,11 +689,12 @@ function renderListDuAn(){
   const el = document.getElementById("listDuAn");
   if(duAnCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có dự án nào.</div>'; return; }
   el.innerHTML = duAnCache.map(d => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border); ${d.an?'opacity:.5;':''}">
-      <span>${nl2br(d.ten)}${d.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${d.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);">
+      <span style="${(d.an_nhansu&&d.an_mmtb)?'opacity:.5;':''}">${nl2br(d.ten)}${d.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}</span>
       <span style="white-space:nowrap;">
         <button class="icon-btn" data-rename-duan="${d.id}">✏️ Đổi tên</button>
-        <button class="icon-btn" data-toggle-duan="${d.id}">${d.an?'👁️ Hiện':'🙈 Ẩn'}</button>
+        <button class="icon-btn" data-toggle-duan-ns="${d.id}" style="${d.an_nhansu?'color:var(--bad);':''}">${d.an_nhansu?'🙈 NS: Ẩn':'👁️ NS: Hiện'}</button>
+        <button class="icon-btn" data-toggle-duan-mmtb="${d.id}" style="${d.an_mmtb?'color:var(--bad);':''}">${d.an_mmtb?'🙈 MMTB: Ẩn':'👁️ MMTB: Hiện'}</button>
         ${d.mac_dinh?'':`<button class="icon-btn reject" data-del-duan="${d.id}">Xoá</button>`}
       </span>
     </div>`).join("");
@@ -708,11 +709,20 @@ function renderListDuAn(){
       await loadCauHinhNS(); renderCauHinhAll();
     });
   });
-  el.querySelectorAll("[data-toggle-duan]").forEach(btn=>{
+  el.querySelectorAll("[data-toggle-duan-ns]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
-      const id = parseInt(btn.dataset.toggleDuan);
+      const id = parseInt(btn.dataset.toggleDuanNs);
       const d = duAnCache.find(x=>x.id===id);
-      const { error } = await sb.rpc("admin_an_hien_du_an", { p_pass: currentAdminPass, p_id: id, p_an: !d.an });
+      const { error } = await sb.rpc("admin_an_hien_du_an_nhansu", { p_pass: currentAdminPass, p_id: id, p_an: !d.an_nhansu });
+      if(error){ alert("Không thao tác được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+  el.querySelectorAll("[data-toggle-duan-mmtb]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.toggleDuanMmtb);
+      const d = duAnCache.find(x=>x.id===id);
+      const { error } = await sb.rpc("admin_an_hien_du_an_mmtb", { p_pass: currentAdminPass, p_id: id, p_an: !d.an_mmtb });
       if(error){ alert("Không thao tác được."); return; }
       await loadCauHinhNS(); renderCauHinhAll();
     });
