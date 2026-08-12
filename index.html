@@ -1325,7 +1325,7 @@ async function exportFullReport(){
   // Render panel chi tiết Nhân sự
   var nsPanelEl=document.getElementById('reportNsChartPanel');
   var nsYesterday=nsMap[days7[5]]||null;
-  if(nsPanelEl)renderReportNsPanel(nsProjs,nsCols,nsData,nsYesterday);
+  if(nsPanelEl)renderReportNsPanel(nsProjs,nsCols,nsData,nsYesterday,dateStr);
 
   // Render panel chi tiết MMTB
   var mmtbPanelEl=document.getElementById('reportMmtbChartPanel');
@@ -1372,7 +1372,7 @@ function mergedMmtbMachines(){
   return mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES;
 }
 
-function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
+function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr){
   var el=document.getElementById('reportNsChartPanel');
   if(!el)return;
   // Bảng màu luân phiên cho tối đa 26 chức danh (không cần gộp nhóm nữa — mỗi chức danh đã có cột riêng)
@@ -1384,6 +1384,13 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
     });
     return total;
   }
+  var nk=nghiKey(); // cần biết TRƯỚC để mỗi chức danh cũng hiện đúng "đi làm/tổng"
+  function calcColNghi(colKey,projs,dt){
+    if(!nk) return 0;
+    var total=0;
+    (projs||[]).forEach(function(p){ total+=(dt[p]&&dt[p][nk]?dt[p][nk][colKey]||0:0); });
+    return total;
+  }
   var prevProjs=prevDayFull?(prevDayFull.projects||[]):null;
   var prevData=prevDayFull?(prevDayFull.data||{}):null;
   var rows=[],grandTotal=0;
@@ -1392,7 +1399,8 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
     grandTotal+=v;
     if(v<=0)return; // chỉ hiện chức danh có dữ liệu, bỏ qua dòng = 0
     var pv=prevData?calcCol(c.k,prevProjs,prevData):null;
-    rows.push({label:c.n,value:v,prev:pv,color:palette[ci%palette.length]});
+    var diLamV=v-calcColNghi(c.k,nsProjs,nsData);
+    rows.push({label:c.n,value:v,diLam:diLamV,prev:pv,color:palette[ci%palette.length]});
   });
   function rowHtml(r){
     var arrow='';
@@ -1403,19 +1411,19 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;">'
       +'<span style="display:flex;align-items:center;gap:5px;min-width:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+r.color+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a;white-space:normal;line-height:1.25;">'+r.label+'</span></span>'
-      +'<span style="font-weight:600;color:#1a1a1a;min-width:26px;text-align:right;flex-shrink:0;">'+arrow+r.value+'</span></div>';
+      +'<span style="font-weight:600;color:#1a1a1a;min-width:26px;text-align:right;flex-shrink:0;">'+arrow+r.diLam+'/'+r.value+'</span></div>';
   }
   // Chia 2 cột song song nếu danh sách dài, đỡ kéo dài layout ảnh xuất báo cáo
   var half=Math.ceil(rows.length/2);
   var colA=rows.slice(0,half), colB=rows.slice(half);
-  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">Nhân sự BCH CL-CR</div>';
+  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;">Nhân sự BCH CL-CR</div>'
+    +'<div style="font-size:10px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+(dateStr||'')+'</div>';
   html+='<div style="display:flex;gap:14px;">'
     +'<div style="flex:1;min-width:0;">'+colA.map(rowHtml).join('')+'</div>'
     +'<div style="flex:1;min-width:0;">'+colB.map(rowHtml).join('')+'</div>'
     +'</div>';
   html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;"><span style="color:#555;">Tổng</span><span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span></div>';
   // Tách dòng Đi làm/Nghỉ theo loại ca CUỐI CÙNG trong cấu hình (quy ước Nghỉ theo vị trí)
-  var nk=nghiKey();
   if(nk){
     var nghiTotal=0;
     nsProjs.forEach(function(p){
@@ -1425,34 +1433,52 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#555;">Đi làm</span><span style="font-weight:700;color:#1a1a1a">'+diLamTotal+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#e53935;">Nghỉ</span><span style="font-weight:700;color:#e53935">'+nghiTotal+'</span></div>';
   }
-  // Bổ sung riêng LXLM & CNCH — 2 chức danh trọng yếu cần theo dõi sát theo từng dự án, dạng
-  // "đi làm/tổng" (VD 12/22 = 12 người đang đi làm trên tổng 22 người thuộc chức danh đó).
-  var specialCols=(nsCols&&nsCols.length?nsCols:DEF_COLS).filter(function(c){
-    return c.n==='NV.LXLM' || c.n==='CNCH';
-  });
-  if(specialCols.length){
-    html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-weight:700;font-size:11px;color:#1565c0;">LXLM & CNCH theo dự án</div>';
-    specialCols.forEach(function(c){
-      html+='<div style="font-weight:700;color:#1a1a1a;margin-top:4px;">'+c.n+'</div>';
-      var sumDiLam=0, sumTong=0;
-      nsProjs.forEach(function(p){
-        var tong=0, nghiC=0;
-        TYPES.forEach(function(t){
-          var v=(nsData[p]&&nsData[p][t]?nsData[p][t][c.k]||0:0);
-          tong+=v;
-          if(t===nk) nghiC=v;
-        });
-        var diLam=tong-nghiC;
-        sumDiLam+=diLam; sumTong+=tong;
-        if(tong<=0)return; // dự án nào không có ai thuộc chức danh này thì bỏ qua, đỡ rối
-        html+='<div style="display:flex;justify-content:space-between;padding:1px 0 1px 8px;">'
-          +'<span style="color:#555;">'+nl2br(projName(p))+'</span>'
-          +'<span style="font-weight:600;color:#1a1a1a;">'+diLam+'/'+tong+'</span></div>';
+  // Chi tiết CNCH & LXLM theo dự án — 2 chức danh lãnh đạo quan tâm hằng ngày, trình bày dạng
+  // bảng (dự án x 2 cột) thay vì liệt kê rời rạc, dòng Tổng hợp tô nổi bật để nhìn phát thấy ngay.
+  var CNCH_col=(nsCols&&nsCols.length?nsCols:DEF_COLS).find(function(c){return c.n==='CNCH';});
+  var LXLM_col=(nsCols&&nsCols.length?nsCols:DEF_COLS).find(function(c){return c.n==='NV.LXLM';});
+  if(CNCH_col||LXLM_col){
+    function tinhDiLamTong(colObj,proj){
+      if(!colObj) return {diLam:0,tong:0};
+      var tong=0, nghiV=0;
+      TYPES.forEach(function(t){
+        var v=(nsData[proj]&&nsData[proj][t]?nsData[proj][t][colObj.k]||0:0);
+        tong+=v;
+        if(t===nk) nghiV=v;
       });
-      html+='<div style="display:flex;justify-content:space-between;padding:1px 0 1px 8px;border-top:1px dashed #ddd;margin-top:2px;">'
-        +'<span style="font-weight:700;color:#1a1a1a;">Tổng hợp</span>'
-        +'<span style="font-weight:800;color:#1565c0;">'+sumDiLam+'/'+sumTong+'</span></div>';
+      return {diLam:tong-nghiV,tong:tong};
+    }
+    var tblRows='';
+    var sumCNCH={diLam:0,tong:0}, sumLXLM={diLam:0,tong:0};
+    nsProjs.forEach(function(p){
+      var c1=tinhDiLamTong(CNCH_col,p);
+      var l1=tinhDiLamTong(LXLM_col,p);
+      sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
+      sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
+      if(c1.tong<=0 && l1.tong<=0) return; // dự án không có ai thuộc 2 chức danh này thì bỏ qua, đỡ rối
+      tblRows+='<tr>'
+        +'<td style="padding:2px 0;color:#555;">'+nl2br(projName(p))+'</td>'
+        +'<td style="padding:2px 0;text-align:right;font-weight:600;">'+(c1.tong>0?c1.diLam+'/'+c1.tong:'-')+'</td>'
+        +'<td style="padding:2px 0;text-align:right;font-weight:600;">'+(l1.tong>0?l1.diLam+'/'+l1.tong:'-')+'</td>'
+        +'</tr>';
     });
+    html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;">'
+      +'<div style="font-weight:700;font-size:11px;color:#1565c0;">Chi tiết số lượng CNCH và LXLM</div>'
+      +'<div style="font-size:10px;color:#888;margin-bottom:4px;">'+(dateStr||'')+'</div>'
+      +'</div>';
+    html+='<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+      +'<tr style="color:#777;border-bottom:1px solid #ddd;">'
+      +'<td style="padding:2px 0;">Dự án</td>'
+      +'<td style="padding:2px 0;text-align:right;">CNCH</td>'
+      +'<td style="padding:2px 0;text-align:right;">LXLM</td>'
+      +'</tr>'
+      +tblRows
+      +'<tr style="background:#fff3cd;">'
+      +'<td style="padding:3px 0 3px 3px;font-weight:800;color:#8a5a00;">Tổng hợp</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;color:#8a5a00;">'+sumCNCH.diLam+'/'+sumCNCH.tong+'</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;color:#8a5a00;">'+sumLXLM.diLam+'/'+sumLXLM.tong+'</td>'
+      +'</tr>'
+      +'</table>';
   }
   el.innerHTML=html;
 }
@@ -1472,6 +1498,14 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
     });
     return v;
   }
+  function calcMachHD(machKey,projsList,dataObj){
+    var v=0;
+    (projsList||[]).forEach(function(proj){
+      var pdata=dataObj[proj]||{};
+      v+=(pdata.hoatdong&&pdata.hoatdong[machKey]||0);
+    });
+    return v;
+  }
   var html='<div style="font-weight:700;font-size:10px;color:#e65100;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">Biểu đồ MMTB</div>';
   html+='<div style="font-size:9px;color:#888;margin-bottom:6px;">'+dateStr+'</div>';
   html+='<div style="font-weight:700;font-size:9px;color:#e65100;margin-bottom:4px;">MMTB BCH CL-CR</div>';
@@ -1486,6 +1520,7 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
   }
   mList.forEach(function(m,i){
     var v=calcMachTotal(m.k,mProjs,dt);
+    var hd=calcMachHD(m.k,mProjs,dt);
     var arrow='';
     if(ydt){
       var pv=calcMachTotal(m.k,yProjs,ydt);
@@ -1495,7 +1530,7 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:1px 0;">'
       +'<span style="display:flex;align-items:center;gap:4px;"><span style="width:7px;height:7px;border-radius:50%;background:'+palette[i%palette.length]+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a">'+m.n+'</span></span>'
-      +'<span style="font-weight:600;color:#1a1a1a;min-width:30px;text-align:right">'+arrow+v+'</span></div>';
+      +'<span style="font-weight:600;color:#1a1a1a;min-width:30px;text-align:right">'+arrow+hd+'/'+v+'</span></div>';
   });
   function totArrow(cur,prev){
     if(!ydt)return '';
@@ -2283,6 +2318,16 @@ function renderCharts(){
 
   var el=document.getElementById('chart_BCH');
   if(!el)return;
+  var nk2=nghiKey(); // cần biết TRƯỚC khi dựng danh sách, để mỗi chức danh cũng hiện đúng "đi làm/tổng"
+  function calcColNghi(colKey,src){
+    if(!nk2) return 0;
+    var total=0;
+    var srcData=src||data;
+    projects.forEach(function(proj){
+      total+=(srcData[proj]&&srcData[proj][nk2]?srcData[proj][nk2][colKey]||0:0);
+    });
+    return total;
+  }
   var rows=[];
   var grandTotal=0;
   (COLS&&COLS.length?COLS:DEF_COLS).forEach(function(c,ci){
@@ -2290,7 +2335,8 @@ function renderCharts(){
     grandTotal+=v;
     if(v<=0)return; // chỉ hiện chức danh có dữ liệu, bỏ qua dòng = 0
     var prevV=prevDayData?calcColBCH(c.k,prevDayData):undefined;
-    rows.push({label:c.n,value:v,prev:prevV,color:palette[ci%palette.length]});
+    var diLamV=v-calcColNghi(c.k);
+    rows.push({label:c.n,value:v,diLam:diLamV,prev:prevV,color:palette[ci%palette.length]});
   });
 
   function rowHtml2(r){
@@ -2304,7 +2350,7 @@ function renderCharts(){
       +'<span style="display:flex;align-items:center;gap:5px;min-width:0;">'
       +'<span style="width:8px;height:8px;border-radius:50%;background:'+r.color+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a;white-space:normal;line-height:1.25;">'+r.label+'</span></span>'
-      +'<span style="font-weight:700;color:'+numColor2+';min-width:20px;text-align:right;flex-shrink:0;">'+arrow2+r.value+'</span>'
+      +'<span style="font-weight:700;color:'+numColor2+';min-width:20px;text-align:right;flex-shrink:0;">'+arrow2+r.diLam+'/'+r.value+'</span>'
       +'</div>';
   }
 
@@ -2324,7 +2370,6 @@ function renderCharts(){
     +'<span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span>'
     +'</div>';
   // Tách dòng Đi làm/Nghỉ theo loại ca CUỐI CÙNG trong cấu hình (quy ước Nghỉ theo vị trí)
-  var nk2=nghiKey();
   if(nk2){
     var tongNghi=0;
     projects.forEach(function(proj){
@@ -2342,34 +2387,52 @@ function renderCharts(){
       +'<span style="font-weight:600;color:#e53935;font-size:10px;">'+tongNghi+'</span>'
       +'</div>';
   }
-  // Bổ sung riêng LXLM & CNCH — 2 chức danh trọng yếu cần theo dõi sát theo từng dự án, dạng
-  // "đi làm/tổng" (VD 12/22 = 12 người đang đi làm trên tổng 22 người thuộc chức danh đó).
-  var specialCols2=(COLS&&COLS.length?COLS:DEF_COLS).filter(function(c){
-    return c.n==='NV.LXLM' || c.n==='CNCH';
-  });
-  if(specialCols2.length){
-    html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-weight:700;font-size:10px;color:#1565c0;">LXLM & CNCH theo dự án</div>';
-    specialCols2.forEach(function(c){
-      html+='<div style="font-weight:700;color:#1a1a1a;font-size:10px;margin-top:4px;">'+c.n+'</div>';
-      var sumDiLam2=0, sumTong2=0;
-      projects.forEach(function(p){
-        var tong2=0, nghiC2=0;
-        TYPES.forEach(function(t){
-          var v=(data[p]&&data[p][t]?data[p][t][c.k]||0:0);
-          tong2+=v;
-          if(t===nk2) nghiC2=v;
-        });
-        var diLam2=tong2-nghiC2;
-        sumDiLam2+=diLam2; sumTong2+=tong2;
-        if(tong2<=0)return; // dự án nào không có ai thuộc chức danh này thì bỏ qua, đỡ rối
-        html+='<div style="display:flex;justify-content:space-between;padding:1px 0 1px 8px;font-size:10px;">'
-          +'<span style="color:#555;">'+nl2br(projName(p))+'</span>'
-          +'<span style="font-weight:600;color:#1a1a1a;">'+diLam2+'/'+tong2+'</span></div>';
+  // Chi tiết CNCH & LXLM theo dự án — 2 chức danh lãnh đạo quan tâm hằng ngày, trình bày dạng
+  // bảng (dự án x 2 cột) thay vì liệt kê rời rạc, dòng Tổng hợp tô nổi bật để nhìn phát thấy ngay.
+  var CNCH_col=(COLS&&COLS.length?COLS:DEF_COLS).find(function(c){return c.n==='CNCH';});
+  var LXLM_col=(COLS&&COLS.length?COLS:DEF_COLS).find(function(c){return c.n==='NV.LXLM';});
+  if(CNCH_col||LXLM_col){
+    function tinhDiLamTong(colObj,proj){
+      if(!colObj) return {diLam:0,tong:0};
+      var tong=0, nghiV=0;
+      TYPES.forEach(function(t){
+        var v=(data[proj]&&data[proj][t]?data[proj][t][colObj.k]||0:0);
+        tong+=v;
+        if(t===nk2) nghiV=v;
       });
-      html+='<div style="display:flex;justify-content:space-between;padding:1px 0 1px 8px;font-size:10px;border-top:1px dashed #ddd;margin-top:2px;">'
-        +'<span style="font-weight:700;color:#1a1a1a;">Tổng hợp</span>'
-        +'<span style="font-weight:800;color:#1565c0;">'+sumDiLam2+'/'+sumTong2+'</span></div>';
+      return {diLam:tong-nghiV,tong:tong};
+    }
+    var tblRows='';
+    var sumCNCH={diLam:0,tong:0}, sumLXLM={diLam:0,tong:0};
+    projects.forEach(function(p){
+      var c1=tinhDiLamTong(CNCH_col,p);
+      var l1=tinhDiLamTong(LXLM_col,p);
+      sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
+      sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
+      if(c1.tong<=0 && l1.tong<=0) return; // dự án không có ai thuộc 2 chức danh này thì bỏ qua, đỡ rối
+      tblRows+='<tr>'
+        +'<td style="padding:2px 0;color:#555;">'+nl2br(projName(p))+'</td>'
+        +'<td style="padding:2px 0;text-align:right;font-weight:600;">'+(c1.tong>0?c1.diLam+'/'+c1.tong:'-')+'</td>'
+        +'<td style="padding:2px 0;text-align:right;font-weight:600;">'+(l1.tong>0?l1.diLam+'/'+l1.tong:'-')+'</td>'
+        +'</tr>';
     });
+    html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;">'
+      +'<div style="font-weight:700;font-size:10px;color:#1565c0;">Chi tiết số lượng CNCH và LXLM</div>'
+      +'<div style="font-size:9px;color:#888;margin-bottom:4px;">'+dateStr+'</div>'
+      +'</div>';
+    html+='<table style="width:100%;border-collapse:collapse;font-size:10px;">'
+      +'<tr style="color:#777;border-bottom:1px solid #ddd;">'
+      +'<td style="padding:2px 0;">Dự án</td>'
+      +'<td style="padding:2px 0;text-align:right;">CNCH</td>'
+      +'<td style="padding:2px 0;text-align:right;">LXLM</td>'
+      +'</tr>'
+      +tblRows
+      +'<tr style="background:#fff3cd;">'
+      +'<td style="padding:3px 0 3px 3px;font-weight:800;color:#8a5a00;">Tổng hợp</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;color:#8a5a00;">'+sumCNCH.diLam+'/'+sumCNCH.tong+'</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;color:#8a5a00;">'+sumLXLM.diLam+'/'+sumLXLM.tong+'</td>'
+      +'</tr>'
+      +'</table>';
   }
   el.innerHTML=html;
 }
@@ -3449,7 +3512,7 @@ function mmtbRenderCharts(){
       +'<span style="display:flex;align-items:center;gap:4px;">'
       +'<span style="width:7px;height:7px;border-radius:50%;background:'+palette[i%palette.length]+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a">'+m.n+'</span></span>'
-      +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+v+'</span>'
+      +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+hd+'/'+v+'</span>'
       +'</div>';
   });
   html+='<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;">'
