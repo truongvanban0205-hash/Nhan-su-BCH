@@ -1425,6 +1425,35 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull){
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#555;">Đi làm</span><span style="font-weight:700;color:#1a1a1a">'+diLamTotal+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#e53935;">Nghỉ</span><span style="font-weight:700;color:#e53935">'+nghiTotal+'</span></div>';
   }
+  // Bổ sung riêng LXLM & CNCH — 2 chức danh trọng yếu cần theo dõi sát theo từng dự án, dạng
+  // "đi làm/tổng" (VD 12/22 = 12 người đang đi làm trên tổng 22 người thuộc chức danh đó).
+  var specialCols=(nsCols&&nsCols.length?nsCols:DEF_COLS).filter(function(c){
+    return c.n==='NV.LXLM' || c.n==='CNCH';
+  });
+  if(specialCols.length){
+    html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-weight:700;font-size:11px;color:#1565c0;">LXLM & CNCH theo dự án</div>';
+    specialCols.forEach(function(c){
+      html+='<div style="font-weight:700;color:#1a1a1a;margin-top:4px;">'+c.n+'</div>';
+      var sumDiLam=0, sumTong=0;
+      nsProjs.forEach(function(p){
+        var tong=0, nghiC=0;
+        TYPES.forEach(function(t){
+          var v=(nsData[p]&&nsData[p][t]?nsData[p][t][c.k]||0:0);
+          tong+=v;
+          if(t===nk) nghiC=v;
+        });
+        var diLam=tong-nghiC;
+        sumDiLam+=diLam; sumTong+=tong;
+        if(tong<=0)return; // dự án nào không có ai thuộc chức danh này thì bỏ qua, đỡ rối
+        html+='<div style="display:flex;justify-content:space-between;padding:1px 0 1px 8px;">'
+          +'<span style="color:#555;">'+nl2br(projName(p))+'</span>'
+          +'<span style="font-weight:600;color:#1a1a1a;">'+diLam+'/'+tong+'</span></div>';
+      });
+      html+='<div style="display:flex;justify-content:space-between;padding:1px 0 1px 8px;border-top:1px dashed #ddd;margin-top:2px;">'
+        +'<span style="font-weight:700;color:#1a1a1a;">Tổng hợp</span>'
+        +'<span style="font-weight:800;color:#1565c0;">'+sumDiLam+'/'+sumTong+'</span></div>';
+    });
+  }
   el.innerHTML=html;
 }
 
@@ -2312,6 +2341,35 @@ function renderCharts(){
       +'<span style="color:#e53935;font-size:10px;">Nghỉ</span>'
       +'<span style="font-weight:600;color:#e53935;font-size:10px;">'+tongNghi+'</span>'
       +'</div>';
+  }
+  // Bổ sung riêng LXLM & CNCH — 2 chức danh trọng yếu cần theo dõi sát theo từng dự án, dạng
+  // "đi làm/tổng" (VD 12/22 = 12 người đang đi làm trên tổng 22 người thuộc chức danh đó).
+  var specialCols2=(COLS&&COLS.length?COLS:DEF_COLS).filter(function(c){
+    return c.n==='NV.LXLM' || c.n==='CNCH';
+  });
+  if(specialCols2.length){
+    html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-weight:700;font-size:10px;color:#1565c0;">LXLM & CNCH theo dự án</div>';
+    specialCols2.forEach(function(c){
+      html+='<div style="font-weight:700;color:#1a1a1a;font-size:10px;margin-top:4px;">'+c.n+'</div>';
+      var sumDiLam2=0, sumTong2=0;
+      projects.forEach(function(p){
+        var tong2=0, nghiC2=0;
+        TYPES.forEach(function(t){
+          var v=(data[p]&&data[p][t]?data[p][t][c.k]||0:0);
+          tong2+=v;
+          if(t===nk2) nghiC2=v;
+        });
+        var diLam2=tong2-nghiC2;
+        sumDiLam2+=diLam2; sumTong2+=tong2;
+        if(tong2<=0)return; // dự án nào không có ai thuộc chức danh này thì bỏ qua, đỡ rối
+        html+='<div style="display:flex;justify-content:space-between;padding:1px 0 1px 8px;font-size:10px;">'
+          +'<span style="color:#555;">'+nl2br(projName(p))+'</span>'
+          +'<span style="font-weight:600;color:#1a1a1a;">'+diLam2+'/'+tong2+'</span></div>';
+      });
+      html+='<div style="display:flex;justify-content:space-between;padding:1px 0 1px 8px;font-size:10px;border-top:1px dashed #ddd;margin-top:2px;">'
+        +'<span style="font-weight:700;color:#1a1a1a;">Tổng hợp</span>'
+        +'<span style="font-weight:800;color:#1565c0;">'+sumDiLam2+'/'+sumTong2+'</span></div>';
+    });
   }
   el.innerHTML=html;
 }
