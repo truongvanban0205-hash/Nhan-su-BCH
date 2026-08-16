@@ -1325,7 +1325,7 @@ async function exportFullReport(){
   // Render panel chi tiết Nhân sự
   var nsPanelEl=document.getElementById('reportNsChartPanel');
   var nsYesterday=nsMap[days7[5]]||null;
-  if(nsPanelEl)renderReportNsPanel(nsProjs,nsCols,nsData,nsYesterday,dateStr);
+  if(nsPanelEl)renderReportNsPanel(nsProjs,nsCols,nsData,nsYesterday,dateStr,mList,mmtbToday);
 
   // Render panel chi tiết MMTB
   var mmtbPanelEl=document.getElementById('reportMmtbChartPanel');
@@ -1372,7 +1372,7 @@ function mergedMmtbMachines(){
   return mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES;
 }
 
-function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr){
+function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmtbToday){
   var el=document.getElementById('reportNsChartPanel');
   if(!el)return;
   // Bảng màu luân phiên cho tối đa 26 chức danh (không cần gộp nhóm nữa — mỗi chức danh đã có cột riêng)
@@ -1394,8 +1394,13 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr){
   var prevProjs=prevDayFull?(prevDayFull.projects||[]):null;
   var prevData=prevDayFull?(prevDayFull.data||{}):null;
   var rows=[],grandTotal=0;
+  var changesNS=[]; // dùng cho mục "Ghi chú" — so sánh TOÀN BỘ chức danh với hôm qua, kể cả khi hôm nay = 0
   (nsCols&&nsCols.length?nsCols:DEF_COLS).forEach(function(c,ci){
     var v=calcCol(c.k,nsProjs,nsData);
+    if(prevData){
+      var pv0=calcCol(c.k,prevProjs,prevData);
+      if(v!==pv0)changesNS.push(c.n+' ('+(v-pv0>0?'+':'')+(v-pv0)+')');
+    }
     grandTotal+=v;
     if(v<=0)return; // chỉ hiện chức danh có dữ liệu, bỏ qua dòng = 0
     var pv=prevData?calcCol(c.k,prevProjs,prevData):null;
@@ -1411,7 +1416,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr){
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;">'
       +'<span style="display:flex;align-items:center;gap:5px;min-width:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+r.color+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a;white-space:normal;line-height:1.25;">'+r.label+'</span></span>'
-      +'<span style="font-weight:600;color:#1a1a1a;min-width:26px;text-align:right;flex-shrink:0;">'+arrow+r.diLam+'/'+r.value+'</span></div>';
+      +'<span style="min-width:26px;text-align:right;flex-shrink:0;">'+arrow+fmtDL(r.diLam,r.value)+'</span></div>';
   }
   // Chia 2 cột song song nếu danh sách dài, đỡ kéo dài layout ảnh xuất báo cáo
   var half=Math.ceil(rows.length/2);
@@ -1433,8 +1438,8 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr){
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#555;">Đi làm</span><span style="font-weight:700;color:#1a1a1a">'+diLamTotal+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#e53935;">Nghỉ</span><span style="font-weight:700;color:#e53935">'+nghiTotal+'</span></div>';
   }
-  // Chi tiết CNCH & LXLM theo dự án — 2 chức danh lãnh đạo quan tâm hằng ngày, trình bày dạng
-  // bảng (dự án x 2 cột) thay vì liệt kê rời rạc, dòng Tổng hợp tô nổi bật để nhìn phát thấy ngay.
+  // Chi tiết CNCH & LXLM & SL.MMTB theo dự án — trình bày dạng bảng (dự án x 3 cột), dòng Tổng hợp
+  // tô nổi bật để lãnh đạo nhìn phát thấy ngay (đây là 3 chỉ số cần theo dõi sát hằng ngày).
   var CNCH_col=(nsCols&&nsCols.length?nsCols:DEF_COLS).find(function(c){return c.n==='CNCH';});
   var LXLM_col=(nsCols&&nsCols.length?nsCols:DEF_COLS).find(function(c){return c.n==='NV.LXLM';});
   if(CNCH_col||LXLM_col){
@@ -1448,18 +1453,30 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr){
       });
       return {diLam:tong-nghiV,tong:tong};
     }
+    function tinhMmtb(proj){
+      var hd=0,tong=0;
+      var pd=(mmtbToday&&mmtbToday.data&&mmtbToday.data[proj])||{};
+      (mList||[]).forEach(function(m){
+        hd+=(pd.hoatdong&&pd.hoatdong[m.k])||0;
+        tong+=(pd.hoatdong&&pd.hoatdong[m.k]||0)+(pd.huhong&&pd.huhong[m.k]||0)+(pd.luukho&&pd.luukho[m.k]||0);
+      });
+      return {hd:hd,tong:tong};
+    }
     var tblRows='';
-    var sumCNCH={diLam:0,tong:0}, sumLXLM={diLam:0,tong:0};
+    var sumCNCH={diLam:0,tong:0}, sumLXLM={diLam:0,tong:0}, sumMmtb={hd:0,tong:0};
     nsProjs.forEach(function(p){
       var c1=tinhDiLamTong(CNCH_col,p);
       var l1=tinhDiLamTong(LXLM_col,p);
+      var m1=tinhMmtb(p);
       sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
       sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
-      if(c1.tong<=0 && l1.tong<=0) return; // dự án không có ai thuộc 2 chức danh này thì bỏ qua, đỡ rối
+      sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
+      if(c1.tong<=0 && l1.tong<=0 && m1.tong<=0) return; // dự án trắng cả 3 mục thì bỏ qua, đỡ rối
       tblRows+='<tr>'
         +'<td style="padding:2px 0;color:#555;">'+nl2br(projName(p))+'</td>'
-        +'<td style="padding:2px 0;text-align:right;font-weight:600;">'+(c1.tong>0?c1.diLam+'/'+c1.tong:'-')+'</td>'
-        +'<td style="padding:2px 0;text-align:right;font-weight:600;">'+(l1.tong>0?l1.diLam+'/'+l1.tong:'-')+'</td>'
+        +'<td style="padding:2px 0;text-align:right;">'+(c1.tong>0?fmtDL(c1.diLam,c1.tong):'-')+'</td>'
+        +'<td style="padding:2px 0;text-align:right;">'+(l1.tong>0?fmtDL(l1.diLam,l1.tong):'-')+'</td>'
+        +'<td style="padding:2px 0;text-align:right;">'+(m1.tong>0?fmtDL(m1.hd,m1.tong):'-')+'</td>'
         +'</tr>';
     });
     html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;">'
@@ -1471,17 +1488,24 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr){
       +'<td style="padding:2px 0;">Dự án</td>'
       +'<td style="padding:2px 0;text-align:right;">CNCH</td>'
       +'<td style="padding:2px 0;text-align:right;">LXLM</td>'
+      +'<td style="padding:2px 0;text-align:right;">SL.MMTB</td>'
       +'</tr>'
       +tblRows
       +'<tr style="background:#fff3cd;">'
       +'<td style="padding:3px 0 3px 3px;font-weight:800;color:#8a5a00;">Tổng hợp</td>'
-      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;color:#8a5a00;">'+sumCNCH.diLam+'/'+sumCNCH.tong+'</td>'
-      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;color:#8a5a00;">'+sumLXLM.diLam+'/'+sumLXLM.tong+'</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;">'+fmtDL(sumCNCH.diLam,sumCNCH.tong)+'</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;">'+fmtDL(sumLXLM.diLam,sumLXLM.tong)+'</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;">'+fmtDL(sumMmtb.hd,sumMmtb.tong)+'</td>'
       +'</tr>'
       +'</table>';
   }
+  // Ghi chú: liệt kê chức danh nào tăng/giảm so với hôm qua
+  html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;font-size:10px;color:#555;">'
+    +'<b>Ghi chú:</b> '+(changesNS.length?changesNS.join('; '):'Không có biến động so với ngày hôm trước')
+    +'</div>';
   el.innerHTML=html;
 }
+
 
 function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterday){
   var el=document.getElementById('reportMmtbChartPanel');
@@ -1518,19 +1542,21 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
       if(pdata.luukho)Object.values(pdata.luukho).forEach(function(v){totalLKy+=v||0;});
     });
   }
+  var changesM2=[]; // dùng cho mục "Ghi chú" — so sánh TOÀN BỘ loại máy với hôm qua, kể cả khi hôm nay = 0
   mList.forEach(function(m,i){
     var v=calcMachTotal(m.k,mProjs,dt);
     var hd=calcMachHD(m.k,mProjs,dt);
     var arrow='';
     if(ydt){
       var pv=calcMachTotal(m.k,yProjs,ydt);
+      if(v!==pv)changesM2.push(m.n+' ('+(v-pv>0?'+':'')+(v-pv)+')');
       if(v>pv)arrow='<span style="color:#1565c0;font-size:11px;font-weight:900">↑</span> ';
       else if(v<pv)arrow='<span style="color:#e53935;font-size:11px;font-weight:900">↓</span> ';
     }
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:1px 0;">'
       +'<span style="display:flex;align-items:center;gap:4px;"><span style="width:7px;height:7px;border-radius:50%;background:'+palette[i%palette.length]+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a">'+m.n+'</span></span>'
-      +'<span style="font-weight:600;color:#1a1a1a;min-width:30px;text-align:right">'+arrow+hd+'/'+v+'</span></div>';
+      +'<span style="min-width:30px;text-align:right">'+arrow+fmtDL(hd,v)+'</span></div>';
   });
   function totArrow(cur,prev){
     if(!ydt)return '';
@@ -1544,6 +1570,9 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
     +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#888;font-size:10px;">Lưu kho</span><span style="font-weight:600;font-size:10px;">'+totArrow(mTotal.lk,totalLKy)+mTotal.lk+'</span></div>'
     +'</div>';
   html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;"><span style="color:#555;">Tổng</span><span style="font-weight:700;color:#1a1a1a">'+totArrow(mTotal.hd+mTotal.hh+mTotal.lk,totalHDy+totalHHy+totalLKy)+(mTotal.hd+mTotal.hh+mTotal.lk)+'</span></div>';
+  html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-size:10px;color:#555;">'
+    +'<b>Ghi chú:</b> '+(changesM2.length?changesM2.join('; '):'Không có biến động so với ngày hôm trước')
+    +'</div>';
   el.innerHTML=html;
 }
 
@@ -1759,6 +1788,11 @@ async function taiCauHinhCaLamViec(){
 var PROJ_NAME={duan_1:'Dự án 1',duan_2:'Dự án 2',duan_3:'Dự án 3',duan_4:'Dự án 4',duan_5:'Dự án 5'};
 function projName(k){ return PROJ_NAME[k] || k; }
 function nl2br(s){ return String(s==null?'':s).split('\n').join('<br>'); }
+// Hiện dạng "đi làm/tổng" (hoặc "hoạt động/tổng") với số đầu tô xanh lá đậm, số sau giữ màu đen —
+// dùng chung cho mọi bảng (Nhân sự, MMTB, CNCH/LXLM...) để đồng nhất màu sắc.
+function fmtDL(soDau,soSau){
+  return '<span style="color:#33691E;font-weight:700;">'+soDau+'</span><span style="color:#1a1a1a;">/'+soSau+'</span>';
+}
 async function taiCauHinhDuAn(){
   try{
     var r = await sc.rpc('cauhinh_lay_du_an');
@@ -2300,7 +2334,12 @@ function calcTotals(){
   if(bgte)bgte.textContent=fmtN(bgt);
 }
 
-function renderCharts(){
+async function renderCharts(){
+  // Đảm bảo có sẵn dữ liệu MMTB hôm nay để tính cột SL.MMTB, dù chưa từng mở tab MMTB trong phiên này.
+  if(!mmtbInited){
+    mmtbInited=true;
+    try{ await taiCauHinhDuAnMMTB(); await mmtbLoadData(); }catch(e){}
+  }
   // Bảng màu luân phiên cho tối đa 26 chức danh (không cần gộp nhóm nữa — mỗi chức danh đã có cột riêng)
   var palette=['#378ADD','#1D9E75','#EF9F27','#E24B4A','#534AB7','#0F6E56','#D4537E','#BA7517','#185FA5','#639922','#8E24AA','#00838F','#C0CA33','#6D4C41'];
 
@@ -2330,8 +2369,13 @@ function renderCharts(){
   }
   var rows=[];
   var grandTotal=0;
+  var changesNS=[]; // dùng cho mục "Ghi chú" — so sánh TOÀN BỘ chức danh với hôm qua, kể cả khi hôm nay = 0
   (COLS&&COLS.length?COLS:DEF_COLS).forEach(function(c,ci){
     var v=calcColBCH(c.k);
+    if(prevDayData){
+      var pv0=calcColBCH(c.k,prevDayData);
+      if(v!==pv0)changesNS.push(c.n+' ('+(v-pv0>0?'+':'')+(v-pv0)+')');
+    }
     grandTotal+=v;
     if(v<=0)return; // chỉ hiện chức danh có dữ liệu, bỏ qua dòng = 0
     var prevV=prevDayData?calcColBCH(c.k,prevDayData):undefined;
@@ -2341,16 +2385,15 @@ function renderCharts(){
 
   function rowHtml2(r){
     var arrow2='';
-    var numColor2='#1a1a1a';
     if(prevDayData&&r.prev!==undefined){
-      if(r.value>r.prev){arrow2='<span style="color:#1565c0;font-size:13px;font-weight:900">↑</span>';numColor2='#1565c0';}
-      else if(r.value<r.prev){arrow2='<span style="color:#e53935;font-size:13px;font-weight:900">↓</span>';numColor2='#e53935';}
+      if(r.value>r.prev){arrow2='<span style="color:#1565c0;font-size:13px;font-weight:900">↑</span>';}
+      else if(r.value<r.prev){arrow2='<span style="color:#e53935;font-size:13px;font-weight:900">↓</span>';}
     }
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;">'
       +'<span style="display:flex;align-items:center;gap:5px;min-width:0;">'
       +'<span style="width:8px;height:8px;border-radius:50%;background:'+r.color+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a;white-space:normal;line-height:1.25;">'+r.label+'</span></span>'
-      +'<span style="font-weight:700;color:'+numColor2+';min-width:20px;text-align:right;flex-shrink:0;">'+arrow2+r.diLam+'/'+r.value+'</span>'
+      +'<span style="min-width:20px;text-align:right;flex-shrink:0;">'+arrow2+fmtDL(r.diLam,r.value)+'</span>'
       +'</div>';
   }
 
@@ -2387,8 +2430,8 @@ function renderCharts(){
       +'<span style="font-weight:600;color:#e53935;font-size:10px;">'+tongNghi+'</span>'
       +'</div>';
   }
-  // Chi tiết CNCH & LXLM theo dự án — 2 chức danh lãnh đạo quan tâm hằng ngày, trình bày dạng
-  // bảng (dự án x 2 cột) thay vì liệt kê rời rạc, dòng Tổng hợp tô nổi bật để nhìn phát thấy ngay.
+  // Chi tiết CNCH & LXLM & SL.MMTB theo dự án — trình bày dạng bảng (dự án x 3 cột), dòng Tổng hợp
+  // tô nổi bật để lãnh đạo nhìn phát thấy ngay (đây là 3 chỉ số cần theo dõi sát hằng ngày).
   var CNCH_col=(COLS&&COLS.length?COLS:DEF_COLS).find(function(c){return c.n==='CNCH';});
   var LXLM_col=(COLS&&COLS.length?COLS:DEF_COLS).find(function(c){return c.n==='NV.LXLM';});
   if(CNCH_col||LXLM_col){
@@ -2402,18 +2445,30 @@ function renderCharts(){
       });
       return {diLam:tong-nghiV,tong:tong};
     }
+    function tinhMmtb(proj){
+      var hd=0,tong=0;
+      var pd=mmtbData[proj]||{};
+      mmtbMachines.forEach(function(m){
+        hd+=(pd.hoatdong&&pd.hoatdong[m.k])||0;
+        tong+=(pd.hoatdong&&pd.hoatdong[m.k]||0)+(pd.huhong&&pd.huhong[m.k]||0)+(pd.luukho&&pd.luukho[m.k]||0);
+      });
+      return {hd:hd,tong:tong};
+    }
     var tblRows='';
-    var sumCNCH={diLam:0,tong:0}, sumLXLM={diLam:0,tong:0};
+    var sumCNCH={diLam:0,tong:0}, sumLXLM={diLam:0,tong:0}, sumMmtb={hd:0,tong:0};
     projects.forEach(function(p){
       var c1=tinhDiLamTong(CNCH_col,p);
       var l1=tinhDiLamTong(LXLM_col,p);
+      var m1=tinhMmtb(p);
       sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
       sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
-      if(c1.tong<=0 && l1.tong<=0) return; // dự án không có ai thuộc 2 chức danh này thì bỏ qua, đỡ rối
+      sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
+      if(c1.tong<=0 && l1.tong<=0 && m1.tong<=0) return; // dự án trắng cả 3 mục thì bỏ qua, đỡ rối
       tblRows+='<tr>'
         +'<td style="padding:2px 0;color:#555;">'+nl2br(projName(p))+'</td>'
-        +'<td style="padding:2px 0;text-align:right;font-weight:600;">'+(c1.tong>0?c1.diLam+'/'+c1.tong:'-')+'</td>'
-        +'<td style="padding:2px 0;text-align:right;font-weight:600;">'+(l1.tong>0?l1.diLam+'/'+l1.tong:'-')+'</td>'
+        +'<td style="padding:2px 0;text-align:right;">'+(c1.tong>0?fmtDL(c1.diLam,c1.tong):'-')+'</td>'
+        +'<td style="padding:2px 0;text-align:right;">'+(l1.tong>0?fmtDL(l1.diLam,l1.tong):'-')+'</td>'
+        +'<td style="padding:2px 0;text-align:right;">'+(m1.tong>0?fmtDL(m1.hd,m1.tong):'-')+'</td>'
         +'</tr>';
     });
     html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;">'
@@ -2425,15 +2480,21 @@ function renderCharts(){
       +'<td style="padding:2px 0;">Dự án</td>'
       +'<td style="padding:2px 0;text-align:right;">CNCH</td>'
       +'<td style="padding:2px 0;text-align:right;">LXLM</td>'
+      +'<td style="padding:2px 0;text-align:right;">SL.MMTB</td>'
       +'</tr>'
       +tblRows
       +'<tr style="background:#fff3cd;">'
       +'<td style="padding:3px 0 3px 3px;font-weight:800;color:#8a5a00;">Tổng hợp</td>'
-      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;color:#8a5a00;">'+sumCNCH.diLam+'/'+sumCNCH.tong+'</td>'
-      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;color:#8a5a00;">'+sumLXLM.diLam+'/'+sumLXLM.tong+'</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;">'+fmtDL(sumCNCH.diLam,sumCNCH.tong)+'</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;">'+fmtDL(sumLXLM.diLam,sumLXLM.tong)+'</td>'
+      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;">'+fmtDL(sumMmtb.hd,sumMmtb.tong)+'</td>'
       +'</tr>'
       +'</table>';
   }
+  // Ghi chú: liệt kê chức danh nào tăng/giảm so với hôm qua
+  html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;font-size:10px;color:#555;">'
+    +'<b>Ghi chú:</b> '+(changesNS.length?changesNS.join('; '):'Không có biến động so với ngày hôm trước')
+    +'</div>';
   el.innerHTML=html;
 }
 
@@ -2929,6 +2990,7 @@ var mmtbAst=null;
 var mmtbCurTab=1;
 var mmtbTimeLocked=false;
 var mmtbLastLoadedDate=null;
+var mmtbPrevDayData=null; // dữ liệu MMTB hôm qua — dùng để so sánh tăng/giảm cho mục "Ghi chú"
 var mmtbUnlockedSession=false;
 var mmtbLineChart=null;
 var mmtbPieChart=null;
@@ -3048,6 +3110,15 @@ async function mmtbLoadData(){
       mmtbNotes=td.notes||{};
       mmtbLog=td.log||[];
       mmtbEnsureData();
+      // Tải kèm dữ liệu hôm qua để so sánh tăng/giảm (mục "Ghi chú")
+      var histM=await mmtbSHist();
+      for(var iM=0;iM<histM.length;iM++){
+        if(histM[iM].ngay<mmtbTkey()){
+          var pdM=histM[iM].data||{};
+          mmtbPrevDayData=pdM.data||pdM||null;
+          break;
+        }
+      }
       mmtbSetSS('✅ Đã cập nhật');
       mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();return;
     }
@@ -3061,6 +3132,7 @@ async function mmtbLoadData(){
       mmtbMachines=mmtbMergeMachines(yd.machines);
       mmtbData=mmtbCopyFromYest(yd.data||{});
       mmtbNotes=mmtbCopyNotesFromYest(yd.notes);
+      mmtbPrevDayData=yd.data||{};
       mmtbLog=[];
       var pts=prev.ngay.split('-');
       mmtbSetSS('📋 Copy từ '+pts[2]+'/'+pts[1]+'/'+pts[0]);
@@ -3131,7 +3203,7 @@ function mmtbUpdVal(proj,status,k,val){
   if(!mmtbPendingChanges[proj][status])mmtbPendingChanges[proj][status]={};
   mmtbPendingChanges[proj][status][k]=v;
   mmtbCalcTotals();
-  mmtbAddLog(proj+' - '+mmtbMachines.find(function(m){return m.k===k;}).n);
+  mmtbAddLog(projName(proj)+' - '+mmtbMachines.find(function(m){return m.k===k;}).n);
   mmtbRenderCharts();
   mmtbSchSave();
 }
@@ -3498,6 +3570,7 @@ function mmtbRenderCharts(){
   if(!el)return;
   var palette=['#42a5f5','#66bb6a','#ffb74d','#ce93d8','#ef5350','#4dd0e1','#d4e157','#9575cd'];
   var totalHD=0,totalHH=0,totalLK=0;
+  var changesM=[]; // dùng cho mục "Ghi chú" — so sánh TOÀN BỘ loại máy với hôm qua, kể cả khi hôm nay = 0
   var html='<div style="font-weight:700;font-size:10px;color:#e65100;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">MMTB BCH CL-CR</div>';
   mmtbMachines.forEach(function(m,i){
     var hd=0,hh=0,lk=0;
@@ -3508,11 +3581,24 @@ function mmtbRenderCharts(){
     });
     totalHD+=hd;totalHH+=hh;totalLK+=lk;
     var v=hd+hh+lk;
+    var arrow='';
+    if(mmtbPrevDayData){
+      var pvHd=0,pvHh=0,pvLk=0;
+      mmtbProjects.forEach(function(proj){
+        pvHd+=(mmtbPrevDayData[proj]&&mmtbPrevDayData[proj].hoatdong&&mmtbPrevDayData[proj].hoatdong[m.k])||0;
+        pvHh+=(mmtbPrevDayData[proj]&&mmtbPrevDayData[proj].huhong&&mmtbPrevDayData[proj].huhong[m.k])||0;
+        pvLk+=(mmtbPrevDayData[proj]&&mmtbPrevDayData[proj].luukho&&mmtbPrevDayData[proj].luukho[m.k])||0;
+      });
+      var pv=pvHd+pvHh+pvLk;
+      if(v!==pv)changesM.push(m.n+' ('+(v-pv>0?'+':'')+(v-pv)+')');
+      if(v>pv)arrow='<span style="color:#1565c0;font-size:12px;font-weight:900">↑</span>';
+      else if(v<pv)arrow='<span style="color:#e53935;font-size:12px;font-weight:900">↓</span>';
+    }
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;">'
       +'<span style="display:flex;align-items:center;gap:4px;">'
       +'<span style="width:7px;height:7px;border-radius:50%;background:'+palette[i%palette.length]+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a">'+m.n+'</span></span>'
-      +'<span style="font-weight:600;color:#1a1a1a;min-width:20px;text-align:right">'+hd+'/'+v+'</span>'
+      +'<span style="min-width:20px;text-align:right">'+arrow+fmtDL(hd,v)+'</span>'
       +'</div>';
   });
   html+='<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;">'
@@ -3524,8 +3610,12 @@ function mmtbRenderCharts(){
     +'<span style="color:#555;">Tổng</span>'
     +'<span style="font-weight:700;color:#1a1a1a">'+(totalHD+totalHH+totalLK)+'</span>'
     +'</div>';
+  html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-size:10px;color:#555;">'
+    +'<b>Ghi chú:</b> '+(changesM.length?changesM.join('; '):'Không có biến động so với ngày hôm trước')
+    +'</div>';
   el.innerHTML=html;
 }
+
 
 async function mmtbToggleAdmin(){
   var bar=document.getElementById('mmtb-admin-bar');
