@@ -1428,7 +1428,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   // Chia 2 cột song song nếu danh sách dài, đỡ kéo dài layout ảnh xuất báo cáo
   var half=Math.ceil(rows.length/2);
   var colA=rows.slice(0,half), colB=rows.slice(half);
-  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;">Nhân sự BCH CL-CR</div>'
+  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR</div>'
     +'<div style="font-size:10px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+(dateStr||'')+'</div>';
   html+='<div style="display:flex;gap:14px;">'
     +'<div style="flex:1;min-width:0;">'+colA.map(rowHtml).join('')+'</div>'
@@ -1537,9 +1537,8 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
     });
     return v;
   }
-  var html='<div style="font-weight:700;font-size:10px;color:#e65100;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">Biểu đồ MMTB</div>';
+  var html='<div style="font-weight:700;font-size:10px;color:#e65100;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">Báo cáo tổng hợp MMTB</div>';
   html+='<div style="font-size:9px;color:#888;margin-bottom:6px;">'+dateStr+'</div>';
-  html+='<div style="font-weight:700;font-size:9px;color:#e65100;margin-bottom:4px;">MMTB BCH CL-CR</div>';
   var totalHDy=0,totalHHy=0,totalLKy=0;
   if(ydt&&yProjs){
     yProjs.forEach(function(proj){
@@ -2016,7 +2015,7 @@ async function loadData(){
   renderTable();renderLog();
 }
 
-function setUser(){
+async function setUser(){
   var n=document.getElementById('uname').value.trim();
   if(!n){alert('Nhập tên trước!');return;}
   curUser=n;
@@ -2032,16 +2031,15 @@ function setUser(){
     isEdit=true;
     document.getElementById('ust').textContent='✅ '+n;
   }
-  // Ghi log đăng nhập
-  {
-    var now=new Date();
-    var time=p2(now.getHours())+':'+p2(now.getMinutes());
-    logItems.unshift({time:time,u:curUser,p:'— đăng nhập —',ts:now.toISOString(),login:true});
-    if(logItems.length>100)logItems.pop();
-    renderLog();
-    schSave();
-  }
+  // Ghi log đăng nhập — lưu NGAY (không qua debounce 500ms như khi gõ số liệu), để không bị mất
+  // log nếu người dùng thoát ra ngay sau khi gõ tên (vào xem rồi thoát, không sửa gì).
+  var now=new Date();
+  var time=p2(now.getHours())+':'+p2(now.getMinutes());
+  logItems.unshift({time:time,u:curUser,p:'— đăng nhập —',ts:now.toISOString(),login:true});
+  if(logItems.length>100)logItems.pop();
+  renderLog();
   renderTable();
+  await mergeSave();
 }
 
 function fmtN(v){return v===0?'-':(v<10?'0'+v:String(v));}
@@ -2216,7 +2214,7 @@ function renderTable(){
   h+='<th class="stk s1" rowspan="2">Ca làm việc</th>';
   COLS.forEach(function(c){h+='<th>'+c.n+'</th>';});
   h+='<th style="background:#ffeb3b;color:#333;min-width:42px">Tổng</th>';
-  h+='<th style="min-width:280px;background:#eceff3;">Biểu đồ BCH</th>';
+  h+='<th style="min-width:280px;background:#eceff3;">Báo cáo tổng hợp BCH CL-CR</th>';
   h+='</tr></thead><tbody>';
 
   var chartRowspanTotal = (projects.length+1)*(TYPES.length+1);
@@ -2406,7 +2404,7 @@ async function renderCharts(){
 
   var now2=new Date();
   var dateStr=p2(now2.getDate())+'/'+p2(now2.getMonth()+1)+'/'+now2.getFullYear();
-  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;">Nhân sự BCH CL-CR</div>'
+  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR</div>'
     +'<div style="font-size:9px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+dateStr+'</div>';
   // Chia 2 cột song song nếu danh sách dài, đỡ kéo dài layout
   var half=Math.ceil(rows.length/2);
@@ -3156,10 +3154,14 @@ async function mmtbLoadData(){
   mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();
 }
 
-function mmtbSetUser(){
+async function mmtbSetUser(){
   var n=document.getElementById('mmtb-uname').value.trim();
   if(!n){alert('Nhập tên trước!');return;}
   mmtbUser=n;
+  if(mmtbVDate){
+    document.getElementById('mmtb-ust').textContent='✅ '+n;
+    return; // Đang xem/sửa ngày cũ — không đụng tới trạng thái khoá/mở đang có
+  }
   if(isAfterCutoff()&&mmtbTimeLocked&&!mmtbUnlockedSession){
     mmtbEdit=false;
     document.getElementById('mmtb-ust').textContent='✅ '+n+' (chỉ xem)';
@@ -3168,7 +3170,15 @@ function mmtbSetUser(){
     mmtbEdit=!mmtbVDate;
     document.getElementById('mmtb-ust').textContent='✅ '+n;
   }
+  // Ghi log đăng nhập (trước đây MMTB CHƯA CÓ bước này — khác Nhân sự) — lưu NGAY, không debounce,
+  // để không bị mất nếu người dùng vào xem rồi thoát ngay, không sửa gì.
+  var now=new Date();
+  var time=p2(now.getHours())+':'+p2(now.getMinutes());
+  mmtbLog.unshift({time:time,u:mmtbUser,p:'— đăng nhập —',ts:now.toISOString(),login:true});
+  if(mmtbLog.length>100)mmtbLog.pop();
+  mmtbRenderLog();
   mmtbRenderTable();
+  await mmtbMergeSave();
 }
 
 function mmtbCheckTimeLock(){
@@ -3352,7 +3362,7 @@ function mmtbRenderTable(){
   });
   h+='<th rowspan="2" style="background:#ffeb3b;color:#333;min-width:42px">Tổng</th>';
   h+='<th rowspan="2" style="min-width:120px">Ghi chú</th>';
-  h+='<th rowspan="2" style="min-width:160px">Biểu đồ MMTB</th>';
+  h+='<th rowspan="2" style="min-width:160px">Báo cáo tổng hợp MMTB</th>';
   h+='</tr><tr>';
   mmtbProjects.forEach(function(proj){
     MMTB_STATUS_LABEL.forEach(function(l){h+='<th>'+l+'</th>';});
@@ -3578,7 +3588,7 @@ function mmtbRenderCharts(){
   var palette=['#42a5f5','#66bb6a','#ffb74d','#ce93d8','#ef5350','#4dd0e1','#d4e157','#9575cd'];
   var totalHD=0,totalHH=0,totalLK=0;
   var changesM=[]; // dùng cho mục "Ghi chú" — so sánh TOÀN BỘ loại máy với hôm qua, kể cả khi hôm nay = 0
-  var html='<div style="font-weight:700;font-size:10px;color:#e65100;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">MMTB BCH CL-CR</div>';
+  var html='<div style="font-weight:700;font-size:10px;color:#e65100;margin-bottom:6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px;">Báo cáo tổng hợp MMTB</div>';
   mmtbMachines.forEach(function(m,i){
     var hd=0,hh=0,lk=0;
     mmtbProjects.forEach(function(proj){
