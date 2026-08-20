@@ -553,14 +553,12 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
   <div class="action-bar">
     <button class="btn btn-gr" onclick="mmtbSaveData()">💾 Lưu ngay</button>
-    <button class="btn btn-sm btn-or" onclick="mmtbAddMachine()">＋ Thêm loại máy</button>
     <button class="btn btn-pu btn-sm" onclick="mmtbExportXL()">📊 Xuất Excel</button>
     <button class="admin-toggle-btn" onclick="mmtbToggleAdmin()" id="mmtb-admin-toggle">🔒 Quản lý</button>
     <div class="admin-bar admin-hidden" id="mmtb-admin-bar">
       <span class="admin-lbl">🔒 Quản lý:</span>
-      <button class="btn btn-sm btn-or" onclick="alert('Thêm/Đổi tên/Ẩn-hiện Dự án giờ làm ở trang Quản lý chung → Cấu hình Nhân sự.')">✏️ Sửa Dự án ở Quản lý chung</button>
-      <button class="btn btn-sm btn-or" onclick="mmtbRenameMachine()">✏️ Đổi tên máy</button>
-      <button class="btn btn-sm btn-re" onclick="mmtbDelMachine()">✕ Xoá loại máy</button>
+      <button class="btn btn-sm btn-or" onclick="alert('Thêm/Đổi tên/Ẩn-hiện Dự án giờ làm ở trang Quản lý chung → Cấu hình chung.')">✏️ Sửa Dự án ở Quản lý chung</button>
+      <button class="btn btn-sm btn-or" onclick="alert('Thêm/Đổi tên/Ẩn-hiện Loại máy giờ làm ở trang Quản lý chung → Cấu hình chung.')">✏️ Sửa Loại máy ở Quản lý chung</button>
       <button class="btn btn-sm btn-pu" onclick="mmtbExportXLRange()">📦 Xuất Excel theo ngày</button>
       <button class="btn btn-sm btn-or" onclick="mmtbReset()">🔄 Reset</button>
       <button class="btn btn-sm btn-re" onclick="mmtbDelAll()">🗑️ Xoá lịch sử</button>
@@ -1840,6 +1838,25 @@ async function taiCauHinhDuAnMMTB(){
   }
 }
 
+// Loại máy MMTB giờ lấy 100% từ bảng cấu hình chung (cauhinh_mmtb_may) — sửa tên/ẩn-hiện/thêm/xoá
+// làm ở trang Quản lý chung, giống hệt cách Dự án đã làm. Mã (ma) giữ nguyên y hệt code cũ
+// (MayXucBanhXich, MayUi...) nên dữ liệu máy móc đã nhập từ trước không cần chuyển đổi gì cả.
+async function taiCauHinhLoaiMayMMTB(){
+  try{
+    var r = await sc.rpc('cauhinh_lay_loai_may');
+    var list = r.data;
+    if(list && list.length){
+      var active = list.filter(function(m){ return !m.an; });
+      active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
+      if(active.length){
+        mmtbMachines = active.map(function(m){ return {k:m.ma, n:m.ten}; });
+      }
+    }
+  }catch(e){
+    // Lỗi mạng/Supabase -> giữ nguyên danh sách loại máy hiện có để trang vẫn chạy được
+  }
+}
+
 // Cầu nối: vớt lại dữ liệu đang "kẹt" dưới TÊN dự án cũ (trước khi có khoá theo ID)
 // sang đúng khoá ID hiện tại, nếu tên khớp thì copy sang. KHÔNG xoá bất kỳ khoá nào khác —
 // trước đây có đoạn tự xoá mọi khoá "lạ" mỗi lần lưu, đây chính là nguyên nhân gây mất dữ liệu
@@ -2343,7 +2360,7 @@ async function renderCharts(){
   // Đảm bảo có sẵn dữ liệu MMTB hôm nay để tính cột SL.MMTB, dù chưa từng mở tab MMTB trong phiên này.
   if(!mmtbInited){
     mmtbInited=true;
-    try{ await taiCauHinhDuAnMMTB(); await mmtbLoadData(); }catch(e){}
+    try{ await taiCauHinhDuAnMMTB(); await taiCauHinhLoaiMayMMTB(); await mmtbLoadData(); }catch(e){}
   }
   // Bảng màu luân phiên cho tối đa 26 chức danh (không cần gộp nhóm nữa — mỗi chức danh đã có cột riêng)
   var palette=['#378ADD','#1D9E75','#EF9F27','#E24B4A','#534AB7','#0F6E56','#D4537E','#BA7517','#185FA5','#639922','#8E24AA','#00838F','#C0CA33','#6D4C41'];
@@ -3007,12 +3024,17 @@ function mmtbYkey(){var n=new Date();n.setDate(n.getDate()-1);return n.getFullYe
 function mmtbSetSS(m){document.getElementById('mmtb-ss').innerHTML=m;}
 
 function mmtbMergeMachines(saved){
-  if(saved&&saved.length){
-    // Đã có dữ liệu máy được lưu trước đó -> dùng đúng y như đã lưu (giữ xoá/đổi tên của người dùng)
-    return saved.map(function(c){return {k:c.k,n:c.n};});
-  }
-  // Chưa từng có dữ liệu máy nào được lưu -> khởi tạo lần đầu bằng danh sách mặc định
-  return DEF_MACHINES.map(function(c){return {k:c.k,n:c.n};});
+  // Loại máy MMTB giờ lấy 100% từ cấu hình chung (đã tải sẵn ở taiCauHinhLoaiMayMMTB()) — không
+  // dùng danh sách cũ đã lưu trên server nữa, giống hệt cách COLS đang làm cho Định biên. Việc
+  // thêm/đổi tên/ẩn-hiện/xoá loại máy giờ làm ở Quản lý chung, không tự quản lý cục bộ ở đây nữa.
+  return (mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES).map(function(c){return {k:c.k,n:c.n};});
+}
+// Dùng riêng cho XEM LỊCH SỬ — giữ NGUYÊN đúng danh sách máy của ngày đó, không đổi theo cấu hình
+// hiện tại (đúng nguyên tắc: dữ liệu ngày cũ phải giữ nguyên cấu trúc lúc lưu, không bị cấu hình
+// hiện tại đè lên — bài học từ vụ lịch sử Nhân sự bị về 0 trước đây).
+function mmtbHistMachines(saved){
+  if(saved&&saved.length) return saved.map(function(c){return {k:c.k,n:c.n};});
+  return (mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES).map(function(c){return {k:c.k,n:c.n};});
 }
 
 function mmtbEnsureProj(proj){
@@ -3419,60 +3441,8 @@ function mmtbCalcTotals(){
   });
 }
 
-function mmtbAddMachine(){
-  askP(function(){
-    var name=prompt('Tên loại máy mới:');
-    if(!name||!name.trim())return;
-    var n=name.trim();
-    if(mmtbMachines.find(function(m){return m.n===n;})){alert('Đã có rồi!');return;}
-    var k='mx_'+Date.now();
-    mmtbMachines.push({k:k,n:n});
-    mmtbProjects.forEach(function(proj){
-      mmtbEnsureProj(proj);
-      MMTB_STATUS.forEach(function(s){mmtbData[proj][s][k]=0;});
-    });
-    mmtbNotes[k]='';
-    mmtbRenderTable();mmtbRenderCharts();
-    mmtbSaveStructure();
-    toast('✅ Đã thêm: '+n);
-  },'thêm loại máy');
-}
-
-function mmtbRenameMachine(){
-  askP(function(){
-    if(!mmtbMachines.length){alert('Chưa có loại máy nào!');return;}
-    var list=mmtbMachines.map(function(m,i){return (i+1)+'. '+m.n;}).join('\n');
-    var idx=parseInt(prompt('Chọn số thứ tự loại máy cần đổi tên:\n'+list))-1;
-    if(isNaN(idx)||idx<0||idx>=mmtbMachines.length)return;
-    var oldName=mmtbMachines[idx].n;
-    var newName=prompt('Tên mới cho "'+oldName+'":');
-    if(!newName||!newName.trim())return;
-    mmtbMachines[idx].n=newName.trim();
-    mmtbRenderTable();mmtbRenderCharts();
-    mmtbSaveStructure();
-    toast('✅ Đã đổi: '+oldName+' → '+newName.trim());
-  },'đổi tên loại máy');
-}
-
-function mmtbDelMachine(){
-  askP(function(){
-    if(!mmtbMachines.length){alert('Chưa có loại máy nào!');return;}
-    var list=mmtbMachines.map(function(m,i){return (i+1)+'. '+m.n;}).join('\n');
-    var idx=parseInt(prompt('Chọn số thứ tự loại máy cần xoá:\n'+list))-1;
-    if(isNaN(idx)||idx<0||idx>=mmtbMachines.length)return;
-    var m=mmtbMachines[idx];
-    if(!confirm('Xoá loại máy "'+m.n+'"?'))return;
-    mmtbMachines.splice(idx,1);
-    mmtbProjects.forEach(function(proj){
-      if(!mmtbData[proj])return;
-      MMTB_STATUS.forEach(function(s){if(mmtbData[proj][s])delete mmtbData[proj][s][m.k];});
-    });
-    delete mmtbNotes[m.k];
-    mmtbRenderTable();mmtbRenderCharts();
-    mmtbSaveStructure();
-    toast('🗑️ Đã xoá: '+m.n);
-  },'xoá loại máy');
-}
+// mmtbAddMachine/mmtbRenameMachine/mmtbDelMachine đã bỏ — Loại máy giờ quản lý 100% ở trang Quản
+// lý chung (cauhinh_mmtb_may), giống hệt Dự án — tránh kiểu prompt() dễ bấm nhầm/thất bại như trước.
 
 // mmtbAddProj/mmtbRenameProj/mmtbDelProj đã bỏ — Dự án giờ quản lý 100% ở trang Quản lý chung,
 // dùng chung 1 bảng cấu hình (cauhinh_du_an) với Nhân sự, tránh lệch dữ liệu như trước.
@@ -3532,7 +3502,7 @@ async function mmtbViewDay(key){
   mmtbVDate=key;
   // XEM LỊCH SỬ: giữ NGUYÊN danh sách dự án/máy móc của đúng ngày đó — TUYỆT ĐỐI không dùng
   // danh sách dự án hiện tại (mmtbProjects sống), nếu không sẽ về 0 hết y như lỗi Nhân sự đã gặp.
-  mmtbMachines=mmtbMergeMachines(h.machines);
+  mmtbMachines=mmtbHistMachines(h.machines);
   mmtbData=h.data||{};
   mmtbProjects=(h.projects && h.projects.length)?h.projects:Object.keys(mmtbData);
   mmtbNotes=h.notes||{};
@@ -3568,7 +3538,7 @@ async function mmtbBackToday(){
   mmtbUser='';mmtbEdit=false;
   document.getElementById('mmtb-uname').value='';
   document.getElementById('mmtb-ust').textContent='';
-  await taiCauHinhDuAnMMTB(); // khôi phục lại đúng danh sách dự án HIỆN TẠI (mmtbViewDay() đã tạm đổi sang của ngày cũ)
+  await taiCauHinhDuAnMMTB(); await taiCauHinhLoaiMayMMTB(); // khôi phục lại đúng danh sách dự án/máy HIỆN TẠI (mmtbViewDay() đã tạm đổi sang của ngày cũ)
   await mmtbLoadData();
 }
 function mmtbAskDelOne(key){
@@ -3690,7 +3660,7 @@ async function mmtbExportXLRange(){
       var k=row.ngay,h=row.data||{};
       var pts=k.split('-');
       var ds=pts[2]+'/'+pts[1]+'/'+pts[0];
-      var machs=mmtbMergeMachines(h.machines);
+      var machs=mmtbHistMachines(h.machines);
       var projs=h.projects||['CL-CR'];
       var dt=h.data||{};
       projs.forEach(function(proj){
@@ -3744,9 +3714,8 @@ function subscribeMMTBRealtime(){
 }
 
 function applyMMTBRealtimeUpdate(incoming){
-  if(incoming.machines) mmtbMachines = mmtbMergeMachines(incoming.machines);
-  // mmtbProjects không còn lấy từ payload realtime nữa — luôn do cauhinh_du_an quyết định
-  // (taiCauHinhDuAnMMTB()), y hệt cách Nhân sự đã sửa — tránh 1 thiết bị cũ đẩy đè dự án sai lên.
+  // machines/projects không còn lấy từ payload realtime nữa — luôn do cauhinh_mmtb_may/cauhinh_du_an
+  // quyết định (taiCauHinhLoaiMayMMTB()/taiCauHinhDuAnMMTB()), tránh 1 thiết bị cũ đẩy đè sai lên.
   mmtbEnsureData();
 
   var incomingData = mmtbMigrateLegacyProjKeys(incoming.data || {});
@@ -3785,7 +3754,7 @@ async function mmtbInit(){
   var days=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
   document.getElementById('mmtb-dp').textContent=days[n.getDay()]+', ngày '+p2(n.getDate())+' tháng '+p2(n.getMonth()+1)+' năm '+n.getFullYear();
   mmtbLastLoadedDate=tkey();
-  await taiCauHinhDuAnMMTB();
+  await taiCauHinhDuAnMMTB(); await taiCauHinhLoaiMayMMTB();
   await mmtbLoadData();
   mmtbCheckTimeLock();
   await mmtbCheckAutoSaveAt8();

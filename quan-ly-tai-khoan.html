@@ -306,7 +306,7 @@
 </div>
 
 <!-- ============ MODAL ĐỔI TÊN (hỗ trợ xuống dòng tuỳ ý — Enter để xuống dòng) ============ -->
-<div class="modal-overlay" id="modalRenameText">
+<div class="modal-overlay" id="modalRenameText" style="z-index:1001;">
   <div class="modal">
     <h3 id="renameTextTitle">Đổi tên</h3>
     <label>Nhấn Enter để xuống dòng khi cần ghi chú thêm</label>
@@ -432,7 +432,7 @@
 <!-- ============ MODAL CẤU HÌNH NHÂN SỰ (DỰ ÁN / CA LÀM VIỆC) ============ -->
 <div class="modal-overlay" id="modalCauHinh">
   <div class="modal" style="max-width:720px;">
-    <h3>Cấu hình Nhân sự — Dự án &amp; Ca làm việc</h3>
+    <h3>Cấu hình chung — Dự án, Ca làm việc &amp; Loại máy MMTB</h3>
 
     <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:20px;">
       <div style="flex:1; min-width:260px;">
@@ -450,6 +450,15 @@
           <input type="text" id="inputCaMoi" placeholder="Tên ca mới (vd: Ca 3)" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.getElementById('btnThemCa').click()">
           <button class="btn small" id="btnThemCa">Thêm</button>
         </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label>Danh sách Loại máy (MMTB)</label>
+      <div id="listLoaiMay" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:180px; overflow-y:auto; margin-bottom:8px;"></div>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="inputMayMoi" placeholder="Tên loại máy mới" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.getElementById('btnThemMay').click()">
+        <button class="btn small" id="btnThemMay">Thêm</button>
       </div>
     </div>
 
@@ -647,16 +656,19 @@ const modalPass = document.getElementById("modalPass");
 let duAnCache = [];
 let loaiCaCache = [];
 let tenCaRiengCache = [];
+let loaiMayCache = [];
 
 async function loadCauHinhNS(){
-  const [r1, r2, r3] = await Promise.all([
+  const [r1, r2, r3, r4] = await Promise.all([
     sb.rpc("cauhinh_lay_du_an"),
     sb.rpc("cauhinh_lay_loai_ca"),
-    sb.rpc("cauhinh_lay_ten_ca_rieng")
+    sb.rpc("cauhinh_lay_ten_ca_rieng"),
+    sb.rpc("cauhinh_lay_loai_may")
   ]);
   duAnCache = r1.data || [];
   loaiCaCache = r2.data || [];
   tenCaRiengCache = r3.data || [];
+  loaiMayCache = r4.data || [];
 }
 
 // Modal đổi tên hỗ trợ xuống dòng tuỳ ý (Enter = xuống dòng) — thay cho prompt() chỉ nhập được 1 dòng.
@@ -824,8 +836,62 @@ function renderTenCaRieng(){
 function renderCauHinhAll(){
   renderListDuAn();
   renderListLoaiCa();
+  renderListLoaiMay();
   renderTenCaRieng();
 }
+
+function renderListLoaiMay(){
+  const el = document.getElementById("listLoaiMay");
+  if(loaiMayCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có loại máy nào.</div>'; return; }
+  el.innerHTML = loaiMayCache.map(m => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border); ${m.an?'opacity:.5;':''}">
+      <span>${nl2br(m.ten)}${m.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${m.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
+      <span style="white-space:nowrap;">
+        <button class="icon-btn" data-rename-may="${m.id}">✏️ Đổi tên</button>
+        <button class="icon-btn" data-toggle-may="${m.id}">${m.an?'👁️ Hiện':'🙈 Ẩn'}</button>
+        ${m.mac_dinh?'':`<button class="icon-btn reject" data-del-may="${m.id}">Xoá</button>`}
+      </span>
+    </div>`).join("");
+  el.querySelectorAll("[data-rename-may]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.renameMay);
+      const m = loaiMayCache.find(x=>x.id===id);
+      const ten = await renameTextModal(`Đổi tên loại máy`, m.ten);
+      if(ten===null || !ten.trim()) return;
+      const { error } = await sb.rpc("admin_doi_ten_loai_may", { p_pass: currentAdminPass, p_id: id, p_ten_moi: ten });
+      if(error){ alert("Không đổi tên được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+  el.querySelectorAll("[data-toggle-may]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.toggleMay);
+      const m = loaiMayCache.find(x=>x.id===id);
+      const { error } = await sb.rpc("admin_an_hien_loai_may", { p_pass: currentAdminPass, p_id: id, p_an: !m.an });
+      if(error){ alert("Không thao tác được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+  el.querySelectorAll("[data-del-may]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.delMay);
+      const m = loaiMayCache.find(x=>x.id===id);
+      if(!confirm(`Xoá loại máy "${m.ten}"?`)) return;
+      const { error } = await sb.rpc("admin_xoa_loai_may", { p_pass: currentAdminPass, p_id: id });
+      if(error){ alert("Không xoá được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+}
+
+document.getElementById("btnThemMay").addEventListener("click", async ()=>{
+  const ten = document.getElementById("inputMayMoi").value.trim();
+  if(!ten){ alert("Vui lòng nhập tên loại máy."); return; }
+  const { error } = await sb.rpc("admin_them_loai_may", { p_pass: currentAdminPass, p_ten: ten });
+  if(error){ alert("Không thêm được."); return; }
+  document.getElementById("inputMayMoi").value = "";
+  await loadCauHinhNS(); renderCauHinhAll();
+});
 
 document.getElementById("btnCauHinhNS").addEventListener("click", async ()=>{
   await loadCauHinhNS();
