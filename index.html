@@ -971,9 +971,15 @@ function qsCheckAlert(cardId,shouldBlink){
 var GIO_HAN = { gio_han_ns_mmtb: '08:00:00', gio_han_nghiem_thu: '16:00:00' };
 async function taiGioHan(){
   try{
-    var r = await sc.rpc('cauhinh_lay_gio_han');
-    if(r.data) GIO_HAN = r.data;
-  }catch(e){ /* giữ mặc định 08:00/16:00 nếu lỗi mạng/chưa chạy patch10 */ }
+    var r = await rpcCoThuLai('cauhinh_lay_gio_han');
+    // Phòng trường hợp hàm RPC trả về dạng mảng 1 phần tử (setof) thay vì thẳng 1 object —
+    // trước đây gán thẳng r.data khiến GIO_HAN.gio_han_ns_mmtb bị undefined, tự rơi về mặc định
+    // 08:00 dù đã đổi giờ khoá trong Quản lý chung.
+    var d = Array.isArray(r.data) ? r.data[0] : r.data;
+    if(d && d.gio_han_ns_mmtb){
+      GIO_HAN = { gio_han_ns_mmtb: d.gio_han_ns_mmtb, gio_han_nghiem_thu: d.gio_han_nghiem_thu||GIO_HAN.gio_han_nghiem_thu };
+    }
+  }catch(e){ console.error('[taiGioHan] Lỗi tải giờ khoá, đang dùng mặc định:', e); }
   var gt=gioKhoaHienThi();
   ['lock-time-ns','lock-time-mmtb'].forEach(function(id){
     var el=document.getElementById(id);
@@ -1752,7 +1758,7 @@ function isNghiType(t){ return TYPES.length>0 && t===nghiKey(); }
 
 async function taiCauHinhCaLamViec(){
   try{
-    var r1 = await sc.rpc('cauhinh_lay_loai_ca');
+    var r1 = await rpcCoThuLai('cauhinh_lay_loai_ca');
     var caList = r1.data;
     if(caList && caList.length > 0){
       // Lọc bỏ ca đang ẨN — giống hệt cách taiCauHinhDuAn() đang lọc dự án ẩn.
@@ -1781,6 +1787,7 @@ async function taiCauHinhCaLamViec(){
       TEN_RIENG_MAP[t.du_an][t.ma_ca] = t.ten_rieng;
     });
   }catch(e){
+    console.error('[taiCauHinhCaLamViec] Lỗi tải cấu hình ca, đang dùng mặc định:', e);
     // Nếu lỗi mạng/Supabase, giữ nguyên mặc định ca1/ca2/nghỉ để trang vẫn chạy được
   }
 }
@@ -1797,9 +1804,23 @@ function nl2br(s){ return String(s==null?'':s).split('\n').join('<br>'); }
 function fmtDL(soDau,soSau){
   return '<span style="color:#33691E;font-weight:700;">'+soDau+'</span><span style="color:#1a1a1a;">/'+soSau+'</span>';
 }
+// Gọi RPC có TỰ THỬ LẠI 1 lần nếu lần đầu lỗi (thường do mạng chập chờn hoặc Supabase vừa tạo
+// bảng/hàm mới cần vài giây "nhận diện") — giúp tự khỏi các lỗi "lúc có lúc không" mà không cần
+// người dùng phải bấm F5 lại.
+async function rpcCoThuLai(tenHam, thamSo){
+  try{
+    var r = await sc.rpc(tenHam, thamSo);
+    if(r.error) throw r.error;
+    return r;
+  }catch(e1){
+    await new Promise(function(res){setTimeout(res,1200);});
+    return await sc.rpc(tenHam, thamSo);
+  }
+}
+
 async function taiCauHinhDuAn(){
   try{
-    var r = await sc.rpc('cauhinh_lay_du_an');
+    var r = await rpcCoThuLai('cauhinh_lay_du_an');
     var list = r.data;
     if(list && list.length){
       // Tên hiển thị lấy từ TOÀN BỘ danh sách (kể cả đang ẩn) — để dữ liệu lịch sử cũ nhắc tới
@@ -1814,6 +1835,7 @@ async function taiCauHinhDuAn(){
       }
     }
   }catch(e){
+    console.error('[taiCauHinhDuAn] Lỗi tải danh sách dự án (Nhân sự), đang dùng mặc định:', e);
     // Lỗi mạng/Supabase -> giữ nguyên danh sách dự án mặc định để trang vẫn chạy được
   }
 }
@@ -1823,7 +1845,7 @@ async function taiCauHinhDuAn(){
 // Riêng ẨN/HIỆN thì tách biệt (an_mmtb) — 1 dự án có thể ẩn ở Nhân sự nhưng vẫn hiện ở MMTB.
 async function taiCauHinhDuAnMMTB(){
   try{
-    var r = await sc.rpc('cauhinh_lay_du_an');
+    var r = await rpcCoThuLai('cauhinh_lay_du_an');
     var list = r.data;
     if(list && list.length){
       list.forEach(function(d){ PROJ_NAME['duan_'+d.id]=d.ten; });
@@ -1834,6 +1856,7 @@ async function taiCauHinhDuAnMMTB(){
       }
     }
   }catch(e){
+    console.error('[taiCauHinhDuAnMMTB] Lỗi tải danh sách dự án (MMTB), đang dùng mặc định:', e);
     // Lỗi mạng/Supabase -> giữ nguyên danh sách dự án hiện có để trang vẫn chạy được
   }
 }
@@ -1843,7 +1866,7 @@ async function taiCauHinhDuAnMMTB(){
 // (MayXucBanhXich, MayUi...) nên dữ liệu máy móc đã nhập từ trước không cần chuyển đổi gì cả.
 async function taiCauHinhLoaiMayMMTB(){
   try{
-    var r = await sc.rpc('cauhinh_lay_loai_may');
+    var r = await rpcCoThuLai('cauhinh_lay_loai_may');
     var list = r.data;
     if(list && list.length){
       var active = list.filter(function(m){ return !m.an; });
@@ -1853,6 +1876,7 @@ async function taiCauHinhLoaiMayMMTB(){
       }
     }
   }catch(e){
+    console.error('[taiCauHinhLoaiMayMMTB] Lỗi tải danh sách loại máy, đang dùng mặc định:', e);
     // Lỗi mạng/Supabase -> giữ nguyên danh sách loại máy hiện có để trang vẫn chạy được
   }
 }
@@ -4470,6 +4494,41 @@ document.addEventListener('click', function(e){
   if('Notification' in window && !bchIsIOS() && Notification.permission==='granted'){
     bchScheduleAllNotifs();
   }
+
+  // ===== TỰ ĐỘNG ĐỒNG BỘ CẤU HÌNH ĐỊNH KỲ =====
+  // Trước đây: mọi cấu hình (Dự án, Ca, Chức danh, Loại máy, Giờ khoá) CHỈ được tải đúng 1 lần lúc
+  // mở trang — nếu ai đó sửa trong Quản lý chung trong lúc trang đang mở, người xem KHÔNG hề hay
+  // biết, phải tự bấm F5 mới thấy đúng. Đây chính là gốc rễ của mọi kiểu "lúc có lúc không" đã gặp.
+  // Giờ tự tải lại toàn bộ cấu hình mỗi 45 giây, âm thầm cập nhật — không cần F5 tay nữa. Chỉ vẽ
+  // lại bảng khi KHÔNG có ô nào đang được gõ dở (tránh giật/mất focus khi người dùng đang nhập số).
+  async function dongBoCauHinhDinhKy(){
+    try{
+      var truocTYPES=TYPES.join(','), truocProjects=projects.join(','), truocCOLS=COLS.map(function(c){return c.k;}).join(',');
+      var truocMmtbMachines=mmtbMachines.map(function(m){return m.k;}).join(',');
+      var truocMmtbProjects=mmtbProjects.join(',');
+      await taiCauHinhCaLamViec();
+      await taiCauHinhDuAn();
+      await taiDinhBienChucDanh();
+      await taiGioHan();
+      if(mmtbInited){
+        await taiCauHinhDuAnMMTB();
+        await taiCauHinhLoaiMayMMTB();
+      }
+      LIVE_TYPES=TYPES.slice(); LIVE_TLABELS=TLABELS.slice(); // cập nhật lại bản sao lưu để xem lịch sử/quay về hôm nay vẫn đúng
+      var dangGoDo = document.activeElement && (document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA');
+      var coDoiNS = truocTYPES!==TYPES.join(',') || truocProjects!==projects.join(',') || truocCOLS!==COLS.map(function(c){return c.k;}).join(',');
+      var coDoiMmtb = truocMmtbMachines!==mmtbMachines.map(function(m){return m.k;}).join(',') || truocMmtbProjects!==mmtbProjects.join(',');
+      if(!dangGoDo){
+        if(coDoiNS && !vDate && document.getElementById('screen-ns') && document.getElementById('screen-ns').classList.contains('active')){
+          renderTable(); renderCharts();
+        }
+        if(coDoiMmtb && !mmtbVDate && document.getElementById('screen-mmtb') && document.getElementById('screen-mmtb').classList.contains('active')){
+          mmtbRenderTable(); mmtbRenderCharts();
+        }
+      }
+    }catch(e){ console.error('[dongBoCauHinhDinhKy] Lỗi đồng bộ cấu hình:', e); }
+  }
+  setInterval(dongBoCauHinhDinhKy, 45000);
 
   // Khởi động: hiện trang chọn module trước
   showScreen('home');
