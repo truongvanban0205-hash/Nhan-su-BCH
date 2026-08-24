@@ -2002,8 +2002,8 @@ async function sHist(){
   }catch(e){return [];}
 }
 
-async function sDel(d){await sc.from('nhansu').delete().eq('ngay',d);}
-async function sDelAll(){await sc.from('nhansu').delete().neq('ngay','__x__');}
+async function sDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'nhansu',p_ngay:d});}
+async function sDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'nhansu'});}
 
 async function loadData(){
   setSS('🔄 Đang tải...');
@@ -2561,7 +2561,7 @@ async function askP(fn,lbl){
   var p=prompt('🔒 Mật khẩu để '+lbl+':');
   if(p===null)return;
   if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
-  fn();
+  fn(p);
 }
 
 // doAddProj/doRenameProj/doDelProj đã bỏ — Dự án giờ quản lý 100% ở trang Quản lý chung
@@ -2617,9 +2617,9 @@ function doReset(){
 }
 
 function doDelAll(){
-  askP(async function(){
+  askP(async function(pass){
     if(!confirm('Xoá TOÀN BỘ lịch sử? Không thể khôi phục!'))return;
-    await sDelAll();
+    await sDelAll(pass);
     if(curTab===2)await renderDayList();
     toast('🗑️ Đã xoá toàn bộ!');
   },'xoá lịch sử');
@@ -2729,10 +2729,10 @@ async function backToday(){
 }
 
 function askDelOne(key){
-  askP(async function(){
+  askP(async function(pass){
     var pts=key.split('-');
     if(!confirm('Xoá lịch sử ngày '+pts[2]+'/'+pts[1]+'?'))return;
-    await sDel(key);
+    await sDel(pass,key);
     if(vDate===key)backToday();
     else renderDayList();
     toast('🗑️ Đã xoá!');
@@ -3144,8 +3144,8 @@ async function mmtbSHist(){
     return r.data||[];
   }catch(e){return [];}
 }
-async function mmtbSDel(d){await sc.from('mmtb').delete().eq('ngay',d);}
-async function mmtbSDelAll(){await sc.from('mmtb').delete().neq('ngay','__x__');}
+async function mmtbSDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'mmtb',p_ngay:d});}
+async function mmtbSDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'mmtb'});}
 
 async function mmtbLoadData(){
   mmtbSetSS('🔄 Đang tải...');
@@ -3481,9 +3481,9 @@ function mmtbReset(){
   },'reset MMTB');
 }
 function mmtbDelAll(){
-  askP(async function(){
+  askP(async function(pass){
     if(!confirm('Xoá TOÀN BỘ lịch sử MMTB? Không thể khôi phục!'))return;
-    await mmtbSDelAll();
+    await mmtbSDelAll(pass);
     if(mmtbCurTab===2)await mmtbRenderDayList();
     toast('🗑️ Đã xoá toàn bộ MMTB!');
   },'xoá lịch sử MMTB');
@@ -3566,10 +3566,10 @@ async function mmtbBackToday(){
   await mmtbLoadData();
 }
 function mmtbAskDelOne(key){
-  askP(async function(){
+  askP(async function(pass){
     var pts=key.split('-');
     if(!confirm('Xoá lịch sử MMTB ngày '+pts[2]+'/'+pts[1]+'?'))return;
-    await mmtbSDel(key);
+    await mmtbSDel(pass,key);
     if(mmtbVDate===key)mmtbBackToday();else mmtbRenderDayList();
     toast('🗑️ Đã xoá!');
   },'xoá ngày này');
@@ -3836,8 +3836,8 @@ async function ldtSHist(){
     return r.data||[];
   }catch(e){return [];}
 }
-async function ldtSDel(d){await sc.from('ldt').delete().eq('ngay',d);}
-async function ldtSDelAll(){await sc.from('ldt').delete().neq('ngay','__x__');}
+async function ldtSDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'ldt',p_ngay:d});}
+async function ldtSDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'ldt'});}
 
 async function ldtLoadData(){
   ldtSetSS('🔄 Đang tải...');
@@ -4028,9 +4028,9 @@ function ldtReset(){
   },'reset lịch nghiệm thu');
 }
 function ldtDelAll(){
-  askP(async function(){
+  askP(async function(pass){
     if(!confirm('Xoá TOÀN BỘ lịch sử nghiệm thu? Không thể khôi phục!'))return;
-    await ldtSDelAll();
+    await ldtSDelAll(pass);
     if(ldtCurTab===2)await ldtRenderDayList();
     toast('🗑️ Đã xoá toàn bộ!');
   },'xoá lịch sử nghiệm thu');
@@ -4083,10 +4083,10 @@ async function ldtBackToday(){
   await ldtLoadData();
 }
 function ldtAskDelOne(key){
-  askP(async function(){
+  askP(async function(pass){
     var pts=key.split('-');
     if(!confirm('Xoá lịch sử nghiệm thu ngày '+pts[2]+'/'+pts[1]+'?'))return;
-    await ldtSDel(key);
+    await ldtSDel(pass,key);
     if(ldtVDate===key)ldtBackToday();else ldtRenderDayList();
     toast('🗑️ Đã xoá!');
   },'xoá ngày này');
