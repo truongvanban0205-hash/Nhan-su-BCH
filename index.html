@@ -342,10 +342,6 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">📅</div>
         <div class="mod-title">Lịch nghiệm thu</div>
       </div>
-      <div class="mod-tile c-hc" data-quyen="hau_can" onclick="goModuleHauCan()">
-        <div class="mod-icon">🍱</div>
-        <div class="mod-title">Hậu cần</div>
-      </div>
       <div class="mod-tile c-db" data-quyen="dinh_bien" onclick="goModuleDinhBien()">
         <div class="mod-icon">📊</div>
         <div class="mod-title">Định biên</div>
@@ -690,14 +686,6 @@ function goModule(name){
     return;
   }
   showScreen(name);
-}
-function goModuleHauCan(){
-  var el = document.querySelector('.mod-tile.c-hc');
-  if(el && el.classList.contains('locked')){
-    toast('🔒 Bạn chưa được cấp quyền vào mục này. Liên hệ Ban chỉ huy để được cấp quyền.');
-    return;
-  }
-  location.href = 'hau-can.html';
 }
 function goModuleDinhBien(){
   var el = document.querySelector('.mod-tile.c-db');
