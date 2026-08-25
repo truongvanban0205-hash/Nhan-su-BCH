@@ -1179,6 +1179,25 @@ async function exportFullReport(){
       +'<td style="border:1px solid #ccc;padding:4px;text-align:left;font-size:10px;color:#666;white-space:pre-line;">'+mmtbReportNote+'</td>'
       +'</tr>';
   });
+  // Hàng TỔNG CỘNG ở cuối bảng — cộng dồn Hoạt động/Hư hỏng/Lưu kho của TẤT CẢ loại máy theo
+  // từng dự án, giống hệt hàng "TỔNG BCH" bên bảng Nhân sự đang có.
+  mmtbRows+='<tr style="background:#fff3cd;font-weight:800;">'
+    +'<td colspan="2" style="border:1px solid #ccc;padding:4px;text-align:center;">TỔNG CỘNG</td>';
+  mProjs.forEach(function(proj){
+    var pdata=(mmtbToday&&mmtbToday.data&&mmtbToday.data[proj])||{};
+    var shd=0,shh=0,slk=0;
+    mList.forEach(function(m){
+      shd+=(pdata.hoatdong&&pdata.hoatdong[m.k])||0;
+      shh+=(pdata.huhong&&pdata.huhong[m.k])||0;
+      slk+=(pdata.luukho&&pdata.luukho[m.k])||0;
+    });
+    mmtbRows+='<td style="border:1px solid #ccc;padding:4px;text-align:center;">'+f(shd)+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px;text-align:center;color:#e53935;">'+f(shh)+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px;text-align:center;">'+f(slk)+'</td>';
+  });
+  mmtbRows+='<td style="border:1px solid #ccc;padding:4px;text-align:center;background:#ffeb3b;">'+f(mTotal.hd+mTotal.hh+mTotal.lk)+'</td>'
+    +'<td style="border:1px solid #ccc;padding:4px;"></td>'
+    +'</tr>';
 
   // --- Bảng Nhân sự ---
   var nsProjs=(nsToday&&nsToday.projects)||['CL-CR'];
@@ -3444,6 +3463,18 @@ function mmtbRenderTable(){
     }
     h+='</tr>';
   });
+  // Hàng TỔNG CỘNG ở cuối bảng — cộng dồn Hoạt động/Hư hỏng/Lưu kho của TẤT CẢ loại máy theo
+  // từng dự án, giống hệt hàng "TỔNG BCH" bên bảng Nhân sự đang có.
+  h+='<tr style="background:#fff3cd;font-weight:800;">';
+  h+='<td colspan="2" style="text-align:center;">TỔNG CỘNG</td>';
+  mmtbProjects.forEach(function(proj){
+    MMTB_STATUS.forEach(function(s){
+      h+='<td id="mmtb-tong-'+proj+'-'+s+'"></td>';
+    });
+  });
+  h+='<td id="mmtb-tong-grand" style="background:#ffeb3b;"></td>';
+  h+='<td></td>';
+  h+='</tr>';
   h+='</tbody>';
   document.getElementById('mmtb-mt').innerHTML=h;
   mmtbCalcTotals();
@@ -3463,6 +3494,21 @@ function mmtbCalcTotals(){
     var el=document.getElementById('mmtb-rt-'+m.k);
     if(el)el.textContent=mmtbFmtN(total);
   });
+  // Cập nhật hàng TỔNG CỘNG cuối bảng
+  var grand=0;
+  mmtbProjects.forEach(function(proj){
+    MMTB_STATUS.forEach(function(s){
+      var sum=0;
+      mmtbMachines.forEach(function(m){
+        sum+=(mmtbData[proj]&&mmtbData[proj][s]&&mmtbData[proj][s][m.k])||0;
+      });
+      grand+=sum;
+      var el=document.getElementById('mmtb-tong-'+proj+'-'+s);
+      if(el)el.textContent=mmtbFmtN(sum);
+    });
+  });
+  var elGrand=document.getElementById('mmtb-tong-grand');
+  if(elGrand)elGrand.textContent=mmtbFmtN(grand);
 }
 
 // mmtbAddMachine/mmtbRenameMachine/mmtbDelMachine đã bỏ — Loại máy giờ quản lý 100% ở trang Quản
