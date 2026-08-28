@@ -1811,17 +1811,22 @@ function nl2br(s){ return String(s==null?'':s).split('\n').join('<br>'); }
 function fmtDL(soDau,soSau){
   return '<span style="color:#33691E;font-weight:700;">'+soDau+'</span><span style="color:#1a1a1a;">/'+soSau+'</span>';
 }
-// Gọi RPC có TỰ THỬ LẠI 1 lần nếu lần đầu lỗi (thường do mạng chập chờn hoặc Supabase vừa tạo
-// bảng/hàm mới cần vài giây "nhận diện") — giúp tự khỏi các lỗi "lúc có lúc không" mà không cần
-// người dùng phải bấm F5 lại.
+// Gọi RPC có TỰ THỬ LẠI TỐI ĐA 3 LẦN, càng thử càng chờ lâu hơn (1s, 2s, 4s) — trước đây chỉ thử
+// lại đúng 1 lần sau 1.2s, không đủ nếu Supabase chậm hơn (hay gặp buổi sáng nhiều người cùng mở
+// app 1 lúc) — đây chính là nguyên nhân "ngày mới mở app hay bị mặc định, 1-2 phút sau mới đúng
+// lại": trước đây phải chờ tới vòng tự đồng bộ 45 giây kế tiếp mới sửa được, giờ tự đúng ngay từ
+// lần tải đầu tiên trong hầu hết trường hợp.
 async function rpcCoThuLai(tenHam, thamSo){
-  try{
-    var r = await sc.rpc(tenHam, thamSo);
-    if(r.error) throw r.error;
-    return r;
-  }catch(e1){
-    await new Promise(function(res){setTimeout(res,1200);});
-    return await sc.rpc(tenHam, thamSo);
+  var doTre=[1000,2000,4000];
+  for(var i=0;i<=doTre.length;i++){
+    try{
+      var r = await sc.rpc(tenHam, thamSo);
+      if(r.error) throw r.error;
+      return r;
+    }catch(e){
+      if(i===doTre.length){ throw e; } // đã thử hết số lần, báo lỗi thật để nơi gọi ghi log
+      await new Promise(function(res){setTimeout(res,doTre[i]);});
+    }
   }
 }
 
@@ -2275,15 +2280,16 @@ function renderTable(){
       var isNghi = isNghiType(type);
       var bg = isNghi ? '#ffcdd2' : '#e3f2fd';
       var txtColor = isNghi ? 'color:#b71c1c !important;font-weight:700;' : '';
+      var compact = 'padding:1px 2px;font-size:11px;line-height:1.2;'; // khớp đúng chiều cao với hàng Tổng (.row-tong)
       h+='<tr style="background:'+bg+';'+txtColor+'">';
       if(ti===0){
         h+='<td class="stk s0" rowspan="'+rowspanN+'" style="vertical-align:middle;font-weight:800;background:#fff">'+nl2br(projName(proj))+'</td>';
       }
-      h+='<td class="stk s1" style="background:'+bg+';'+txtColor+'">'+getTenCa(proj,ti)+'</td>';
+      h+='<td class="stk s1" style="background:'+bg+';'+txtColor+compact+'">'+getTenCa(proj,ti)+'</td>';
       COLS.forEach(function(c){
         var v=(data[proj]&&data[proj][type]&&data[proj][type][c.k])?data[proj][type][c.k]:0;
         var disp=v===0?'-':(v<10?'0'+v:String(v));
-        h+='<td style="background:'+bg+'"><input class="ni" type="text" inputmode="numeric" style="'+txtColor+'"'
+        h+='<td style="background:'+bg+';'+compact+'"><input class="ni" type="text" inputmode="numeric" style="'+txtColor+'font-size:11px;width:30px;padding:1px 0;"'
           +' value="'+disp+'"'
           +' data-proj="'+proj+'" data-type="'+type+'" data-col="'+c.k+'"'
           +' '+dis
@@ -2292,7 +2298,7 @@ function renderTable(){
           +' oninput="updVal(\''+proj+'\',\''+type+'\',\''+c.k+'\',this.value)">'
           +'</td>';
       });
-      h+='<td id="rt_'+proj+'_'+type+'" style="font-weight:700;background:'+bg+';'+txtColor+'"></td>';
+      h+='<td id="rt_'+proj+'_'+type+'" style="font-weight:700;background:'+bg+';'+txtColor+compact+'"></td>';
       if(!chartCellPlaced){
         chartCellPlaced = true;
         h+='<td class="chart-cell" id="chart_BCH" rowspan="'+chartRowspanTotal+'" style="min-width:280px;max-width:340px;"></td>';
