@@ -461,13 +461,6 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   </div>
 </div>
 
-<div id="nb" class="nbar" style="display:none">
-  <span>🔔 Cho phép thông báo nhắc nhập lúc 7:30 mỗi ngày?</span>
-  <div style="display:flex;gap:6px">
-    <button class="btn btn-gr btn-sm" onclick="enableNotif()">Cho phép</button>
-    <button class="btn btn-sm btn-or" onclick="document.getElementById('nb').style.display='none'">Bỏ qua</button>
-  </div>
-</div>
 
 <div id="vb" class="vbanner" style="display:none">
   <span id="vl">👁️ Đang xem ngày cũ (chỉ đọc)</span>
@@ -2895,30 +2888,6 @@ async function exportXLRange(){
   },'xuất Excel theo ngày');
 }
 
-// NOTIF
-function checkNotif(){
-  if(!('Notification' in window))return;
-  if(Notification.permission==='default')document.getElementById('nb').style.display='flex';
-  else if(Notification.permission==='granted')schNotif();
-}
-function enableNotif(){
-  Notification.requestPermission().then(function(p){
-    document.getElementById('nb').style.display='none';
-    if(p==='granted'){schNotif();toast('🔔 Đã bật thông báo lúc 7:30!');}
-  });
-}
-function schNotif(){
-  var now=new Date(),next=new Date();
-  next.setHours(7,30,0,0);
-  if(now>=next)next.setDate(next.getDate()+1);
-  setTimeout(function(){
-    new Notification('📋 BCH CL-CR',{body:'Đã 7:30 — nhớ nhập số liệu hôm nay nhé!'});
-    setInterval(function(){
-      new Notification('📋 BCH CL-CR',{body:'Đã 7:30 — nhập nhân sự nhé!'});
-    },86400000);
-  },next-now);
-}
-
 function toast(msg){
   var el=document.getElementById('t');
   el.textContent=msg;el.classList.add('show');
@@ -2995,7 +2964,6 @@ async function init(){
   setDate();
   lastLoadedDate=tkey();
   await loadData();
-  checkNotif();
   checkTimeLock();
   await checkAutoSaveAt8();
   subscribeNSRealtime();
