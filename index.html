@@ -1397,7 +1397,11 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   var palette=['#378ADD','#1D9E75','#EF9F27','#E24B4A','#534AB7','#0F6E56','#D4537E','#BA7517','#185FA5','#639922','#8E24AA','#00838F','#C0CA33','#6D4C41'];
   function calcCol(colKey,projs,dt){
     var total=0;
-    (projs||[]).forEach(function(p){
+    // Luôn cộng theo ĐÚNG những dự án THỰC SỰ có dữ liệu trong đúng ngày đó (Object.keys(dt)) —
+    // không dùng danh sách "projects" đã lưu (có thể lệch nếu 1 dự án bị ẩn sau khi lưu). Nhờ vậy
+    // Tổng hôm nay và Tổng hôm qua luôn cộng đúng kiểu, không bị "tăng ảo" khi ẩn dự án + chuyển
+    // người sang dự án khác (ẩn không xoá dữ liệu, vẫn phải tính đủ).
+    Object.keys(dt||{}).forEach(function(p){
       TYPES.forEach(function(t){ total+=(dt[p]&&dt[p][t]?dt[p][t][colKey]||0:0); });
     });
     return total;
@@ -1534,7 +1538,9 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
   var yProjs=(mmtbYesterday&&mmtbYesterday.projects)||null;
   function calcMachTotal(machKey,projsList,dataObj){
     var v=0;
-    (projsList||[]).forEach(function(proj){
+    // Luôn cộng theo TOÀN BỘ dự án THỰC SỰ có dữ liệu (Object.keys) — không chỉ dự án đang hiện —
+    // để ẩn 1 dự án không làm ra "tăng ảo" khi so sánh với ngày khác.
+    Object.keys(dataObj||{}).forEach(function(proj){
       var pdata=dataObj[proj]||{};
       v+=(pdata.hoatdong&&pdata.hoatdong[machKey]||0)+(pdata.huhong&&pdata.huhong[machKey]||0)+(pdata.luukho&&pdata.luukho[machKey]||0);
     });
@@ -1542,7 +1548,7 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
   }
   function calcMachHD(machKey,projsList,dataObj){
     var v=0;
-    (projsList||[]).forEach(function(proj){
+    Object.keys(dataObj||{}).forEach(function(proj){
       var pdata=dataObj[proj]||{};
       v+=(pdata.hoatdong&&pdata.hoatdong[machKey]||0);
     });
@@ -2076,8 +2082,9 @@ async function setUser(){
     document.getElementById('ust').textContent='✅ '+n;
     return; // Đang xem/sửa ngày cũ — không đụng tới trạng thái khoá/mở đang có (do unlockHistEdit quản lý)
   }
-  if(isAfterCutoff()&&timeLocked){
+  if(isAfterCutoff()&&!unlockedThisSession){
     isEdit=false;
+    timeLocked=true; // đồng bộ cờ ngay tại đây, không chờ checkTimeLock() chạy sau (tránh đua thời gian)
     document.getElementById('ust').textContent='✅ '+n+' (chỉ xem)';
     document.getElementById('lock-banner').style.display='flex';
   } else {
@@ -2406,7 +2413,9 @@ async function renderCharts(){
   function calcColBCH(colKey,src){
     var total=0;
     var srcData=src||data;
-    projects.forEach(function(proj){
+    // Luôn cộng theo TOÀN BỘ dự án THỰC SỰ có dữ liệu (Object.keys) — không chỉ dự án đang hiện —
+    // để ẩn 1 dự án (dù chỉ do chuyển người sang dự án khác) không làm ra "tăng ảo" khi so sánh.
+    Object.keys(srcData||{}).forEach(function(proj){
       TYPES.forEach(function(t){
         total+=(srcData[proj]&&srcData[proj][t]?srcData[proj][t][colKey]||0:0);
       });
@@ -3221,8 +3230,9 @@ async function mmtbSetUser(){
     document.getElementById('mmtb-ust').textContent='✅ '+n;
     return; // Đang xem/sửa ngày cũ — không đụng tới trạng thái khoá/mở đang có
   }
-  if(isAfterCutoff()&&mmtbTimeLocked&&!mmtbUnlockedSession){
+  if(isAfterCutoff()&&!mmtbUnlockedSession){
     mmtbEdit=false;
+    mmtbTimeLocked=true; // đồng bộ cờ ngay tại đây, không chờ mmtbCheckTimeLock() chạy sau (tránh đua thời gian)
     document.getElementById('mmtb-ust').textContent='✅ '+n+' (chỉ xem)';
     document.getElementById('mmtb-lock-banner').style.display='flex';
   } else {
@@ -3635,7 +3645,9 @@ function mmtbRenderCharts(){
     var arrow='';
     if(mmtbPrevDayData){
       var pvHd=0,pvHh=0,pvLk=0;
-      mmtbProjects.forEach(function(proj){
+      // Cộng theo TOÀN BỘ dự án THỰC SỰ có trong dữ liệu hôm qua (Object.keys), không chỉ dự án
+      // đang hiện hôm nay — tránh "tăng ảo" khi ẩn 1 dự án (chuyển máy/người sang dự án khác).
+      Object.keys(mmtbPrevDayData||{}).forEach(function(proj){
         pvHd+=(mmtbPrevDayData[proj]&&mmtbPrevDayData[proj].hoatdong&&mmtbPrevDayData[proj].hoatdong[m.k])||0;
         pvHh+=(mmtbPrevDayData[proj]&&mmtbPrevDayData[proj].huhong&&mmtbPrevDayData[proj].huhong[m.k])||0;
         pvLk+=(mmtbPrevDayData[proj]&&mmtbPrevDayData[proj].luukho&&mmtbPrevDayData[proj].luukho[m.k])||0;
