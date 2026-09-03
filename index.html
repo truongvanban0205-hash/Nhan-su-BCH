@@ -43,7 +43,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 /* ============ TRANG CHỌN MODULE (DARK) ============ */
 #screen-home{background:var(--bg-deep);margin:-8px;padding:0;}
 .home-wrap{position:relative;min-height:90vh;display:flex;flex-direction:column;align-items:center;padding:24px 12px;overflow:hidden;color:var(--txt-main);}
-.home-watermark{position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;opacity:0.55;z-index:0;pointer-events:none;filter:saturate(1.3) brightness(1.05);}
+.home-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:70vw;max-width:420px;opacity:0.12;z-index:0;pointer-events:none;filter:saturate(1.2);}
 .home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:1;}
 .home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.25;}
 .brand-title{font-size:16px;font-weight:800;letter-spacing:0.2px;color:#fff;white-space:nowrap;}
@@ -61,7 +61,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .export-popover button:active{background:rgba(255,255,255,0.08);}
 .home-cards{display:flex;flex-direction:column;gap:16px;width:100%;max-width:420px;position:relative;z-index:1;}
 .mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.mod-tile{position:relative;background:linear-gradient(145deg,rgba(19,24,38,0.72),rgba(26,32,50,0.72));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:14px;padding:12px 12px;cursor:pointer;
+.mod-tile{position:relative;background:linear-gradient(145deg,var(--bg-card),var(--bg-card2));border-radius:14px;padding:12px 12px;cursor:pointer;
   display:flex;flex-direction:row;align-items:center;gap:10px;min-height:64px;
   box-shadow:0 3px 14px rgba(0,0,0,0.35);border:1px solid var(--border-soft);transition:transform 0.15s,opacity .2s,filter .2s;overflow:hidden;}
 .mod-tile:active{transform:scale(0.96);}
@@ -93,7 +93,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 }
 
 /* Thời tiết */
-.weather-card{width:100%;max-width:420px;background:linear-gradient(145deg,rgba(19,24,38,0.72),rgba(26,32,50,0.72));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--border-soft);border-radius:16px;padding:16px;margin-bottom:12px;position:relative;z-index:1;box-shadow:0 4px 16px rgba(0,0,0,0.35);}
+.weather-card{width:100%;max-width:420px;background:linear-gradient(145deg,var(--bg-card),var(--bg-card2));border:1px solid var(--border-soft);border-radius:16px;padding:16px;margin-bottom:12px;position:relative;z-index:1;box-shadow:0 4px 16px rgba(0,0,0,0.35);}
 .weather-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
 .weather-loc{font-size:12px;color:var(--txt-dim);margin-bottom:4px;}
 .weather-now{font-size:32px;font-weight:800;color:#fff;line-height:1;}
@@ -108,7 +108,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 
 /* Thu gọn / bung Thống kê nhanh */
 .qs-toggle-row{width:100%;max-width:420px;position:relative;z-index:1;margin-bottom:10px;}
-.qs-toggle-btn{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(19,24,38,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--border-soft);border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:#fff;font-family:inherit;}
+.qs-toggle-btn{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:#fff;font-family:inherit;}
 .qs-toggle-btn .chev{transition:transform .2s;color:var(--txt-dim);flex-shrink:0;}
 .qs-toggle-btn.open .chev{transform:rotate(180deg);}
 #qsCollapseBody{display:none;}
@@ -279,7 +279,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 <!-- ============ TRANG CHỌN MODULE ============ -->
 <div id="screen-home" class="app-screen active">
   <div class="home-wrap">
-    <img src="co-vietnam.svg" class="home-watermark" alt="">
+    <img src="icon.png" class="home-watermark" alt="">
     <div class="home-header">
       <div style="display:flex;flex-direction:column;">
         <h1 class="brand-title" style="order:1;">BCH DA <span style="color:#42a5f5">CAM LÂM</span> - <span style="color:#ffa726">CAM RANH</span></h1>
@@ -4471,9 +4471,13 @@ document.addEventListener('click', function(e){
         banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#ff6f00,#e64a19);color:#fff;padding:12px 16px;font-size:13px;font-weight:700;z-index:9998;display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:0 2px 14px rgba(230,74,25,.5);border-bottom:2px solid #ffb300;';
         banner.innerHTML = '<span>📢 <b>' + tb.noi_dung + '</b></span><span style="cursor:pointer;font-weight:800;padding:0 6px;flex-shrink:0;" id="bchTbClose">✕</span>';
         document.body.appendChild(banner);
+        var bhH = banner.offsetHeight;
+        var bodyBasePad = 8; // khớp đúng padding gốc của body (xem CSS body{padding:8px;})
+        document.body.style.paddingTop = (bodyBasePad + bhH) + 'px';
         document.getElementById('bchTbClose').addEventListener('click', function(){
           localStorage.setItem(seenKey, '1');
           banner.remove();
+          document.body.style.paddingTop = bodyBasePad + 'px';
         });
       }
     }
