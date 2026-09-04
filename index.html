@@ -1115,9 +1115,36 @@ async function exportFullReport(){
     });
     return t;
   }
+  function sumNSDiLam(d){
+    if(!d)return null;
+    var dt=d.data||{},projs=d.projects||[];
+    var cols=(d.cols&&d.cols.length)?d.cols:COLS;
+    var nk=nghiKey();
+    var t=0;
+    projs.forEach(function(p){
+      TYPES.forEach(function(ty){
+        if(ty===nk) return; // bỏ qua loại Nghỉ, chỉ cộng đang đi làm
+        if(dt[p]&&dt[p][ty]){
+          cols.forEach(function(c){ t+=(dt[p][ty][c.k]||0); });
+        }
+      });
+    });
+    return t;
+  }
+  function sumMMTBHoatDong(d){
+    if(!d)return null;
+    var dt=d.data||{},projs=d.projects||['CL-CR'];
+    var t=0;
+    projs.forEach(function(p){
+      if(dt[p]&&dt[p].hoatdong)Object.values(dt[p].hoatdong).forEach(function(v){t+=v||0;});
+    });
+    return t;
+  }
 
   var nsVals=days7.map(function(dk){return sumNS(nsMap[dk]);});
   var mmtbVals=days7.map(function(dk){return sumMMTB(mmtbMap[dk]);});
+  var nsDiLamVals=days7.map(function(dk){return sumNSDiLam(nsMap[dk]);});
+  var mmtbHDVals=days7.map(function(dk){return sumMMTBHoatDong(mmtbMap[dk]);});
   var dayLabels=days7.map(function(dk){var p=dk.split('-');return p[2]+'/'+p[1];});
 
   // ===== Build HTML báo cáo trong container ẩn =====
@@ -1321,17 +1348,21 @@ async function exportFullReport(){
   new Chart(ctx,{
     type:'line',
     data:{labels:dayLabels,datasets:[
-      {label:'Nhân sự',data:nsVals,borderColor:'#1565c0',backgroundColor:'#1565c0',tension:0.3,spanGaps:true,
+      {label:'Tổng NS',data:nsVals,borderColor:'#1565c0',backgroundColor:'#1565c0',tension:0.3,spanGaps:true,
         datalabels:{}},
-      {label:'MMTB',data:mmtbVals,borderColor:'#e53935',backgroundColor:'#e53935',tension:0.3,spanGaps:true}
+      {label:'Tổng MMTB',data:mmtbVals,borderColor:'#e53935',backgroundColor:'#e53935',tension:0.3,spanGaps:true},
+      {label:'NS Đi làm',data:nsDiLamVals,borderColor:'#1565c0',backgroundColor:'#1565c0',borderDash:[5,4],borderWidth:1.5,pointRadius:2,tension:0.3,spanGaps:true},
+      {label:'MMTB Hoạt động',data:mmtbHDVals,borderColor:'#e53935',backgroundColor:'#e53935',borderDash:[5,4],borderWidth:1.5,pointRadius:2,tension:0.3,spanGaps:true}
     ]},
     options:{responsive:false,animation:false,
-      plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:14}},
         tooltip:{enabled:false}},
       scales:{y:{beginAtZero:true,ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}}
   });
-  // Vẽ số trên mỗi điểm bằng canvas overlay đơn giản: dùng Chart.js datalabel thủ công qua afterDraw
-  drawPointLabels(ctx, [nsVals,mmtbVals], ['#1565c0','#e53935']);
+  // Vẽ số trên mỗi điểm: 2 đường nét liền (Tổng) hiện số ở TRÊN điểm, 2 đường nét đứt (Đi làm/Hoạt
+  // động) hiện số ở DƯỚI điểm — tránh chữ đè lên nhau khi 2 đường cùng màu nằm sát nhau.
+  drawPointLabels(ctx, [nsVals,mmtbVals], ['#1565c0','#e53935'], 'above');
+  drawPointLabels(ctx, [nsDiLamVals,mmtbHDVals], ['#1565c0','#e53935'], 'below');
 
   // Render panel chi tiết Nhân sự
   var nsPanelEl=document.getElementById('reportNsChartPanel');
@@ -1361,19 +1392,21 @@ async function exportFullReport(){
   document.body.removeChild(container);
 }
 
-function drawPointLabels(canvasEl, datasetsVals, colors){
+function drawPointLabels(canvasEl, datasetsVals, colors, pos){
   setTimeout(function(){
     var ctx2d=canvasEl.getContext('2d');
     var chart=Chart.getChart(canvasEl);
     if(!chart)return;
     ctx2d.font='bold 10px sans-serif';
-    chart.data.datasets.forEach(function(ds,di){
+    var dsOffset = (pos==='below') ? 2 : 0; // 2 đường nét đứt luôn là dataset thứ 3,4 trong chart
+    datasetsVals.forEach(function(vals,di){
       ctx2d.fillStyle=colors[di];
-      var meta=chart.getDatasetMeta(di);
+      var meta=chart.getDatasetMeta(di+dsOffset);
       meta.data.forEach(function(point,i){
-        var v=ds.data[i];
+        var v=vals[i];
         if(v===null||v===undefined)return;
-        ctx2d.fillText(String(v),point.x-8,point.y-8);
+        var yOff = (pos==='below') ? 16 : -8;
+        ctx2d.fillText(String(v),point.x-8,point.y+yOff);
       });
     });
   },120);
