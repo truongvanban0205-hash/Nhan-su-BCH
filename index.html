@@ -277,6 +277,13 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 <body style="display:none">
 
 <!-- ============ TRANG CHỌN MODULE ============ -->
+<div id="update-lock-banner" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(10,14,26,0.97);color:#fff;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:14px;">
+  <div style="font-size:48px;">🔄</div>
+  <div style="font-size:20px;font-weight:800;">Có bản cập nhật mới</div>
+  <div style="font-size:14px;color:#ccc;max-width:320px;">Thiết bị này đang chạy bản cũ. Để tránh ghi sai dữ liệu, vui lòng tải lại trang ngay.</div>
+  <button class="btn btn-gr" style="max-width:220px;font-size:15px;padding:12px 20px;" onclick="location.reload(true)">Tải lại ngay</button>
+</div>
+
 <div id="screen-home" class="app-screen active">
   <div class="home-wrap">
     <img src="icon.png" class="home-watermark" alt="">
@@ -949,6 +956,23 @@ function qsCheckAlert(cardId,shouldBlink){
 }
 
 // Giờ hạn nhắc nhở — admin tự cấu hình trong Quản lý chung (patch10_gio_han.sql)
+// Số phiên bản của CHÍNH file này — mỗi lần đưa bản mới phải đổi số này khớp với lệnh update
+// app_version chạy trên Supabase, để mọi thiết bị (kể cả thiết bị cũ không ai đụng tới) tự phát
+// hiện lệch bản và tự khoá lại, không cho ghi đè dữ liệu sai theo hiểu biết cũ của nó nữa.
+var APP_VERSION = 'v2026-09-05a';
+var dangBiKhoaCapNhat = false;
+async function kiemTraPhienBan(){
+  try{
+    var r = await sc.rpc('cauhinh_lay_phien_ban');
+    if(r.data && r.data !== APP_VERSION){
+      dangBiKhoaCapNhat = true;
+      isEdit=false; mmtbEdit=false;
+      var el=document.getElementById('update-lock-banner');
+      if(el) el.style.display='flex';
+    }
+  }catch(e){ console.error('[kiemTraPhienBan] Lỗi kiểm tra phiên bản:', e); }
+}
+
 var GIO_HAN = { gio_han_ns_mmtb: '08:00:00', gio_han_nghiem_thu: '16:00:00' };
 async function taiGioHan(){
   try{
@@ -1348,21 +1372,17 @@ async function exportFullReport(){
   new Chart(ctx,{
     type:'line',
     data:{labels:dayLabels,datasets:[
-      {label:'NS Đi làm',data:nsDiLamVals,borderColor:'#1565c0',backgroundColor:'#1565c0',borderDash:[6,4],borderWidth:2,pointRadius:2,tension:0.3,spanGaps:true},
-      {label:'MMTB Hoạt động',data:mmtbHDVals,borderColor:'#e53935',backgroundColor:'#e53935',borderDash:[6,4],borderWidth:2,pointRadius:2,tension:0.3,spanGaps:true},
-      {label:'Tổng NS',data:nsVals,borderColor:'#1565c0',backgroundColor:'#1565c0',tension:0.3,spanGaps:true,
-        datalabels:{}},
+      {label:'Tổng NS',data:nsVals,borderColor:'#1565c0',backgroundColor:'#1565c0',tension:0.3,spanGaps:true},
       {label:'Tổng MMTB',data:mmtbVals,borderColor:'#e53935',backgroundColor:'#e53935',tension:0.3,spanGaps:true}
     ]},
     options:{responsive:false,animation:false,
-      plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:26}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:14}},
         tooltip:{enabled:false}},
       scales:{y:{beginAtZero:true,ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}}
   });
-  // Vẽ số trên mỗi điểm: 2 đường nét liền (Tổng) hiện số ở TRÊN điểm, giữ đúng màu đường. 2 đường
-  // nét đứt (Đi làm/Hoạt động) hiện số ở DƯỚI điểm, luôn tô xanh lá đậm — đúng màu quy ước "đi làm"
-  // đang dùng ở mọi chỗ khác trong app, tránh trùng màu với đường nét liền cùng bên.
-  drawPointLabels(ctx, [nsVals,mmtbVals], ['#1565c0','#e53935'], 'above', 2);
+  // Chỉ 2 đường (Tổng NS, Tổng MMTB), mỗi điểm hiện 2 số: số TRÊN = Tổng (đúng màu đường), số
+  // DƯỚI = Đi làm/Hoạt động (luôn xanh lá đậm — đúng màu quy ước "đi làm" dùng khắp nơi trong app).
+  drawPointLabels(ctx, [nsVals,mmtbVals], ['#1565c0','#e53935'], 'above', 0);
   drawPointLabels(ctx, [nsDiLamVals,mmtbHDVals], ['#33691E','#33691E'], 'below', 0);
 
   // Render panel chi tiết Nhân sự
@@ -2191,6 +2211,7 @@ async function saveStructure(){
 }
 
 async function mergeSave(){
+  if(dangBiKhoaCapNhat){ setSS('🔄 Thiết bị đang chạy bản cũ — vui lòng tải lại trang trước khi lưu.'); return; }
   var targetKey = vDate || tkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
   setSS('⏳ Đang lưu...');
   try{
@@ -3325,6 +3346,7 @@ async function mmtbSaveStructure(){
 }
 
 async function mmtbMergeSave(){
+  if(dangBiKhoaCapNhat){ mmtbSetSS('🔄 Thiết bị đang chạy bản cũ — vui lòng tải lại trang trước khi lưu.'); return; }
   var targetKey = mmtbVDate || mmtbTkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
   mmtbSetSS('⏳ Đang lưu...');
   try{
@@ -4543,6 +4565,7 @@ document.addEventListener('click', function(e){
   };
 
   await layGioChuan();
+  await kiemTraPhienBan(); // kiểm tra NGAY lúc mở app — thiết bị cũ bị khoá từ giây đầu tiên
   await taiCauHinhCaLamViec();
   LIVE_TYPES=TYPES.slice(); LIVE_TLABELS=TLABELS.slice();
   await taiCauHinhDuAn();
@@ -4560,6 +4583,8 @@ document.addEventListener('click', function(e){
   // lại bảng khi KHÔNG có ô nào đang được gõ dở (tránh giật/mất focus khi người dùng đang nhập số).
   async function dongBoCauHinhDinhKy(){
     try{
+      await kiemTraPhienBan(); // kiểm tra phiên bản TRƯỚC — nếu đã bị khoá thì không cần đồng bộ gì thêm
+      if(dangBiKhoaCapNhat) return;
       var truocTYPES=TYPES.join(','), truocProjects=projects.join(','), truocCOLS=COLS.map(function(c){return c.k;}).join(',');
       var truocMmtbMachines=mmtbMachines.map(function(m){return m.k;}).join(',');
       var truocMmtbProjects=mmtbProjects.join(',');
