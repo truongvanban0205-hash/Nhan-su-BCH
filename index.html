@@ -1348,21 +1348,22 @@ async function exportFullReport(){
   new Chart(ctx,{
     type:'line',
     data:{labels:dayLabels,datasets:[
+      {label:'NS Đi làm',data:nsDiLamVals,borderColor:'#1565c0',backgroundColor:'#1565c0',borderDash:[6,4],borderWidth:2,pointRadius:2,tension:0.3,spanGaps:true},
+      {label:'MMTB Hoạt động',data:mmtbHDVals,borderColor:'#e53935',backgroundColor:'#e53935',borderDash:[6,4],borderWidth:2,pointRadius:2,tension:0.3,spanGaps:true},
       {label:'Tổng NS',data:nsVals,borderColor:'#1565c0',backgroundColor:'#1565c0',tension:0.3,spanGaps:true,
         datalabels:{}},
-      {label:'Tổng MMTB',data:mmtbVals,borderColor:'#e53935',backgroundColor:'#e53935',tension:0.3,spanGaps:true},
-      {label:'NS Đi làm',data:nsDiLamVals,borderColor:'#1565c0',backgroundColor:'#1565c0',borderDash:[5,4],borderWidth:1.5,pointRadius:2,tension:0.3,spanGaps:true},
-      {label:'MMTB Hoạt động',data:mmtbHDVals,borderColor:'#e53935',backgroundColor:'#e53935',borderDash:[5,4],borderWidth:1.5,pointRadius:2,tension:0.3,spanGaps:true}
+      {label:'Tổng MMTB',data:mmtbVals,borderColor:'#e53935',backgroundColor:'#e53935',tension:0.3,spanGaps:true}
     ]},
     options:{responsive:false,animation:false,
-      plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:14}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:26}},
         tooltip:{enabled:false}},
       scales:{y:{beginAtZero:true,ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}}
   });
-  // Vẽ số trên mỗi điểm: 2 đường nét liền (Tổng) hiện số ở TRÊN điểm, 2 đường nét đứt (Đi làm/Hoạt
-  // động) hiện số ở DƯỚI điểm — tránh chữ đè lên nhau khi 2 đường cùng màu nằm sát nhau.
-  drawPointLabels(ctx, [nsVals,mmtbVals], ['#1565c0','#e53935'], 'above');
-  drawPointLabels(ctx, [nsDiLamVals,mmtbHDVals], ['#1565c0','#e53935'], 'below');
+  // Vẽ số trên mỗi điểm: 2 đường nét liền (Tổng) hiện số ở TRÊN điểm, giữ đúng màu đường. 2 đường
+  // nét đứt (Đi làm/Hoạt động) hiện số ở DƯỚI điểm, luôn tô xanh lá đậm — đúng màu quy ước "đi làm"
+  // đang dùng ở mọi chỗ khác trong app, tránh trùng màu với đường nét liền cùng bên.
+  drawPointLabels(ctx, [nsVals,mmtbVals], ['#1565c0','#e53935'], 'above', 2);
+  drawPointLabels(ctx, [nsDiLamVals,mmtbHDVals], ['#33691E','#33691E'], 'below', 0);
 
   // Render panel chi tiết Nhân sự
   var nsPanelEl=document.getElementById('reportNsChartPanel');
@@ -1392,16 +1393,15 @@ async function exportFullReport(){
   document.body.removeChild(container);
 }
 
-function drawPointLabels(canvasEl, datasetsVals, colors, pos){
+function drawPointLabels(canvasEl, datasetsVals, colors, pos, dsOffset){
   setTimeout(function(){
     var ctx2d=canvasEl.getContext('2d');
     var chart=Chart.getChart(canvasEl);
     if(!chart)return;
     ctx2d.font='bold 10px sans-serif';
-    var dsOffset = (pos==='below') ? 2 : 0; // 2 đường nét đứt luôn là dataset thứ 3,4 trong chart
     datasetsVals.forEach(function(vals,di){
       ctx2d.fillStyle=colors[di];
-      var meta=chart.getDatasetMeta(di+dsOffset);
+      var meta=chart.getDatasetMeta(di+(dsOffset||0));
       meta.data.forEach(function(point,i){
         var v=vals[i];
         if(v===null||v===undefined)return;
