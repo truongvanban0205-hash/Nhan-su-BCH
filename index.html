@@ -2743,12 +2743,24 @@ async function viewDay(key){
   COLS = (h.cols && h.cols.length) ? h.cols : COLS;
   data = h.data || {};
   projects = (h.projects && h.projects.length) ? h.projects : Object.keys(data);
-  // Loại ca: suy ra đúng từ chính dữ liệu ngày đó (mã ca có thể đã đổi số lượng/tên theo thời gian).
+  // Loại ca: suy ra đúng từ chính dữ liệu ngày đó (mã ca có thể đã đổi số lượng/tên theo thời gian),
+  // nhưng THỨ TỰ hiển thị luôn phải theo đúng thu_tu đang cấu hình ở Quản lý (LIVE_TYPES) — không
+  // theo thứ tự tình cờ gặp trong data (mỗi dự án có thể lưu ca theo thứ tự khác nhau, gây đảo lộn
+  // dòng HC/Ca 1/Ca 2/Ca 3/Nghỉ khi xem lịch sử). Mã ca lạ không còn trong cấu hình hiện tại (đã đổi
+  // /xoá) thì xếp xuống cuối, theo đúng thứ tự phát hiện ban đầu.
   var typesFound = [];
   Object.keys(data).forEach(function(p){
     Object.keys(data[p]||{}).forEach(function(t){ if(typesFound.indexOf(t)<0) typesFound.push(t); });
   });
   if(typesFound.length){
+    var thuTuGoc = typesFound.slice();
+    typesFound.sort(function(a,b){
+      var ia = LIVE_TYPES ? LIVE_TYPES.indexOf(a) : -1;
+      var ib = LIVE_TYPES ? LIVE_TYPES.indexOf(b) : -1;
+      if(ia<0) ia = 999 + thuTuGoc.indexOf(a);
+      if(ib<0) ib = 999 + thuTuGoc.indexOf(b);
+      return ia-ib;
+    });
     TYPES = typesFound;
     TLABELS = typesFound.map(function(t){
       var idx = LIVE_TYPES ? LIVE_TYPES.indexOf(t) : -1;
