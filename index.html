@@ -3154,24 +3154,9 @@ function bdFinish(chip,text){
 function suaLyDoBienDong(module,key){
   var store=module==='ns'?bienDong:mmtbBienDong;
   var pendingStore=module==='ns'?pendingBienDong:mmtbPendingBienDong;
-  var old=store[key];
-  if(old){
-    // Đã có lý do rồi — ai cũng sửa lại được ngay, không cần mật khẩu
-    var text=prompt('Sửa lại nội dung lý do:',old.chiTiet!==null&&old.chiTiet!==undefined?old.chiTiet:old.nhan);
-    if(text===null)return; // bấm Huỷ trên prompt -> không đổi gì
-    text=text.trim();
-    if(!text){alert('Lý do không được để trống!');return;}
-    old.nhan=(old.ma&&old.ma!=='khac'&&old.chiTiet!==null)?
-      (BD_CHIPS[module+'_'+old.huong].find(function(c){return c.ma===old.ma;})||{}).nhan+': '+text : text;
-    old.chiTiet=text;
-    old.ts=new Date().toISOString();
-    old.nguoi=(module==='ns'?curUser:mmtbUser)||old.nguoi;
-    pendingStore[key]=old;
-    if(module==='ns'){ renderCharts(); schSave(); } else { mmtbRenderCharts(); mmtbSchSave(); }
-    toast('✅ Đã sửa lý do');
-    return;
-  }
-  // Chưa có lý do — mở sheet chọn nhanh để nhập lần đầu, không cần mật khẩu
+  // Dù đã có lý do hay chưa, bấm vào đều mở lại ĐẦY ĐỦ bộ chip để chọn lại từ đầu (kể cả đổi hẳn
+  // sang loại lý do khác — ví dụ đang "Điều chuyển" muốn đổi sang "Nghỉ việc") — không giới hạn
+  // chỉ sửa được chữ chi tiết như trước.
   var baseline,cur,label;
   if(module==='ns'){
     baseline=prevDayData?tongChucDanh(key,prevDayData):0;
@@ -3189,6 +3174,7 @@ function suaLyDoBienDong(module,key){
       store[key]=entry;
       pendingStore[key]=entry;
       if(module==='ns'){ renderCharts(); schSave(); } else { mmtbRenderCharts(); mmtbSchSave(); }
+      toast('✅ Đã lưu lý do');
     },
     onCancel:function(){}
   });
