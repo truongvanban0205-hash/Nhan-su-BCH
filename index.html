@@ -3090,8 +3090,7 @@ function openBDSheet(opts){
     +'<div id="bd-chip-list">'
     +chips.map(function(c,i){return '<div class="bd-chip" onclick="bdPickChip('+i+')">'+c.nhan+'</div>';}).join('')
     +'</div>'
-    +'<div id="bd-sub-area"></div>'
-    +'<div class="bd-cancel-row"><button onclick="closeBDSheet(true)">Huỷ (trả lại số cũ)</button></div>';
+    +'<div id="bd-sub-area"></div>';
   document.getElementById('bd-sheet').innerHTML=html;
   document.getElementById('bd-overlay').style.display='flex';
 }
