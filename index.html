@@ -2211,7 +2211,6 @@ function safeEvalCongThuc(str){
 }
 function niFocus(el){
   var n=parseInt(el.value)||0;
-  el.dataset.revertVal=String(n); // giá trị TRƯỚC khi sửa — dùng để Huỷ trả về đúng số cũ nếu không nhập lý do biến động
   el.value=n>0?String(n):'';
   el.select();
 }
@@ -2221,7 +2220,6 @@ function niBlur(el){
   var n = computed !== null ? computed : (parseInt(raw)||0);
   el.value=n===0?'-':(n<10?'0'+n:String(n));
   if(computed !== null) el.dispatchEvent(new Event('input'));
-  checkBienDongNS(el);
 }
 
 var pendingChanges={}; // {proj: {type: {col: value}}}
@@ -2238,45 +2236,59 @@ function tongChucDanh(colKey,src){
   return total;
 }
 
-// Gọi khi rời (blur) 1 ô số Nhân sự — nếu Tổng chức danh đó đổi khác mốc 00:00 hôm nay (=dữ liệu hôm qua)
-// thì bắt buộc hỏi lý do; nếu quay lại đúng mốc cũ thì tự xoá lý do; nếu trùng đúng lý do đã ghi rồi thì bỏ qua.
-function checkBienDongNS(el){
-  if(vDate)return; // CHỈ áp dụng ngày hôm nay, không áp dụng khi xem/sửa lịch sử ngày cũ
-  if(!prevDayData)return; // chưa có dữ liệu hôm qua để so sánh (ngày đầu tiên) -> không áp dụng
-  var colKey=el.getAttribute('data-col');
-  if(!colKey)return;
-  var baseline=tongChucDanh(colKey,prevDayData);
-  var cur=tongChucDanh(colKey);
-  var existing=bienDong[colKey];
-  if(cur===baseline){
-    if(existing){ delete bienDong[colKey]; pendingBienDong[colKey]=null; renderCharts(); schSave(); }
-    return;
-  }
-  if(existing&&existing.tong===cur)return; // đã có đúng lý do cho biến động này rồi
-  var revertVal=el.dataset.revertVal||'0';
-  openBDSheet({
-    module:'ns', label:(COLS.find(function(c){return c.k===colKey;})||{}).n||colKey,
-    huong: cur>baseline?'tang':'giam', delta: cur-baseline,
-    onConfirm:function(entry){
-      entry.tong=cur;
-      bienDong[colKey]=entry;
-      pendingBienDong[colKey]=entry;
-      renderCharts();
-      schSave();
-    },
-    onCancel:function(){
-      var p=el.getAttribute('data-proj'), t=el.getAttribute('data-type');
-      var v=Math.max(0,parseInt(revertVal)||0);
-      data[p][t][colKey]=v;
-      el.value=v===0?'-':(v<10?'0'+v:String(v));
-      if(!pendingChanges[p])pendingChanges[p]={};
-      if(!pendingChanges[p][t])pendingChanges[p][t]={};
-      pendingChanges[p][t][colKey]=v;
-      calcTotals();
-      renderCharts();
-      schSave();
-    }
+// Mở sheet chọn lý do dạng Promise — dùng để hỏi TUẦN TỰ nhiều chức danh trong 1 lượt lưu
+function openBDSheetP(opts){
+  return new Promise(function(resolve){
+    opts.onConfirm=function(entry){ resolve({action:'confirm',entry:entry}); };
+    opts.onCancel=function(){ resolve({action:'cancel'}); };
+    openBDSheet(opts);
   });
+}
+
+// Gọi ĐÚNG LÚC CHUẨN BỊ LƯU (bấm "Lưu ngay", quay lại tab, hoặc vừa tải trang xong) — KHÔNG gọi lúc
+// lưu ngầm tự động (để không ngắt quãng lúc đang gõ nhiều ô liên tiếp). Quét TOÀN BỘ chức danh đang có
+// biến động chưa có lý do (so với mốc 00:00 hôm nay), hỏi lần lượt từng cái; Huỷ thì trả các ô liên quan
+// về đúng số đã lưu trên server gần nhất (huỷ đúng phần thay đổi của mình, không đụng người khác).
+async function resolveBienDongNS(serverDataRef,mergedDataRef){
+  if(vDate||!prevDayData)return;
+  var affected=[];
+  (COLS||[]).forEach(function(c){
+    var baseline=tongChucDanh(c.k,prevDayData);
+    var cur=tongChucDanh(c.k,mergedDataRef);
+    var existing=bienDong[c.k];
+    if(cur===baseline){ if(existing){delete bienDong[c.k];pendingBienDong[c.k]=null;} return; }
+    if(existing&&existing.tong===cur)return;
+    affected.push(c.k);
+  });
+  for(var i=0;i<affected.length;i++){
+    var k=affected[i];
+    var baseline2=tongChucDanh(k,prevDayData);
+    var cur2=tongChucDanh(k,mergedDataRef);
+    var res=await openBDSheetP({
+      module:'ns', label:(COLS.find(function(c){return c.k===k;})||{}).n||k,
+      huong: cur2>baseline2?'tang':'giam', delta: cur2-baseline2
+    });
+    if(res.action==='cancel'){
+      // Trả các ô CHÍNH MÌNH vừa sửa (trong pendingChanges) của đúng chức danh này về số đã lưu server
+      Object.keys(pendingChanges).forEach(function(p){
+        Object.keys(pendingChanges[p]||{}).forEach(function(t){
+          if(pendingChanges[p][t]&&(k in pendingChanges[p][t])){
+            var orig=(serverDataRef&&serverDataRef.data&&serverDataRef.data[p]&&serverDataRef.data[p][t]&&serverDataRef.data[p][t][k])||0;
+            if(!mergedDataRef[p])mergedDataRef[p]={};
+            if(!mergedDataRef[p][t])mergedDataRef[p][t]={};
+            mergedDataRef[p][t][k]=orig;
+            if(data[p]&&data[p][t])data[p][t][k]=orig;
+            delete pendingChanges[p][t][k];
+          }
+        });
+      });
+    }else{
+      res.entry.tong=tongChucDanh(k,mergedDataRef);
+      bienDong[k]=res.entry;
+      pendingBienDong[k]=res.entry;
+    }
+  }
+  renderTable();renderCharts();
 }
 
 function updVal(p,type,k,val){
@@ -2316,8 +2328,11 @@ async function saveStructure(){
   }catch(e){setSS('⚠️ Lỗi: '+e.message);alert('Lỗi lưu: '+e.message);}
 }
 
-async function mergeSave(){
+var mergeSaveBusy=false;
+async function mergeSave(askReason){
   if(dangBiKhoaCapNhat){ setSS('🔄 Thiết bị đang chạy bản cũ — vui lòng tải lại trang trước khi lưu.'); return; }
+  if(mergeSaveBusy)return; // đang có 1 lượt lưu khác chạy (có thể đang chờ nhập lý do) — bỏ qua, lượt sau tự thử lại
+  mergeSaveBusy=true;
   var targetKey = vDate || tkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
   setSS('⏳ Đang lưu...');
   try{
@@ -2376,6 +2391,15 @@ async function mergeSave(){
       logItems.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
       mergedLog=mergedLog.slice(0,50);
     }
+    // CHỈ hỏi lý do biến động khi bấm "Lưu ngay"/quay lại tab/vừa tải trang xong (askReason=true) —
+    // KHÔNG hỏi lúc lưu ngầm tự động, để không ngắt quãng lúc đang gõ nhiều ô liên tiếp.
+    if(askReason){
+      await resolveBienDongNS(serverData,mergedData);
+      Object.keys(pendingBienDong).forEach(function(k){
+        if(pendingBienDong[k]===null) delete mergedBienDong[k];
+        else mergedBienDong[k]=pendingBienDong[k];
+      });
+    }
     var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong};
     if(ex.data){
       await sc.from('nhansu').update({data:payload}).eq('ngay',targetKey);
@@ -2389,12 +2413,13 @@ async function mergeSave(){
     setSS('✅ Đã cập nhật');
     renderLog();
   }catch(e){setSS('⚠️ Lỗi: '+e.message);}
+  finally{mergeSaveBusy=false;}
 }
 
 async function saveData(){
   if(!curUser&&!vDate){alert('Nhập tên trước khi lưu!');return;}
   if(vDate&&!isEdit){alert('Đang ở chế độ chỉ đọc — bấm "🔓 Sửa ngày này" và nhập mật khẩu trước khi lưu.');return;}
-  await mergeSave();
+  await mergeSave(true);
   toast(vDate?'💾 Đã lưu sửa đổi ngày cũ!':'💾 Đã lưu & đồng bộ!');
   if(curTab===2)await renderDayList();
 }
@@ -3311,6 +3336,13 @@ async function init(){
       });
     }
   },20000);
+  // LỚP AN TOÀN: kiểm tra biến động chưa có lý do ngay sau khi tải trang xong (có thể do người/máy
+  // khác vừa lưu để lại), và mỗi khi quay lại tab (chuyển app, mở lại màn hình...) — không hỏi lúc
+  // đang gõ/lưu ngầm tự động (xem askReason trong mergeSave/schSave).
+  if(!vDate)mergeSave(true);
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden&&!vDate&&nsInited)mergeSave(true);
+  });
 }
 // ============ MODULE MMTB ============
 var DEF_MACHINES=[
@@ -3357,42 +3389,45 @@ function tongLoaiMay(mk,src){
   return total;
 }
 
-function checkBienDongMMTB(el){
-  if(mmtbVDate)return; // CHỈ áp dụng ngày hôm nay
-  if(!mmtbPrevDayData)return;
-  var mk=el.getAttribute('data-mk');
-  if(!mk)return;
-  var baseline=tongLoaiMay(mk,mmtbPrevDayData);
-  var cur=tongLoaiMay(mk);
-  var existing=mmtbBienDong[mk];
-  if(cur===baseline){
-    if(existing){ delete mmtbBienDong[mk]; mmtbPendingBienDong[mk]=null; mmtbRenderCharts(); mmtbSchSave(); }
-    return;
-  }
-  if(existing&&existing.tong===cur)return;
-  var revertVal=el.dataset.revertVal||'0';
-  openBDSheet({
-    module:'mmtb', label:(mmtbMachines.find(function(m){return m.k===mk;})||{}).n||mk,
-    huong: cur>baseline?'tang':'giam', delta: cur-baseline,
-    onConfirm:function(entry){
-      entry.tong=cur;
-      mmtbBienDong[mk]=entry;
-      mmtbPendingBienDong[mk]=entry;
-      mmtbRenderCharts();
-      mmtbSchSave();
-    },
-    onCancel:function(){
-      var p=el.getAttribute('data-proj'), s=el.getAttribute('data-status');
-      var v=Math.max(0,parseInt(revertVal)||0);
-      mmtbData[p][s][mk]=v;
-      el.value=v===0?'-':(v<10?'0'+v:String(v));
-      if(!mmtbPendingChanges[p])mmtbPendingChanges[p]={};
-      if(!mmtbPendingChanges[p][s])mmtbPendingChanges[p][s]={};
-      mmtbPendingChanges[p][s][mk]=v;
-      mmtbRenderCharts();
-      mmtbSchSave();
-    }
+async function resolveBienDongMMTB(serverDataRef,mergedDataRef){
+  if(mmtbVDate||!mmtbPrevDayData)return;
+  var affected=[];
+  (mmtbMachines||[]).forEach(function(m){
+    var baseline=tongLoaiMay(m.k,mmtbPrevDayData);
+    var cur=tongLoaiMay(m.k,mergedDataRef);
+    var existing=mmtbBienDong[m.k];
+    if(cur===baseline){ if(existing){delete mmtbBienDong[m.k];mmtbPendingBienDong[m.k]=null;} return; }
+    if(existing&&existing.tong===cur)return;
+    affected.push(m.k);
   });
+  for(var i=0;i<affected.length;i++){
+    var mk=affected[i];
+    var baseline2=tongLoaiMay(mk,mmtbPrevDayData);
+    var cur2=tongLoaiMay(mk,mergedDataRef);
+    var res=await openBDSheetP({
+      module:'mmtb', label:(mmtbMachines.find(function(m){return m.k===mk;})||{}).n||mk,
+      huong: cur2>baseline2?'tang':'giam', delta: cur2-baseline2
+    });
+    if(res.action==='cancel'){
+      Object.keys(mmtbPendingChanges).forEach(function(p){
+        Object.keys(mmtbPendingChanges[p]||{}).forEach(function(s){
+          if(mmtbPendingChanges[p][s]&&(mk in mmtbPendingChanges[p][s])){
+            var orig=(serverDataRef&&serverDataRef.data&&serverDataRef.data[p]&&serverDataRef.data[p][s]&&serverDataRef.data[p][s][mk])||0;
+            if(!mergedDataRef[p])mergedDataRef[p]={};
+            if(!mergedDataRef[p][s])mergedDataRef[p][s]={};
+            mergedDataRef[p][s][mk]=orig;
+            if(mmtbData[p]&&mmtbData[p][s])mmtbData[p][s][mk]=orig;
+            delete mmtbPendingChanges[p][s][mk];
+          }
+        });
+      });
+    }else{
+      res.entry.tong=tongLoaiMay(mk,mergedDataRef);
+      mmtbBienDong[mk]=res.entry;
+      mmtbPendingBienDong[mk]=res.entry;
+    }
+  }
+  mmtbRenderTable();mmtbRenderCharts();
 }
 
 function mmtbTkey(){ return tkey(); }
@@ -3607,14 +3642,12 @@ async function mmtbUnlockEdit(){
 
 function mmtbNiFocus(el){
   var n=parseInt(el.value)||0;
-  el.dataset.revertVal=String(n);
   el.value=n>0?String(n):'';
   el.select();
 }
 function mmtbNiBlur(el){
   var n=parseInt(el.value)||0;
   el.value=n===0?'-':(n<10?'0'+n:String(n));
-  checkBienDongMMTB(el);
 }
 function mmtbFmtN(v){return v===0?'-':(v<10?'0'+v:String(v));}
 
@@ -3661,8 +3694,11 @@ async function mmtbSaveStructure(){
   }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);alert('Lỗi lưu: '+e.message);}
 }
 
-async function mmtbMergeSave(){
+var mmtbMergeSaveBusy=false;
+async function mmtbMergeSave(askReason){
   if(dangBiKhoaCapNhat){ mmtbSetSS('🔄 Thiết bị đang chạy bản cũ — vui lòng tải lại trang trước khi lưu.'); return; }
+  if(mmtbMergeSaveBusy)return;
+  mmtbMergeSaveBusy=true;
   var targetKey = mmtbVDate || mmtbTkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
   mmtbSetSS('⏳ Đang lưu...');
   try{
@@ -3713,15 +3749,22 @@ async function mmtbMergeSave(){
       Object.keys(mmtbPendingNotesChanges).forEach(function(k){
         mergedNotes[k]=mmtbPendingNotesChanges[k];
       });
-      // Ghi đè/xoá CHỈ những lý do biến động vừa đổi trong phiên này (null = đã xoá vì hết biến động)
-      Object.keys(mmtbPendingBienDong).forEach(function(k){
-        if(mmtbPendingBienDong[k]===null) delete mergedBienDong[k];
-        else mergedBienDong[k]=mmtbPendingBienDong[k];
-      });
       mmtbMachines.forEach(function(m){if(!mergedMachines.find(function(mm){return mm.k===m.k;}))mergedMachines.push(m);});
       var existingTs=mergedLog.map(function(l){return l.ts;});
       mmtbLog.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
       mergedLog=mergedLog.slice(0,50);
+    }
+    // CHỈ hỏi lý do biến động khi bấm "Lưu ngay"/quay lại tab/vừa tải trang xong (askReason=true)
+    if(askReason){
+      await resolveBienDongMMTB(serverData,mergedData);
+    }
+    // Ghi đè/xoá CHỈ những lý do biến động vừa đổi trong phiên này (null = đã xoá vì hết biến động)
+    // — đặt SAU resolveBienDongMMTB để gồm cả những lý do vừa được xử lý ở bước trên.
+    if(!mmtbVDate){
+      Object.keys(mmtbPendingBienDong).forEach(function(k){
+        if(mmtbPendingBienDong[k]===null) delete mergedBienDong[k];
+        else mergedBienDong[k]=mmtbPendingBienDong[k];
+      });
     }
     var payload={machines:mergedMachines,projects:mergedProjects,data:mergedData,notes:mergedNotes,log:mergedLog,bienDong:mergedBienDong};
     if(ex.data){
@@ -3736,12 +3779,13 @@ async function mmtbMergeSave(){
     mmtbSetSS('✅ Đã cập nhật');
     mmtbRenderLog();
   }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);}
+  finally{mmtbMergeSaveBusy=false;}
 }
 
 async function mmtbSaveData(){
   if(!mmtbUser&&!mmtbVDate){alert('Nhập tên trước khi lưu!');return;}
   if(mmtbVDate&&!mmtbEdit){alert('Đang ở chế độ chỉ đọc — bấm "🔓 Sửa ngày này" và nhập mật khẩu trước khi lưu.');return;}
-  await mmtbMergeSave();
+  await mmtbMergeSave(true);
   toast(mmtbVDate?'💾 Đã lưu sửa đổi ngày cũ!':'💾 MMTB: Đã lưu!');
   if(mmtbCurTab===2)await mmtbRenderDayList();
 }
@@ -4215,6 +4259,11 @@ async function mmtbInit(){
       });
     }
   },20000);
+  // LỚP AN TOÀN: kiểm tra biến động chưa có lý do ngay sau khi tải trang xong, và mỗi khi quay lại tab.
+  if(!mmtbVDate)mmtbMergeSave(true);
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden&&!mmtbVDate&&mmtbInited)mmtbMergeSave(true);
+  });
 }
 
 // ============ MODULE LỊCH NGHIỆM THU ============
