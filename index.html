@@ -1592,18 +1592,19 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
       +'</tr>'
       +'</table>';
   }
-  var bdKeysExp=Object.keys(nsBienDong);
+  var bdRowsExp=[];
+  (nsCols||[]).forEach(function(c){
+    if(!prevData)return;
+    var base=calcCol(c.k,prevProjs,prevData);
+    var cur=calcCol(c.k,nsProjs,nsData);
+    if(cur===base)return;
+    var e=nsBienDong[c.k];
+    var dau=cur>base?'+':'';
+    bdRowsExp.push('<div style="margin-top:2px;"><b>'+c.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
+  });
   html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;font-size:10px;color:#555;">'
     +'<b>Ghi chú:</b>'
-    +(bdKeysExp.length
-      ? bdKeysExp.map(function(k){
-          var cname=(nsCols.find(function(c){return c.k===k;})||{}).n||k;
-          var e=nsBienDong[k];
-          var base=calcCol(k,prevProjs,prevData);
-          var dau=e.huong==='tang'?'+':'';
-          return '<div style="margin-top:2px;"><b>'+cname+'</b> ('+dau+(e.tong-base)+'): '+e.nhan+'</div>';
-        }).join('')
-      : ' Không có biến động so với ngày hôm trước')
+    +(bdRowsExp.length ? bdRowsExp.join('') : ' Không có biến động so với ngày hôm trước')
     +'</div>';
   el.innerHTML=html;
 }
@@ -1674,18 +1675,19 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
     +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#888;font-size:10px;">Lưu kho</span><span style="font-weight:600;font-size:10px;">'+totArrow(mTotal.lk,totalLKy)+mTotal.lk+'</span></div>'
     +'</div>';
   html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;"><span style="color:#555;">Tổng</span><span style="font-weight:700;color:#1a1a1a">'+totArrow(mTotal.hd+mTotal.hh+mTotal.lk,totalHDy+totalHHy+totalLKy)+(mTotal.hd+mTotal.hh+mTotal.lk)+'</span></div>';
-  var bdKeysExpM=Object.keys(mmtbBienDongExp);
+  var bdRowsExpM=[];
+  mList.forEach(function(m){
+    if(!ydt)return;
+    var base=calcMachTotal(m.k,yProjs,ydt);
+    var cur=calcMachTotal(m.k,mProjs,dt);
+    if(cur===base)return;
+    var e=mmtbBienDongExp[m.k];
+    var dau=cur>base?'+':'';
+    bdRowsExpM.push('<div style="margin-top:2px;"><b>'+m.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
+  });
   html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-size:10px;color:#555;">'
     +'<b>Ghi chú:</b>'
-    +(bdKeysExpM.length
-      ? bdKeysExpM.map(function(k){
-          var mname=(mList.find(function(m){return m.k===k;})||{}).n||k;
-          var e=mmtbBienDongExp[k];
-          var base=calcMachTotal(k,yProjs,ydt||{});
-          var dau=e.huong==='tang'?'+':'';
-          return '<div style="margin-top:2px;"><b>'+mname+'</b> ('+dau+(e.tong-base)+'): '+e.nhan+'</div>';
-        }).join('')
-      : ' Không có biến động so với ngày hôm trước')
+    +(bdRowsExpM.length ? bdRowsExpM.join('') : ' Không có biến động so với ngày hôm trước')
     +'</div>';
   el.innerHTML=html;
 }
@@ -2236,60 +2238,6 @@ function tongChucDanh(colKey,src){
   return total;
 }
 
-// Mở sheet chọn lý do dạng Promise — dùng để hỏi TUẦN TỰ nhiều chức danh trong 1 lượt lưu
-function openBDSheetP(opts){
-  return new Promise(function(resolve){
-    opts.onConfirm=function(entry){ resolve({action:'confirm',entry:entry}); };
-    opts.onCancel=function(){ resolve({action:'cancel'}); };
-    openBDSheet(opts);
-  });
-}
-
-// Gọi ĐÚNG LÚC CHUẨN BỊ LƯU (bấm "Lưu ngay", quay lại tab, hoặc vừa tải trang xong) — KHÔNG gọi lúc
-// lưu ngầm tự động (để không ngắt quãng lúc đang gõ nhiều ô liên tiếp). Quét TOÀN BỘ chức danh đang có
-// biến động chưa có lý do (so với mốc 00:00 hôm nay), hỏi lần lượt từng cái; Huỷ thì trả các ô liên quan
-// về đúng số đã lưu trên server gần nhất (huỷ đúng phần thay đổi của mình, không đụng người khác).
-async function resolveBienDongNS(serverDataRef,mergedDataRef){
-  if(vDate||!prevDayData)return;
-  var affected=[];
-  (COLS||[]).forEach(function(c){
-    var baseline=tongChucDanh(c.k,prevDayData);
-    var cur=tongChucDanh(c.k,mergedDataRef);
-    var existing=bienDong[c.k];
-    if(cur===baseline){ if(existing){delete bienDong[c.k];pendingBienDong[c.k]=null;} return; }
-    if(existing&&existing.tong===cur)return;
-    affected.push(c.k);
-  });
-  for(var i=0;i<affected.length;i++){
-    var k=affected[i];
-    var baseline2=tongChucDanh(k,prevDayData);
-    var cur2=tongChucDanh(k,mergedDataRef);
-    var res=await openBDSheetP({
-      module:'ns', label:(COLS.find(function(c){return c.k===k;})||{}).n||k,
-      huong: cur2>baseline2?'tang':'giam', delta: cur2-baseline2
-    });
-    if(res.action==='cancel'){
-      // Trả các ô CHÍNH MÌNH vừa sửa (trong pendingChanges) của đúng chức danh này về số đã lưu server
-      Object.keys(pendingChanges).forEach(function(p){
-        Object.keys(pendingChanges[p]||{}).forEach(function(t){
-          if(pendingChanges[p][t]&&(k in pendingChanges[p][t])){
-            var orig=(serverDataRef&&serverDataRef.data&&serverDataRef.data[p]&&serverDataRef.data[p][t]&&serverDataRef.data[p][t][k])||0;
-            if(!mergedDataRef[p])mergedDataRef[p]={};
-            if(!mergedDataRef[p][t])mergedDataRef[p][t]={};
-            mergedDataRef[p][t][k]=orig;
-            if(data[p]&&data[p][t])data[p][t][k]=orig;
-            delete pendingChanges[p][t][k];
-          }
-        });
-      });
-    }else{
-      res.entry.tong=tongChucDanh(k,mergedDataRef);
-      bienDong[k]=res.entry;
-      pendingBienDong[k]=res.entry;
-    }
-  }
-  renderTable();renderCharts();
-}
 
 function updVal(p,type,k,val){
   if(!isEdit)return;
@@ -2390,15 +2338,6 @@ async function mergeSave(askReason){
       var existingTs=mergedLog.map(function(l){return l.ts;});
       logItems.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
       mergedLog=mergedLog.slice(0,50);
-    }
-    // CHỈ hỏi lý do biến động khi bấm "Lưu ngay"/quay lại tab/vừa tải trang xong (askReason=true) —
-    // KHÔNG hỏi lúc lưu ngầm tự động, để không ngắt quãng lúc đang gõ nhiều ô liên tiếp.
-    if(askReason){
-      await resolveBienDongNS(serverData,mergedData);
-      Object.keys(pendingBienDong).forEach(function(k){
-        if(pendingBienDong[k]===null) delete mergedBienDong[k];
-        else mergedBienDong[k]=pendingBienDong[k];
-      });
     }
     var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong};
     if(ex.data){
@@ -2745,21 +2684,23 @@ async function renderCharts(){
       +'</tr>'
       +'</table>';
   }
-  // Ghi chú: liệt kê đúng lý do biến động đã ghi (mỗi chức danh 1 dòng, bấm để quản lý sửa lại)
-  var bdKeys=Object.keys(bienDong);
+  // Ghi chú: liệt kê MỌI chức danh đang biến động so với hôm qua — có lý do thì hiện lý do,
+  // chưa có thì hiện dòng trống để quản lý bấm vào bổ sung sau (không bắt buộc lúc lưu).
+  var bdRows=[];
+  (COLS||[]).forEach(function(c){
+    if(!prevDayData)return;
+    var base=tongChucDanh(c.k,prevDayData);
+    var cur=tongChucDanh(c.k);
+    if(cur===base)return;
+    var e=bienDong[c.k];
+    var dau=cur>base?'+':'';
+    bdRows.push('<div style="margin-top:3px;cursor:pointer;" onclick="suaLyDoBienDong(\'ns\',\''+c.k+'\')" title="Bấm để nhập/sửa lý do">'
+      +'<b>'+c.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')
+      +' <span style="color:#1565c0;">✎</span></div>');
+  });
   html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;font-size:10px;color:#555;">'
     +'<b>Ghi chú:</b>'
-    +(bdKeys.length
-      ? bdKeys.map(function(k){
-          var cname=(COLS.find(function(c){return c.k===k;})||{}).n||k;
-          var e=bienDong[k];
-          var base=prevDayData?tongChucDanh(k,prevDayData):0;
-          var dau=e.huong==='tang'?'+':'';
-          return '<div style="margin-top:3px;cursor:pointer;" onclick="suaLyDoBienDong(\'ns\',\''+k+'\')" title="Bấm để sửa lại lý do">'
-            +'<b>'+cname+'</b> ('+dau+(e.tong-base)+'): '+e.nhan
-            +' <span style="color:#1565c0;">✎</span></div>';
-        }).join('')
-      : ' Không có biến động so với ngày hôm trước')
+    +(bdRows.length ? bdRows.join('') : ' Không có biến động so với ngày hôm trước')
     +'</div>';
   el.innerHTML=html;
 }
@@ -3212,10 +3153,11 @@ function bdFinish(chip,text){
 
 // Quản lý bấm vào 1 dòng Ghi chú đã có để SỬA lại lý do — yêu cầu đúng mật khẩu dùng chung với "Sửa ngày này"
 function suaLyDoBienDong(module,key){
-  askP(function(){
-    var store=module==='ns'?bienDong:mmtbBienDong;
-    var old=store[key];
-    if(!old)return;
+  var store=module==='ns'?bienDong:mmtbBienDong;
+  var pendingStore=module==='ns'?pendingBienDong:mmtbPendingBienDong;
+  var old=store[key];
+  if(old){
+    // Đã có lý do rồi — ai cũng sửa lại được ngay, không cần mật khẩu
     var text=prompt('Sửa lại nội dung lý do:',old.chiTiet!==null&&old.chiTiet!==undefined?old.chiTiet:old.nhan);
     if(text===null)return; // bấm Huỷ trên prompt -> không đổi gì
     text=text.trim();
@@ -3225,10 +3167,32 @@ function suaLyDoBienDong(module,key){
     old.chiTiet=text;
     old.ts=new Date().toISOString();
     old.nguoi=(module==='ns'?curUser:mmtbUser)||old.nguoi;
-    if(module==='ns'){ pendingBienDong[key]=old; renderCharts(); schSave(); }
-    else{ mmtbPendingBienDong[key]=old; mmtbRenderCharts(); mmtbSchSave(); }
+    pendingStore[key]=old;
+    if(module==='ns'){ renderCharts(); schSave(); } else { mmtbRenderCharts(); mmtbSchSave(); }
     toast('✅ Đã sửa lý do');
-  },'sửa lý do biến động');
+    return;
+  }
+  // Chưa có lý do — mở sheet chọn nhanh để nhập lần đầu, không cần mật khẩu
+  var baseline,cur,label;
+  if(module==='ns'){
+    baseline=prevDayData?tongChucDanh(key,prevDayData):0;
+    cur=tongChucDanh(key);
+    label=(COLS.find(function(c){return c.k===key;})||{}).n||key;
+  }else{
+    baseline=mmtbPrevDayData?tongLoaiMay(key,mmtbPrevDayData):0;
+    cur=tongLoaiMay(key);
+    label=(mmtbMachines.find(function(m){return m.k===key;})||{}).n||key;
+  }
+  openBDSheet({
+    module:module, label:label, huong: cur>baseline?'tang':'giam', delta: cur-baseline,
+    onConfirm:function(entry){
+      entry.tong=cur;
+      store[key]=entry;
+      pendingStore[key]=entry;
+      if(module==='ns'){ renderCharts(); schSave(); } else { mmtbRenderCharts(); mmtbSchSave(); }
+    },
+    onCancel:function(){}
+  });
 }
 
 function setDate(){
@@ -3336,13 +3300,6 @@ async function init(){
       });
     }
   },20000);
-  // LỚP AN TOÀN: kiểm tra biến động chưa có lý do ngay sau khi tải trang xong (có thể do người/máy
-  // khác vừa lưu để lại), và mỗi khi quay lại tab (chuyển app, mở lại màn hình...) — không hỏi lúc
-  // đang gõ/lưu ngầm tự động (xem askReason trong mergeSave/schSave).
-  if(!vDate)mergeSave(true);
-  document.addEventListener('visibilitychange',function(){
-    if(!document.hidden&&!vDate&&nsInited)mergeSave(true);
-  });
 }
 // ============ MODULE MMTB ============
 var DEF_MACHINES=[
@@ -3389,46 +3346,6 @@ function tongLoaiMay(mk,src){
   return total;
 }
 
-async function resolveBienDongMMTB(serverDataRef,mergedDataRef){
-  if(mmtbVDate||!mmtbPrevDayData)return;
-  var affected=[];
-  (mmtbMachines||[]).forEach(function(m){
-    var baseline=tongLoaiMay(m.k,mmtbPrevDayData);
-    var cur=tongLoaiMay(m.k,mergedDataRef);
-    var existing=mmtbBienDong[m.k];
-    if(cur===baseline){ if(existing){delete mmtbBienDong[m.k];mmtbPendingBienDong[m.k]=null;} return; }
-    if(existing&&existing.tong===cur)return;
-    affected.push(m.k);
-  });
-  for(var i=0;i<affected.length;i++){
-    var mk=affected[i];
-    var baseline2=tongLoaiMay(mk,mmtbPrevDayData);
-    var cur2=tongLoaiMay(mk,mergedDataRef);
-    var res=await openBDSheetP({
-      module:'mmtb', label:(mmtbMachines.find(function(m){return m.k===mk;})||{}).n||mk,
-      huong: cur2>baseline2?'tang':'giam', delta: cur2-baseline2
-    });
-    if(res.action==='cancel'){
-      Object.keys(mmtbPendingChanges).forEach(function(p){
-        Object.keys(mmtbPendingChanges[p]||{}).forEach(function(s){
-          if(mmtbPendingChanges[p][s]&&(mk in mmtbPendingChanges[p][s])){
-            var orig=(serverDataRef&&serverDataRef.data&&serverDataRef.data[p]&&serverDataRef.data[p][s]&&serverDataRef.data[p][s][mk])||0;
-            if(!mergedDataRef[p])mergedDataRef[p]={};
-            if(!mergedDataRef[p][s])mergedDataRef[p][s]={};
-            mergedDataRef[p][s][mk]=orig;
-            if(mmtbData[p]&&mmtbData[p][s])mmtbData[p][s][mk]=orig;
-            delete mmtbPendingChanges[p][s][mk];
-          }
-        });
-      });
-    }else{
-      res.entry.tong=tongLoaiMay(mk,mergedDataRef);
-      mmtbBienDong[mk]=res.entry;
-      mmtbPendingBienDong[mk]=res.entry;
-    }
-  }
-  mmtbRenderTable();mmtbRenderCharts();
-}
 
 function mmtbTkey(){ return tkey(); }
 function mmtbYkey(){var n=new Date();n.setDate(n.getDate()-1);return n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());}
@@ -3754,12 +3671,7 @@ async function mmtbMergeSave(askReason){
       mmtbLog.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
       mergedLog=mergedLog.slice(0,50);
     }
-    // CHỈ hỏi lý do biến động khi bấm "Lưu ngay"/quay lại tab/vừa tải trang xong (askReason=true)
-    if(askReason){
-      await resolveBienDongMMTB(serverData,mergedData);
-    }
     // Ghi đè/xoá CHỈ những lý do biến động vừa đổi trong phiên này (null = đã xoá vì hết biến động)
-    // — đặt SAU resolveBienDongMMTB để gồm cả những lý do vừa được xử lý ở bước trên.
     if(!mmtbVDate){
       Object.keys(mmtbPendingBienDong).forEach(function(k){
         if(mmtbPendingBienDong[k]===null) delete mergedBienDong[k];
@@ -4065,20 +3977,21 @@ function mmtbRenderCharts(){
     +'<span style="color:#555;">Tổng</span>'
     +'<span style="font-weight:700;color:#1a1a1a">'+(totalHD+totalHH+totalLK)+'</span>'
     +'</div>';
-  var bdKeysM=Object.keys(mmtbBienDong);
+  var bdRowsM=[];
+  (mmtbMachines||[]).forEach(function(m){
+    if(!mmtbPrevDayData)return;
+    var base=tongLoaiMay(m.k,mmtbPrevDayData);
+    var cur=tongLoaiMay(m.k);
+    if(cur===base)return;
+    var e=mmtbBienDong[m.k];
+    var dau=cur>base?'+':'';
+    bdRowsM.push('<div style="margin-top:3px;cursor:pointer;" onclick="suaLyDoBienDong(\'mmtb\',\''+m.k+'\')" title="Bấm để nhập/sửa lý do">'
+      +'<b>'+m.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')
+      +' <span style="color:#1565c0;">✎</span></div>');
+  });
   html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-size:10px;color:#555;">'
     +'<b>Ghi chú:</b>'
-    +(bdKeysM.length
-      ? bdKeysM.map(function(k){
-          var mname=(mmtbMachines.find(function(m){return m.k===k;})||{}).n||k;
-          var e=mmtbBienDong[k];
-          var base=mmtbPrevDayData?tongLoaiMay(k,mmtbPrevDayData):0;
-          var dau=e.huong==='tang'?'+':'';
-          return '<div style="margin-top:3px;cursor:pointer;" onclick="suaLyDoBienDong(\'mmtb\',\''+k+'\')" title="Bấm để sửa lại lý do">'
-            +'<b>'+mname+'</b> ('+dau+(e.tong-base)+'): '+e.nhan
-            +' <span style="color:#1565c0;">✎</span></div>';
-        }).join('')
-      : ' Không có biến động so với ngày hôm trước')
+    +(bdRowsM.length ? bdRowsM.join('') : ' Không có biến động so với ngày hôm trước')
     +'</div>';
   el.innerHTML=html;
 }
@@ -4259,11 +4172,6 @@ async function mmtbInit(){
       });
     }
   },20000);
-  // LỚP AN TOÀN: kiểm tra biến động chưa có lý do ngay sau khi tải trang xong, và mỗi khi quay lại tab.
-  if(!mmtbVDate)mmtbMergeSave(true);
-  document.addEventListener('visibilitychange',function(){
-    if(!document.hidden&&!mmtbVDate&&mmtbInited)mmtbMergeSave(true);
-  });
 }
 
 // ============ MODULE LỊCH NGHIỆM THU ============
