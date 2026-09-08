@@ -1360,9 +1360,12 @@ async function exportFullReport(){
   }).join('');
 
   container.innerHTML=
-    '<div style="position:relative;margin-bottom:16px;padding:14px 28px;background:linear-gradient(180deg,#0d1b4c,#0a1440);border:2px solid #d4af37;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(212,175,55,0.4);display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;">'
-    +'<img src="'+VA_LOGO+'" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);height:46px;width:auto;">'
-    +'<span style="font-weight:800;font-size:19px;letter-spacing:0.4px;color:#f0c14b;font-family:\'Be Vietnam Pro\',Arial,sans-serif;white-space:nowrap;">BÁO CÁO NHÂN SỰ, MÁY MÓC THIẾT BỊ</span>'
+    '<div style="margin-bottom:16px;padding:12px 28px;background:linear-gradient(180deg,#0d1b4c,#0a1440);border:2px solid #d4af37;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(212,175,55,0.4);display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;">'
+    +'<img src="'+VA_LOGO+'" style="height:58px;width:auto;flex-shrink:0;">'
+    +'<span style="font-weight:900;font-size:22px;letter-spacing:0.5px;font-family:\'Be Vietnam Pro\',Arial,sans-serif;white-space:nowrap;'
+      +'background:linear-gradient(180deg,#fff6cf 0%,#f7d774 22%,#f0b429 48%,#d4900f 75%,#a56405 100%);'
+      +'-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#f0c14b;'
+      +'text-shadow:0 1px 0 rgba(255,255,255,0.35),0 2px 1px rgba(120,66,0,0.55),0 4px 6px rgba(0,0,0,0.55);">BÁO CÁO NHÂN SỰ, MÁY MÓC THIẾT BỊ</span>'
     +'<span style="width:1px;height:20px;background:rgba(255,255,255,0.35);"></span>'
     +'<span style="font-weight:700;font-size:15px;color:#ffffff;font-family:\'Be Vietnam Pro\',Arial,sans-serif;white-space:nowrap;">BCH DỰ ÁN CAM LÂM - CAM RANH</span>'
     +'<span style="width:1px;height:20px;background:rgba(255,255,255,0.35);"></span>'
@@ -1577,29 +1580,30 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
       sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
       if(c1.tong<=0 && l1.tong<=0 && m1.tong<=0) return; // dự án trắng cả 3 mục thì bỏ qua, đỡ rối
       tblRows+='<tr>'
-        +'<td style="padding:2px 0;color:#555;">'+nl2br(projName(p))+'</td>'
-        +'<td style="padding:2px 0;text-align:right;">'+(c1.tong>0?fmtDL(c1.diLam,c1.tong):'-')+'</td>'
-        +'<td style="padding:2px 0;text-align:right;">'+(l1.tong>0?fmtDL(l1.diLam,l1.tong):'-')+'</td>'
-        +'<td style="padding:2px 0;text-align:right;">'+(m1.tong>0?fmtDL(m1.hd,m1.tong):'-')+'</td>'
+        +'<td style="padding:3px 4px;color:#555;">'+nl2br(projName(p))+'</td>'
+        +'<td style="padding:3px 4px;text-align:right;">'+(c1.tong>0?fmtDL(c1.diLam,c1.tong):'-')+'</td>'
+        +'<td style="padding:3px 4px;text-align:right;">'+(l1.tong>0?fmtDL(l1.diLam,l1.tong):'-')+'</td>'
+        +'<td style="padding:3px 4px;text-align:right;">'+(m1.tong>0?fmtDL(m1.hd,m1.tong):'-')+'</td>'
+        +'</tr>';
         +'</tr>';
     });
-    html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;">'
-      +'<div style="font-weight:700;font-size:11px;color:#1565c0;">Chi tiết số lượng CNCH và LXLM</div>'
+    html+='<div style="border:3px solid #F7C31E;border-radius:8px;padding:8px 10px;margin-top:10px;background:#fffdf2;">'
+      +'<div style="font-weight:800;font-size:12px;color:#0F2A5C;">⭐ Chi tiết số lượng CNCH và LXLM</div>'
       +'<div style="font-size:10px;color:#888;margin-bottom:4px;">'+(dateStr||'')+'</div>'
       +'</div>';
-    html+='<table style="width:100%;border-collapse:collapse;font-size:11px;">'
-      +'<tr style="color:#777;border-bottom:1px solid #ddd;">'
-      +'<td style="padding:2px 0;">Dự án</td>'
-      +'<td style="padding:2px 0;text-align:right;">CNCH</td>'
-      +'<td style="padding:2px 0;text-align:right;">LXLM</td>'
-      +'<td style="padding:2px 0;text-align:right;">SL.MMTB</td>'
+    html+='<table style="width:100%;border-collapse:collapse;font-size:11px;border:3px solid #F7C31E;border-top:none;border-radius:0 0 8px 8px;overflow:hidden;">'
+      +'<tr style="background:#0F2A5C;">'
+      +'<td style="padding:5px 4px;color:#fff;font-weight:700;">Dự án</td>'
+      +'<td style="padding:5px 4px;text-align:right;color:#fff;font-weight:700;">CNCH</td>'
+      +'<td style="padding:5px 4px;text-align:right;color:#fff;font-weight:700;">LXLM</td>'
+      +'<td style="padding:5px 4px;text-align:right;color:#fff;font-weight:700;">SL.MMTB</td>'
       +'</tr>'
       +tblRows
-      +'<tr style="background:#FCF3D9;">'
-      +'<td style="padding:3px 0 3px 3px;font-weight:800;color:#8a5a00;">Tổng hợp</td>'
-      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;">'+fmtDL(sumCNCH.diLam,sumCNCH.tong)+'</td>'
-      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;">'+fmtDL(sumLXLM.diLam,sumLXLM.tong)+'</td>'
-      +'<td style="padding:3px 3px 3px 0;text-align:right;font-weight:800;">'+fmtDL(sumMmtb.hd,sumMmtb.tong)+'</td>'
+      +'<tr style="background:#F7C31E;">'
+      +'<td style="padding:4px 4px 4px 4px;font-weight:800;color:#0F2A5C;">Tổng hợp</td>'
+      +'<td style="padding:4px;text-align:right;font-weight:800;color:#0F2A5C;">'+fmtDL(sumCNCH.diLam,sumCNCH.tong)+'</td>'
+      +'<td style="padding:4px;text-align:right;font-weight:800;color:#0F2A5C;">'+fmtDL(sumLXLM.diLam,sumLXLM.tong)+'</td>'
+      +'<td style="padding:4px;text-align:right;font-weight:800;color:#0F2A5C;">'+fmtDL(sumMmtb.hd,sumMmtb.tong)+'</td>'
       +'</tr>'
       +'</table>';
   }
