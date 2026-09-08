@@ -1373,25 +1373,22 @@ async function exportFullReport(){
   }).join('');
 
   var repWeatherHtml = repWeather ?
-    ('<div style="position:absolute;right:18px;top:50%;transform:translateY(-50%);text-align:right;color:#fff;">'
-      +'<div style="font-size:10px;color:#d7defa;">📍 Cam Ranh, Khánh Hoà</div>'
+    ('<div style="position:absolute;right:4px;top:50%;transform:translateY(-50%);text-align:right;color:#0F2A5C;">'
+      +'<div style="font-size:10px;color:#5a6b8c;">📍 Cam Ranh, Khánh Hoà</div>'
       +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">'
-        +'<span style="font-size:22px;font-weight:800;color:#fff;">'+repWeather.temp+'°</span>'
+        +'<span style="font-size:22px;font-weight:800;color:#0F2A5C;">'+repWeather.temp+'°</span>'
         +'<span style="font-size:22px;">'+repWeather.icon+'</span>'
       +'</div>'
-      +'<div style="font-size:10px;color:#d7defa;">'+repWeather.desc+'</div>'
+      +'<div style="font-size:10px;color:#5a6b8c;">'+repWeather.desc+'</div>'
     +'</div>') : '';
 
   container.innerHTML=
-    '<div style="position:relative;margin-bottom:16px;padding:12px 130px 12px 20px;background:linear-gradient(180deg,#0d1b4c,#0a1440);border:2px solid #d4af37;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(212,175,55,0.4);display:flex;align-items:center;gap:18px;flex-wrap:wrap;">'
+    '<div style="position:relative;margin-bottom:16px;padding:8px 130px 8px 4px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;">'
     +'<img src="'+VA_LOGO+'" style="height:72px;width:auto;flex-shrink:0;">'
     +'<div style="display:flex;flex-direction:column;gap:3px;">'
-      +'<span style="font-weight:900;font-size:21px;letter-spacing:0.4px;font-family:\'Be Vietnam Pro\',Arial,sans-serif;white-space:nowrap;'
-        +'background:linear-gradient(180deg,#fff6cf 0%,#f7d774 22%,#f0b429 48%,#d4900f 75%,#a56405 100%);'
-        +'-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#f0c14b;'
-        +'text-shadow:0 1px 0 rgba(255,255,255,0.35),0 2px 1px rgba(120,66,0,0.55),0 4px 6px rgba(0,0,0,0.55);">BÁO CÁO NHÂN SỰ, MÁY MÓC THIẾT BỊ</span>'
-      +'<span style="font-size:13px;color:#e3e9f5;font-family:\'Be Vietnam Pro\',Arial,sans-serif;white-space:nowrap;">'
-        +'BCH DỰ ÁN CAM LÂM - CAM RANH &nbsp;·&nbsp; <span style="color:#f0c14b;font-weight:700;">'+dateStr+'</span></span>'
+      +'<span style="font-weight:900;font-size:21px;letter-spacing:0.4px;font-family:\'Be Vietnam Pro\',Arial,sans-serif;white-space:nowrap;color:#0F2A5C;">BÁO CÁO NHÂN SỰ, MÁY MÓC THIẾT BỊ</span>'
+      +'<span style="font-size:13px;color:#555;font-family:\'Be Vietnam Pro\',Arial,sans-serif;white-space:nowrap;">'
+        +'BCH DỰ ÁN CAM LÂM - CAM RANH &nbsp;·&nbsp; <span style="color:#c99404;font-weight:700;">'+dateStr+'</span></span>'
     +'</div>'
     +repWeatherHtml
     +'</div>'
