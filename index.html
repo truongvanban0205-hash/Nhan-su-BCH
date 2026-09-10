@@ -746,30 +746,42 @@ function qsToggleStats(){
 
 // ============ THỜI TIẾT (Open-Meteo — miễn phí, không cần API key) ============
 var WEATHER_LAT=11.9214, WEATHER_LON=109.1591; // Cam Ranh, Khánh Hoà
+var WEATHER_ICONS_DAY={0:'☀️',1:'🌤️',2:'⛅',3:'☁️'};
+var WEATHER_ICONS_NIGHT={0:'🌙',1:'🌙',2:'☁️',3:'☁️'};
 var WEATHER_ICONS={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌦️',
   56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',
   80:'🌦️',81:'🌧️',82:'⛈️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
-var WEATHER_DESC={0:'Trời quang',1:'Ít mây',2:'Có mây',3:'Nhiều mây',45:'Sương mù',48:'Sương mù',
-  51:'Mưa phùn nhẹ',53:'Mưa phùn',55:'Mưa phùn dày',56:'Mưa phùn lạnh',57:'Mưa phùn lạnh',
-  61:'Mưa nhỏ',63:'Mưa vừa',65:'Mưa to',66:'Mưa đá nhẹ',67:'Mưa đá nặng',
-  71:'Tuyết nhẹ',73:'Tuyết vừa',75:'Tuyết to',77:'Hạt tuyết',
-  80:'Mưa rào nhẹ',81:'Mưa rào vừa',82:'Mưa rào to',85:'Mưa tuyết nhẹ',86:'Mưa tuyết to',
-  95:'Dông',96:'Dông kèm mưa đá',99:'Dông kèm mưa đá to'};
-function weatherIcon(c){ return WEATHER_ICONS[c]||'🌡️'; }
-function weatherDesc(c){ return WEATHER_DESC[c]||'Không rõ'; }
+var WEATHER_DESC_DAY={0:'Nắng',1:'Nắng rải rác',2:'Có nắng xen mây',3:'Trời âm u'};
+var WEATHER_DESC_NIGHT={0:'Trời quang',1:'Ít mây',2:'Nhiều mây',3:'Trời âm u'};
+var WEATHER_DESC={0:'Trời quang',1:'Ít mây',2:'Có mây',3:'Nhiều mây',45:'Sương mù',48:'Sương mù giá',
+  51:'Mưa phùn nhẹ',53:'Mưa phùn',55:'Mưa phùn dày hạt',56:'Mưa phùn lạnh nhẹ',57:'Mưa phùn lạnh dày hạt',
+  61:'Mưa nhỏ rải rác',63:'Mưa vừa',65:'Mưa to',66:'Mưa lạnh nhẹ',67:'Mưa lạnh nặng hạt',
+  71:'Tuyết rơi nhẹ',73:'Tuyết rơi vừa',75:'Tuyết rơi dày',77:'Hạt tuyết nhỏ',
+  80:'Mưa rào nhẹ rải rác',81:'Mưa rào vừa',82:'Mưa rào to, xối xả',85:'Mưa tuyết nhẹ',86:'Mưa tuyết to',
+  95:'Có giông',96:'Giông kèm mưa đá nhỏ',99:'Giông kèm mưa đá lớn'};
+function weatherIcon(c,isDay){
+  if(isDay===0 && WEATHER_ICONS_NIGHT[c]) return WEATHER_ICONS_NIGHT[c];
+  if((isDay===1||isDay===undefined) && WEATHER_ICONS_DAY[c]) return WEATHER_ICONS_DAY[c];
+  return WEATHER_ICONS[c]||'🌡️';
+}
+function weatherDesc(c,isDay){
+  if(isDay===0 && WEATHER_DESC_NIGHT[c]) return WEATHER_DESC_NIGHT[c];
+  if((isDay===1||isDay===undefined) && WEATHER_DESC_DAY[c]) return WEATHER_DESC_DAY[c];
+  return WEATHER_DESC[c]||'Không rõ';
+}
 
 async function loadWeather(){
   try{
     var url='https://api.open-meteo.com/v1/forecast?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON
-      +'&current=temperature_2m,weather_code'
+      +'&current=temperature_2m,weather_code,is_day'
       +'&daily=weather_code,temperature_2m_max,temperature_2m_min'
       +'&timezone=Asia%2FHo_Chi_Minh&forecast_days=5';
     var res=await fetch(url);
     var d=await res.json();
     if(d&&d.current){
       document.getElementById('weatherNowTemp').textContent=Math.round(d.current.temperature_2m)+'°';
-      document.getElementById('weatherNowDesc').textContent=weatherDesc(d.current.weather_code);
-      document.getElementById('weatherNowIcon').textContent=weatherIcon(d.current.weather_code);
+      document.getElementById('weatherNowDesc').textContent=weatherDesc(d.current.weather_code,d.current.is_day);
+      document.getElementById('weatherNowIcon').textContent=weatherIcon(d.current.weather_code,d.current.is_day);
     }
     if(d&&d.daily&&d.daily.time){
       var dayLbl=['CN','T2','T3','T4','T5','T6','T7'];
@@ -1108,11 +1120,11 @@ async function exportFullReport(){
   var repWeather=null;
   try{
     var wUrl='https://api.open-meteo.com/v1/forecast?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON
-      +'&current=temperature_2m,weather_code&timezone=Asia%2FHo_Chi_Minh';
+      +'&current=temperature_2m,weather_code,is_day&timezone=Asia%2FHo_Chi_Minh';
     var wRes=await fetch(wUrl);
     var wD=await wRes.json();
     if(wD&&wD.current){
-      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code),icon:weatherIcon(wD.current.weather_code)};
+      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code,wD.current.is_day),icon:weatherIcon(wD.current.weather_code,wD.current.is_day)};
     }
   }catch(e){}
 
