@@ -1610,9 +1610,11 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
       var c1=tinhDiLamTong(CNCH_col,p);
       var l1=tinhDiLamTong(LXLM_col,p);
       var m1=tinhMmtb(p);
-      sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
-      sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
-      sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
+      if(!HO_TRO_PROJS[p]){
+        sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
+        sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
+        sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
+      }
       if(c1.tong<=0 && l1.tong<=0 && m1.tong<=0) return; // dự án trắng cả 3 mục thì bỏ qua, đỡ rối
       tblRows+='<tr>'
         +'<td style="padding:2px 0;color:#555;">'+nl2br(projName(p))+'</td>'
@@ -2709,9 +2711,11 @@ async function renderCharts(){
       var c1=tinhDiLamTong(CNCH_col,p);
       var l1=tinhDiLamTong(LXLM_col,p);
       var m1=tinhMmtb(p);
-      sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
-      sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
-      sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
+      if(!HO_TRO_PROJS[p]){
+        sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
+        sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
+        sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
+      }
       if(c1.tong<=0 && l1.tong<=0 && m1.tong<=0) return; // dự án trắng cả 3 mục thì bỏ qua, đỡ rối
       tblRows+='<tr>'
         +'<td style="padding:2px 0;color:#555;">'+nl2br(projName(p))+'</td>'
