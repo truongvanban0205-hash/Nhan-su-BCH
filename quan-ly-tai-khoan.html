@@ -667,6 +667,7 @@ function renderListDuAn(){
         <button class="icon-btn" data-rename-duan="${d.id}">✏️ Đổi tên</button>
         <button class="icon-btn" data-toggle-duan-ns="${d.id}" style="${d.an_nhansu?'color:var(--bad);':''}">${d.an_nhansu?'🙈 NS: Ẩn':'👁️ NS: Hiện'}</button>
         <button class="icon-btn" data-toggle-duan-mmtb="${d.id}" style="${d.an_mmtb?'color:var(--bad);':''}">${d.an_mmtb?'🙈 MMTB: Ẩn':'👁️ MMTB: Hiện'}</button>
+        <button class="icon-btn" data-toggle-duan-hotro="${d.id}" style="${d.ho_tro?'color:#1565c0;':''}" title="Dự án hỗ trợ: không tính vào Tổng/Đi làm/Nghỉ của BCH, vẫn tính vào Định biên">${d.ho_tro?'🤝 Hỗ trợ: Bật':'🤝 Hỗ trợ: Tắt'}</button>
         ${d.mac_dinh?'':`<button class="icon-btn reject" data-del-duan="${d.id}">Xoá</button>`}
       </span>
     </div>`).join("");
@@ -695,6 +696,15 @@ function renderListDuAn(){
       const id = parseInt(btn.dataset.toggleDuanMmtb);
       const d = duAnCache.find(x=>x.id===id);
       const { error } = await sb.rpc("admin_an_hien_du_an_mmtb", { p_pass: currentAdminPass, p_id: id, p_an: !d.an_mmtb });
+      if(error){ alert("Không thao tác được."); return; }
+      await loadCauHinhNS(); renderCauHinhAll();
+    });
+  });
+  el.querySelectorAll("[data-toggle-duan-hotro]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = parseInt(btn.dataset.toggleDuanHotro);
+      const d = duAnCache.find(x=>x.id===id);
+      const { error } = await sb.rpc("admin_dat_ho_tro_du_an", { p_pass: currentAdminPass, p_id: id, p_ho_tro: !d.ho_tro });
       if(error){ alert("Không thao tác được."); return; }
       await loadCauHinhNS(); renderCauHinhAll();
     });

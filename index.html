@@ -1531,18 +1531,22 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   }
   var prevProjs=prevDayFull?(prevDayFull.projects||[]):null;
   var prevData=prevDayFull?(prevDayFull.data||{}):null;
+  // Dự án đã đánh dấu "Hỗ trợ" (Quản lý dự án) — KHÔNG tính vào Tổng/Đi làm/Nghỉ ở khung tổng hợp này,
+  // vẫn tính đủ ở khối Định biên/Chênh lệch (khối đó dùng riêng nsProjs gốc, không qua đây).
+  var nsProjsSum=nsProjs.filter(function(p){return !HO_TRO_PROJS[p];});
+  var prevProjsSum=(prevProjs||[]).filter(function(p){return !HO_TRO_PROJS[p];});
   var rows=[],grandTotal=0;
   var changesNS=[]; // dùng cho mục "Ghi chú" — so sánh TOÀN BỘ chức danh với hôm qua, kể cả khi hôm nay = 0
   (nsCols&&nsCols.length?nsCols:DEF_COLS).forEach(function(c,ci){
-    var v=calcCol(c.k,nsProjs,nsData);
+    var v=calcCol(c.k,nsProjsSum,nsData);
     if(prevData){
-      var pv0=calcCol(c.k,prevProjs,prevData);
+      var pv0=calcCol(c.k,prevProjsSum,prevData);
       if(v!==pv0)changesNS.push(c.n+' ('+(v-pv0>0?'+':'')+(v-pv0)+')');
     }
     grandTotal+=v;
     if(v<=0)return; // chỉ hiện chức danh có dữ liệu, bỏ qua dòng = 0
-    var pv=prevData?calcCol(c.k,prevProjs,prevData):null;
-    var diLamV=v-calcColNghi(c.k,nsProjs,nsData);
+    var pv=prevData?calcCol(c.k,prevProjsSum,prevData):null;
+    var diLamV=v-calcColNghi(c.k,nsProjsSum,nsData);
     rows.push({label:c.n,value:v,diLam:diLamV,prev:pv,color:palette[ci%palette.length]});
   });
   function rowHtml(r){
@@ -1569,7 +1573,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   // Tách dòng Đi làm/Nghỉ theo loại ca CUỐI CÙNG trong cấu hình (quy ước Nghỉ theo vị trí)
   if(nk){
     var nghiTotal=0;
-    nsProjs.forEach(function(p){
+    nsProjsSum.forEach(function(p){
       if(nsData[p]&&nsData[p][nk])Object.values(nsData[p][nk]).forEach(function(v){nghiTotal+=v||0;});
     });
     var diLamTotal=grandTotal-nghiTotal;
@@ -1949,6 +1953,7 @@ async function taiCauHinhCaLamViec(){
 // QUAN TRỌNG: từ giờ dữ liệu (data[...]) lưu theo KHOÁ CỐ ĐỊNH "duan_<id>" (id không đổi khi đổi tên),
 // projName() dùng để tra TÊN HIỂN THỊ mới nhất — đổi tên dự án bao nhiêu lần cũng không mất số liệu.
 var PROJ_NAME={duan_1:'Dự án 1',duan_2:'Dự án 2',duan_3:'Dự án 3',duan_4:'Dự án 4',duan_5:'Dự án 5'};
+var HO_TRO_PROJS={}; // {duan_X: true} — dự án hỗ trợ: KHÔNG tính vào Tổng/Đi làm/Nghỉ của BCH, vẫn tính vào Định biên
 function projName(k){ return PROJ_NAME[k] || k; }
 function nl2br(s){ return String(s==null?'':s).split('\n').join('<br>'); }
 // Hiện dạng "đi làm/tổng" (hoặc "hoạt động/tổng") với số đầu tô xanh lá đậm, số sau giữ màu đen —
@@ -1982,8 +1987,9 @@ async function taiCauHinhDuAn(){
     if(list && list.length){
       // Tên hiển thị lấy từ TOÀN BỘ danh sách (kể cả đang ẩn) — để dữ liệu lịch sử cũ nhắc tới
       // 1 dự án đã bị ẩn sau này vẫn hiện đúng tên, không hiện mã thô "duan_12".
-      var nm={}; list.forEach(function(d){ nm['duan_'+d.id]=d.ten; });
+      var nm={}; var ht={}; list.forEach(function(d){ nm['duan_'+d.id]=d.ten; ht['duan_'+d.id]=!!d.ho_tro; });
       PROJ_NAME = nm;
+      HO_TRO_PROJS = ht;
       // Nhân sự lọc theo an_nhansu — ẩn/hiện riêng cho từng module, độc lập với MMTB.
       var active = list.filter(function(d){ return !d.an_nhansu; });
       active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
@@ -2586,7 +2592,9 @@ async function renderCharts(){
     var srcData=src||data;
     // Luôn cộng theo TOÀN BỘ dự án THỰC SỰ có dữ liệu (Object.keys) — không chỉ dự án đang hiện —
     // để ẩn 1 dự án (dù chỉ do chuyển người sang dự án khác) không làm ra "tăng ảo" khi so sánh.
+    // Dự án đã đánh dấu "Hỗ trợ" (Quản lý dự án) bị loại khỏi khung tổng hợp này (không phải Định biên).
     Object.keys(srcData||{}).forEach(function(proj){
+      if(HO_TRO_PROJS[proj])return;
       TYPES.forEach(function(t){
         total+=(srcData[proj]&&srcData[proj][t]?srcData[proj][t][colKey]||0:0);
       });
@@ -2602,6 +2610,7 @@ async function renderCharts(){
     var total=0;
     var srcData=src||data;
     projects.forEach(function(proj){
+      if(HO_TRO_PROJS[proj])return;
       total+=(srcData[proj]&&srcData[proj][nk2]?srcData[proj][nk2][colKey]||0:0);
     });
     return total;
@@ -2655,6 +2664,7 @@ async function renderCharts(){
   if(nk2){
     var tongNghi=0;
     projects.forEach(function(proj){
+      if(HO_TRO_PROJS[proj])return;
       COLS.forEach(function(c){
         tongNghi+=(data[proj]&&data[proj][nk2]?data[proj][nk2][c.k]||0:0);
       });
