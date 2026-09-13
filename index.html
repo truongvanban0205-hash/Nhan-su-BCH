@@ -1580,6 +1580,19 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#555;">Đi làm</span><span style="font-weight:700;color:#1a1a1a">'+diLamTotal+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#e53935;">Nghỉ</span><span style="font-weight:700;color:#e53935">'+nghiTotal+'</span></div>';
   }
+  // Nhân sự hỗ trợ dự án khác: KHÔNG gộp vào Tổng/Đi làm/Nghỉ ở trên, hiện riêng 1 dòng cho rõ.
+  var hoTroProjsList=nsProjs.filter(function(p){return HO_TRO_PROJS[p];});
+  if(hoTroProjsList.length){
+    var hoTroTotal=0, hoTroParts=[];
+    (nsCols&&nsCols.length?nsCols:DEF_COLS).forEach(function(c){
+      var v=calcCol(c.k,hoTroProjsList,nsData);
+      if(v>0){hoTroTotal+=v; hoTroParts.push(c.n+': '+v);}
+    });
+    if(hoTroTotal>0){
+      html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#8a5a00;">Hỗ trợ dự án khác</span><span style="font-weight:700;color:#8a5a00">'+hoTroTotal+'</span></div>'
+        +'<div style="font-size:9px;color:#999;">('+hoTroParts.join(', ')+')</div>';
+    }
+  }
   // Chi tiết CNCH & LXLM & SL.MMTB theo dự án — trình bày dạng bảng (dự án x 3 cột), dòng Tổng hợp
   // tô nổi bật để lãnh đạo nhìn phát thấy ngay (đây là 3 chỉ số cần theo dõi sát hằng ngày).
   var CNCH_col=(nsCols&&nsCols.length?nsCols:DEF_COLS).find(function(c){return c.n==='CNCH';});
@@ -1607,14 +1620,13 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
     var tblRows='';
     var sumCNCH={diLam:0,tong:0}, sumLXLM={diLam:0,tong:0}, sumMmtb={hd:0,tong:0};
     nsProjs.forEach(function(p){
+      if(HO_TRO_PROJS[p])return; // dự án hỗ trợ: KHÔNG hiển thị trong bảng này
       var c1=tinhDiLamTong(CNCH_col,p);
       var l1=tinhDiLamTong(LXLM_col,p);
       var m1=tinhMmtb(p);
-      if(!HO_TRO_PROJS[p]){
-        sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
-        sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
-        sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
-      }
+      sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
+      sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
+      sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
       if(c1.tong<=0 && l1.tong<=0 && m1.tong<=0) return; // dự án trắng cả 3 mục thì bỏ qua, đỡ rối
       tblRows+='<tr>'
         +'<td style="padding:2px 0;color:#555;">'+nl2br(projName(p))+'</td>'
@@ -2681,6 +2693,25 @@ async function renderCharts(){
       +'<span style="font-weight:600;color:#e53935;font-size:10px;">'+tongNghi+'</span>'
       +'</div>';
   }
+  // Nhân sự hỗ trợ dự án khác: KHÔNG gộp vào Tổng/Đi làm/Nghỉ ở trên, hiện riêng 1 dòng cho rõ.
+  var hoTroProjsLive=projects.filter(function(p){return HO_TRO_PROJS[p];});
+  if(hoTroProjsLive.length){
+    var hoTroTotalLive=0, hoTroPartsLive=[];
+    COLS.forEach(function(c){
+      var v=0;
+      hoTroProjsLive.forEach(function(proj){
+        TYPES.forEach(function(t){ v+=(data[proj]&&data[proj][t]?data[proj][t][c.k]||0:0); });
+      });
+      if(v>0){hoTroTotalLive+=v; hoTroPartsLive.push(c.n+': '+v);}
+    });
+    if(hoTroTotalLive>0){
+      html+='<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+        +'<span style="color:#8a5a00;font-size:10px;">Hỗ trợ dự án khác</span>'
+        +'<span style="font-weight:600;color:#8a5a00;font-size:10px;">'+hoTroTotalLive+'</span>'
+        +'</div>'
+        +'<div style="font-size:9px;color:#999;">('+hoTroPartsLive.join(', ')+')</div>';
+    }
+  }
   // Chi tiết CNCH & LXLM & SL.MMTB theo dự án — trình bày dạng bảng (dự án x 3 cột), dòng Tổng hợp
   // tô nổi bật để lãnh đạo nhìn phát thấy ngay (đây là 3 chỉ số cần theo dõi sát hằng ngày).
   var CNCH_col=(COLS&&COLS.length?COLS:DEF_COLS).find(function(c){return c.n==='CNCH';});
@@ -2708,14 +2739,13 @@ async function renderCharts(){
     var tblRows='';
     var sumCNCH={diLam:0,tong:0}, sumLXLM={diLam:0,tong:0}, sumMmtb={hd:0,tong:0};
     projects.forEach(function(p){
+      if(HO_TRO_PROJS[p])return; // dự án hỗ trợ: KHÔNG hiển thị trong bảng này
       var c1=tinhDiLamTong(CNCH_col,p);
       var l1=tinhDiLamTong(LXLM_col,p);
       var m1=tinhMmtb(p);
-      if(!HO_TRO_PROJS[p]){
-        sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
-        sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
-        sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
-      }
+      sumCNCH.diLam+=c1.diLam; sumCNCH.tong+=c1.tong;
+      sumLXLM.diLam+=l1.diLam; sumLXLM.tong+=l1.tong;
+      sumMmtb.hd+=m1.hd; sumMmtb.tong+=m1.tong;
       if(c1.tong<=0 && l1.tong<=0 && m1.tong<=0) return; // dự án trắng cả 3 mục thì bỏ qua, đỡ rối
       tblRows+='<tr>'
         +'<td style="padding:2px 0;color:#555;">'+nl2br(projName(p))+'</td>'
