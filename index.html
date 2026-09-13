@@ -1511,13 +1511,16 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   if(!el)return;
   // Bảng màu luân phiên cho tối đa 26 chức danh (không cần gộp nhóm nữa — mỗi chức danh đã có cột riêng)
   var palette=['#378ADD','#1D9E75','#EF9F27','#E24B4A','#534AB7','#0F6E56','#D4537E','#BA7517','#185FA5','#639922','#8E24AA','#00838F','#C0CA33','#6D4C41'];
-  function calcCol(colKey,projs,dt){
+  function calcCol(colKey,projs,dt,mode){
     var total=0;
     // Luôn cộng theo ĐÚNG những dự án THỰC SỰ có dữ liệu trong đúng ngày đó (Object.keys(dt)) —
     // không dùng danh sách "projects" đã lưu (có thể lệch nếu 1 dự án bị ẩn sau khi lưu). Nhờ vậy
     // Tổng hôm nay và Tổng hôm qua luôn cộng đúng kiểu, không bị "tăng ảo" khi ẩn dự án + chuyển
     // người sang dự án khác (ẩn không xoá dữ liệu, vẫn phải tính đủ).
+    // mode='exclude_hotro': bỏ dự án đã đánh dấu Hỗ trợ. mode='only_hotro': CHỈ lấy dự án Hỗ trợ.
     Object.keys(dt||{}).forEach(function(p){
+      if(mode==='exclude_hotro'&&HO_TRO_PROJS[p])return;
+      if(mode==='only_hotro'&&!HO_TRO_PROJS[p])return;
       TYPES.forEach(function(t){ total+=(dt[p]&&dt[p][t]?dt[p][t][colKey]||0:0); });
     });
     return total;
@@ -1538,14 +1541,14 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   var rows=[],grandTotal=0;
   var changesNS=[]; // dùng cho mục "Ghi chú" — so sánh TOÀN BỘ chức danh với hôm qua, kể cả khi hôm nay = 0
   (nsCols&&nsCols.length?nsCols:DEF_COLS).forEach(function(c,ci){
-    var v=calcCol(c.k,nsProjsSum,nsData);
+    var v=calcCol(c.k,nsProjsSum,nsData,'exclude_hotro');
     if(prevData){
-      var pv0=calcCol(c.k,prevProjsSum,prevData);
+      var pv0=calcCol(c.k,prevProjsSum,prevData,'exclude_hotro');
       if(v!==pv0)changesNS.push(c.n+' ('+(v-pv0>0?'+':'')+(v-pv0)+')');
     }
     grandTotal+=v;
     if(v<=0)return; // chỉ hiện chức danh có dữ liệu, bỏ qua dòng = 0
-    var pv=prevData?calcCol(c.k,prevProjsSum,prevData):null;
+    var pv=prevData?calcCol(c.k,prevProjsSum,prevData,'exclude_hotro'):null;
     var diLamV=v-calcColNghi(c.k,nsProjsSum,nsData);
     rows.push({label:c.n,value:v,diLam:diLamV,prev:pv,color:palette[ci%palette.length]});
   });
@@ -1585,7 +1588,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   if(hoTroProjsList.length){
     var hoTroTotal=0;
     (nsCols&&nsCols.length?nsCols:DEF_COLS).forEach(function(c){
-      hoTroTotal+=calcCol(c.k,hoTroProjsList,nsData);
+      hoTroTotal+=calcCol(c.k,hoTroProjsList,nsData,'only_hotro');
     });
     if(hoTroTotal>0){
       html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#8a5a00;">Hỗ trợ dự án khác</span><span style="font-weight:700;color:#8a5a00">'+hoTroTotal+'</span></div>';
