@@ -1169,6 +1169,7 @@ async function exportFullReport(){
     var cols=(d.cols&&d.cols.length)?d.cols:COLS;
     var t=0;
     projs.forEach(function(p){
+      if(HO_TRO_PROJS[p])return; // dự án hỗ trợ: không tính vào Tổng NS trên biểu đồ 7 ngày
       TYPES.forEach(function(ty){
         if(dt[p]&&dt[p][ty]){
           cols.forEach(function(c){ t+=(dt[p][ty][c.k]||0); });
@@ -1195,6 +1196,7 @@ async function exportFullReport(){
     var nk=nghiKey();
     var t=0;
     projs.forEach(function(p){
+      if(HO_TRO_PROJS[p])return; // dự án hỗ trợ: không tính vào Đi làm trên biểu đồ 7 ngày
       TYPES.forEach(function(ty){
         if(ty===nk) return; // bỏ qua loại Nghỉ, chỉ cộng đang đi làm
         if(dt[p]&&dt[p][ty]){
@@ -1420,6 +1422,18 @@ async function exportFullReport(){
     +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);min-width:320px;">'
     +'<div style="font-size:13px;font-weight:800;color:#1565c0;margin-bottom:8px;">📈 Xu hướng Nhân sự &amp; MMTB (7 ngày)</div>'
     +'<canvas id="reportComboChart" width="300" height="240"></canvas>'
+    +'<div style="display:flex;gap:14px;margin-top:8px;font-size:9px;">'
+      +'<div style="flex:1;border-top:1px solid #eee;padding-top:6px;">'
+        +'<div style="font-weight:700;color:#555;margin-bottom:3px;">Nhân sự</div>'
+        +'<div style="color:#1565c0;">■ Tổng nhân sự (không gồm hỗ trợ)</div>'
+        +'<div style="color:#43a047;">■ Nhân sự đi làm (không gồm hỗ trợ)</div>'
+      +'</div>'
+      +'<div style="flex:1;border-top:1px solid #eee;padding-top:6px;">'
+        +'<div style="font-weight:700;color:#555;margin-bottom:3px;">MMTB</div>'
+        +'<div style="color:#e53935;">■ Tổng MMTB</div>'
+        +'<div style="color:#43a047;">■ MMTB đang hoạt động</div>'
+      +'</div>'
+    +'</div>'
     +'</div>'
     +'</div>'
     +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);">'
@@ -1566,7 +1580,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   // Chia 2 cột song song nếu danh sách dài, đỡ kéo dài layout ảnh xuất báo cáo
   var half=Math.ceil(rows.length/2);
   var colA=rows.slice(0,half), colB=rows.slice(half);
-  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR</div>'
+  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR <span style="font-weight:400;font-size:10px;color:#888;">(tại dự án Cam Ranh)</span></div>'
     +'<div style="font-size:10px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+(dateStr||'')+'</div>';
   html+='<div style="display:flex;gap:14px;">'
     +'<div style="flex:1;min-width:0;">'+colA.map(rowHtml).join('')+'</div>'
@@ -2662,7 +2676,7 @@ async function renderCharts(){
 
   var now2=new Date();
   var dateStr=p2(now2.getDate())+'/'+p2(now2.getMonth()+1)+'/'+now2.getFullYear();
-  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR</div>'
+  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR <span style="font-weight:400;color:#888;">(tại dự án Cam Ranh)</span></div>'
     +'<div style="font-size:9px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+dateStr+'</div>';
   // Chia 2 cột song song nếu danh sách dài, đỡ kéo dài layout
   var half=Math.ceil(rows.length/2);
