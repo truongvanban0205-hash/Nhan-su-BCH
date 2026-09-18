@@ -1124,7 +1124,8 @@ async function exportFullReport(){
     var wRes=await fetch(wUrl);
     var wD=await wRes.json();
     if(wD&&wD.current){
-      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code,wD.current.is_day),icon:weatherIcon(wD.current.weather_code,wD.current.is_day)};
+      var wTime=wD.current.time?wD.current.time.split('T')[1].slice(0,5):'';
+      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code,wD.current.is_day),icon:weatherIcon(wD.current.weather_code,wD.current.is_day),time:wTime};
     }
   }catch(e){}
 
@@ -1216,6 +1217,7 @@ async function exportFullReport(){
     return t;
   }
 
+  var hasHoTro=Object.keys(HO_TRO_PROJS).some(function(k){return HO_TRO_PROJS[k];});
   var nsVals=days7.map(function(dk){return sumNS(nsMap[dk]);});
   var mmtbVals=days7.map(function(dk){return sumMMTB(mmtbMap[dk]);});
   var nsDiLamVals=days7.map(function(dk){return sumNSDiLam(nsMap[dk]);});
@@ -1388,7 +1390,7 @@ async function exportFullReport(){
 
   var repWeatherHtml = repWeather ?
     ('<div style="text-align:right;color:#0F2A5C;">'
-      +'<div style="font-size:10px;color:#5a6b8c;">📍 Cam Ranh, Khánh Hoà</div>'
+      +'<div style="font-size:10px;color:#5a6b8c;">📍 '+(repWeather.time?'Lúc '+repWeather.time+' · ':'')+'Cam Ranh, Khánh Hoà</div>'
       +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">'
         +'<span style="font-size:22px;font-weight:800;color:#0F2A5C;">'+repWeather.temp+'°</span>'
         +'<span style="font-size:22px;">'+repWeather.icon+'</span>'
@@ -1425,8 +1427,8 @@ async function exportFullReport(){
     +'<div style="display:flex;gap:14px;margin-top:8px;font-size:9px;">'
       +'<div style="flex:1;border-top:1px solid #eee;padding-top:6px;">'
         +'<div style="font-weight:700;color:#555;margin-bottom:3px;">Nhân sự</div>'
-        +'<div style="color:#1565c0;">■ Tổng nhân sự (không gồm hỗ trợ)</div>'
-        +'<div style="color:#43a047;">■ Nhân sự đi làm (không gồm hỗ trợ)</div>'
+        +'<div style="color:#1565c0;">■ Tổng nhân sự'+(hasHoTro?' (không gồm hỗ trợ)':'')+'</div>'
+        +'<div style="color:#43a047;">■ Nhân sự đi làm'+(hasHoTro?' (không gồm hỗ trợ)':'')+'</div>'
       +'</div>'
       +'<div style="flex:1;border-top:1px solid #eee;padding-top:6px;">'
         +'<div style="font-weight:700;color:#555;margin-bottom:3px;">MMTB</div>'
@@ -1580,7 +1582,8 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   // Chia 2 cột song song nếu danh sách dài, đỡ kéo dài layout ảnh xuất báo cáo
   var half=Math.ceil(rows.length/2);
   var colA=rows.slice(0,half), colB=rows.slice(half);
-  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR <span style="font-weight:400;font-size:10px;color:#888;">(tại dự án Cam Ranh)</span></div>'
+  var hasHoTroTitle=nsProjs.some(function(p){return HO_TRO_PROJS[p];});
+  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR'+(hasHoTroTitle?' <span style="font-weight:400;font-size:10px;color:#888;">(tại dự án Cam Ranh)</span>':'')+'</div>'
     +'<div style="font-size:10px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+(dateStr||'')+'</div>';
   html+='<div style="display:flex;gap:14px;">'
     +'<div style="flex:1;min-width:0;">'+colA.map(rowHtml).join('')+'</div>'
@@ -2676,7 +2679,8 @@ async function renderCharts(){
 
   var now2=new Date();
   var dateStr=p2(now2.getDate())+'/'+p2(now2.getMonth()+1)+'/'+now2.getFullYear();
-  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR <span style="font-weight:400;color:#888;">(tại dự án Cam Ranh)</span></div>'
+  var hasHoTroTitleLive=projects.some(function(p){return HO_TRO_PROJS[p];});
+  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR'+(hasHoTroTitleLive?' <span style="font-weight:400;color:#888;">(tại dự án Cam Ranh)</span>':'')+'</div>'
     +'<div style="font-size:9px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+dateStr+'</div>';
   // Chia 2 cột song song nếu danh sách dài, đỡ kéo dài layout
   var half=Math.ceil(rows.length/2);
