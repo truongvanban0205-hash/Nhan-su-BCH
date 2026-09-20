@@ -373,6 +373,11 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">📊</div>
         <div class="mod-title">Định biên</div>
       </div>
+      <div class="mod-tile c-chat" onclick="goModule('chat')">
+        <span class="mod-badge" id="badge-chat"></span>
+        <div class="mod-icon">💬</div>
+        <div class="mod-title">Chat BCH</div>
+      </div>
     </div>
     </div>
 
@@ -700,6 +705,34 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     </div>
   </div>
 </div>
+<!-- ============ MODULE CHAT BCH (chung, realtime) ============ -->
+<div id="screen-chat" class="app-screen">
+  <div class="back-bar">
+    <button class="back-btn" onclick="showScreen('home')">← Quay lại</button>
+  </div>
+  <div class="topbar">
+    <h1>💬 Chat BCH: CL-CR/<span style="color:#f9a825;font-weight:900">VAL</span></h1>
+    <div class="tsub"><span id="chat-ss">Đang tải...</span></div>
+  </div>
+
+  <div id="chat-name-box" style="padding:12px 14px;background:#fff3cd;border-radius:10px;margin:10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <label style="font-size:13px;font-weight:700;">👤 Tên của bạn:</label>
+    <input type="text" id="chat-uname" placeholder="Nhập tên rồi Enter..." style="flex:1;min-width:140px;padding:8px 10px;border:1.5px solid #d4af37;border-radius:8px;font-size:13px;" onkeydown="if(event.key==='Enter')chatSetUser()" />
+    <button class="btn btn-sm" style="background:#0F2A5C;color:#fff;font-weight:800" onclick="chatSetUser()">Xác nhận</button>
+  </div>
+
+  <div id="chat-msgs" style="background:#fff;border-radius:10px;padding:12px;height:56vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+    <div style="font-size:12px;color:#aaa;text-align:center;">Đang tải tin nhắn...</div>
+  </div>
+
+  <div id="chat-input-box" style="display:none;margin-top:10px;position:relative;">
+    <div id="chat-mention-box" style="display:none;position:absolute;bottom:100%;left:0;right:0;background:#fff;border:1.5px solid #d4af37;border-radius:10px;box-shadow:0 -4px 14px rgba(0,0,0,0.12);max-height:160px;overflow-y:auto;margin-bottom:6px;"></div>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="chat-input" placeholder="Nhập tin nhắn... (gõ @ để nhắc tên)" style="flex:1;padding:10px 12px;border:1.5px solid #ccc;border-radius:10px;font-size:14px;" onkeydown="chatOnKeyDown(event)" oninput="chatOnInput()" />
+      <button class="btn" style="background:#0F2A5C;color:#fff;font-weight:800;padding:10px 18px;border-radius:10px;" onclick="chatSend()">Gửi</button>
+    </div>
+  </div>
+</div>
 <script>
 // ============ SHARED: NAVIGATION & SETUP ============
 // Chặn bấm vào module chưa có quyền — báo rõ lý do thay vì im lặng hoặc phải ẩn hẳn mục đó
@@ -733,6 +766,7 @@ function showScreen(name){
   if(name==='ns'&&!nsInited){nsInited=true;init();}
   if(name==='mmtb'&&!mmtbInited){mmtbInited=true;mmtbInit();}
   if(name==='ldt'&&!ldtInited){ldtInited=true;ldtInit();}
+  if(name==='chat'&&!chatInited){chatInited=true;chatInit();}
 }
 
 // ============ THU GỌN / BUNG "THỐNG KÊ NHANH" ============
@@ -1105,7 +1139,11 @@ function qsCloseModal(){
   document.getElementById('qs-modal-overlay').style.display='none';
 }
 
-var nsInited=false, mmtbInited=false, ldtInited=false;
+var nsInited=false, mmtbInited=false, ldtInited=false, chatInited=false;
+var chatUser=''; // tên người đang chat, lưu riêng theo trình duyệt (localStorage)
+var chatMsgs=[];
+var chatKnownNames={}; // {tên: true} — để gợi ý @ nhắc tên, gom từ lịch sử tin nhắn
+var chatRealtimeCh=null;
 
 // ============ XUẤT BÁO CÁO TỔNG HỢP (ẢNH) ============
 async function exportFullReport(){
@@ -4807,7 +4845,130 @@ document.addEventListener('click', function(e){
   }
 })();
 
-// ============ CỔNG KIỂM TRA ĐĂNG NHẬP (THÊM MỚI — KHÔNG SỬA CODE CŨ) ============
+// ============ MODULE CHAT BCH (chung, realtime) — Giai đoạn 1 ============
+var CHAT_NAME_KEY='bch_chat_name';
+function chatInit(){
+  var savedName=localStorage.getItem(CHAT_NAME_KEY);
+  if(savedName){
+    chatUser=savedName;
+    document.getElementById('chat-uname').value=savedName;
+    document.getElementById('chat-name-box').style.display='none';
+    document.getElementById('chat-input-box').style.display='block';
+  }
+  chatLoadHistory();
+  chatSubscribeRealtime();
+}
+function chatSetUser(){
+  var v=(document.getElementById('chat-uname').value||'').trim();
+  if(!v){alert('Nhập tên trước khi chat!');return;}
+  chatUser=v;
+  localStorage.setItem(CHAT_NAME_KEY,v);
+  document.getElementById('chat-name-box').style.display='none';
+  document.getElementById('chat-input-box').style.display='block';
+  document.getElementById('chat-input').focus();
+}
+async function chatLoadHistory(){
+  document.getElementById('chat-ss').textContent='⏳ Đang tải...';
+  try{
+    var r=await sc.from('chat_messages').select('*').order('created_at',{ascending:false}).limit(100);
+    chatMsgs=(r.data||[]).slice().reverse();
+    chatMsgs.forEach(function(m){ chatKnownNames[m.nguoi_gui]=true; });
+    chatRenderMsgs();
+    document.getElementById('chat-ss').textContent='✅ Đã kết nối';
+  }catch(e){
+    document.getElementById('chat-ss').textContent='⚠️ Lỗi tải: '+e.message;
+  }
+}
+function chatSubscribeRealtime(){
+  if(chatRealtimeCh)return;
+  chatRealtimeCh=sc.channel('chat_messages_rt')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},function(payload){
+      chatMsgs.push(payload.new);
+      chatKnownNames[payload.new.nguoi_gui]=true;
+      chatRenderMsgs();
+    })
+    .subscribe();
+}
+function chatEsc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function chatFmtTime(ts){
+  var d=new Date(ts);
+  return p2(d.getHours())+':'+p2(d.getMinutes());
+}
+function chatHighlightMentions(text){
+  var esc=chatEsc(text);
+  return esc.replace(/@([\p{L}0-9_.]+(?:\s[\p{L}0-9_.]+){0,2})/gu,function(full,name){
+    if(chatKnownNames[name]) return '<b style="color:#0F2A5C;background:#FCF3D9;padding:0 3px;border-radius:4px;">@'+name+'</b>';
+    return full;
+  });
+}
+function chatRenderMsgs(){
+  var el=document.getElementById('chat-msgs');
+  if(!chatMsgs.length){
+    el.innerHTML='<div style="font-size:12px;color:#aaa;text-align:center;">Chưa có tin nhắn nào. Nhắn đầu tiên đi!</div>';
+    return;
+  }
+  var atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+  el.innerHTML=chatMsgs.map(function(m){
+    var mine = m.nguoi_gui===chatUser;
+    return '<div style="align-self:'+(mine?'flex-end':'flex-start')+';max-width:80%;">'
+      +'<div style="font-size:10px;color:#888;margin-bottom:2px;'+(mine?'text-align:right;':'')+'">'+chatEsc(m.nguoi_gui)+' · '+chatFmtTime(m.created_at)+'</div>'
+      +'<div style="background:'+(mine?'#0F2A5C':'#eef1f5')+';color:'+(mine?'#fff':'#1a1a1a')+';padding:8px 12px;border-radius:12px;font-size:13px;word-break:break-word;white-space:pre-wrap;">'+chatHighlightMentions(m.noi_dung)+'</div>'
+      +'</div>';
+  }).join('');
+  if(atBottom) el.scrollTop=el.scrollHeight;
+}
+async function chatSend(){
+  var inp=document.getElementById('chat-input');
+  var v=(inp.value||'').trim();
+  if(!v)return;
+  if(!chatUser){alert('Nhập tên trước khi chat!');return;}
+  inp.value='';
+  document.getElementById('chat-mention-box').style.display='none';
+  try{
+    await sc.from('chat_messages').insert({nguoi_gui:chatUser, noi_dung:v});
+  }catch(e){
+    toast('⚠️ Gửi tin nhắn lỗi: '+e.message);
+  }
+}
+function chatOnKeyDown(e){
+  var box=document.getElementById('chat-mention-box');
+  if(box.style.display==='block' && (e.key==='ArrowDown'||e.key==='ArrowUp'||e.key==='Enter')){
+    // để danh sách gợi ý tự xử lý phím nếu cần mở rộng sau — hiện tại Enter vẫn ưu tiên gửi khi list đang mở nhưng người dùng gõ tiếp
+  }
+  if(e.key==='Enter' && !e.shiftKey){
+    e.preventDefault();
+    chatSend();
+  }
+}
+function chatOnInput(){
+  var inp=document.getElementById('chat-input');
+  var box=document.getElementById('chat-mention-box');
+  var v=inp.value;
+  var caret=inp.selectionStart;
+  var beforeCaret=v.slice(0,caret);
+  var m=beforeCaret.match(/@([\p{L}0-9_.]*)$/u);
+  if(!m){ box.style.display='none'; return; }
+  var typed=m[1].toLowerCase();
+  var names=Object.keys(chatKnownNames).filter(function(n){return n.toLowerCase().indexOf(typed)===0;});
+  if(!names.length){ box.style.display='none'; return; }
+  box.innerHTML=names.slice(0,8).map(function(n){
+    return '<div style="padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid #f0f0f0;" onclick="chatPickMention(\''+n.replace(/'/g,"\\'")+'\')">👤 '+chatEsc(n)+'</div>';
+  }).join('');
+  box.style.display='block';
+}
+function chatPickMention(name){
+  var inp=document.getElementById('chat-input');
+  var v=inp.value;
+  var caret=inp.selectionStart;
+  var beforeCaret=v.slice(0,caret);
+  var afterCaret=v.slice(caret);
+  var newBefore=beforeCaret.replace(/@([\p{L}0-9_.]*)$/u,'@'+name+' ');
+  inp.value=newBefore+afterCaret;
+  document.getElementById('chat-mention-box').style.display='none';
+  inp.focus();
+}
 (async function bchAuthGate(){
   var LS_KEY = 'bch_nv_login';
   var LOGIN_PAGE = 'quan-ly-tai-khoan.html';
