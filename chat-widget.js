@@ -287,7 +287,7 @@
     var typed=m[1].toLowerCase();
     var names=Object.keys(chatKnownNames).filter(function(n){return n.toLowerCase().indexOf(typed)===0;}).sort();
     if(!names.length){ box.style.display='none'; return; }
-    box.innerHTML=names.slice(0,8).map(function(n){
+    box.innerHTML=names.map(function(n){
       return '<div class="cw-mention-item" data-name="'+esc(n)+'">👤 '+esc(n)+'</div>';
     }).join('');
     box.style.display='block';
