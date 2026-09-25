@@ -26,3 +26,30 @@ self.addEventListener('fetch', function(e){
     })
   );
 });
+
+// ============ THÔNG BÁO ĐẨY (PUSH) — Chat BCH, chỉ khi bị @ nhắc tên ============
+self.addEventListener('push', function(e){
+  var data={};
+  try{ data=e.data ? e.data.json() : {}; }catch(err){ data={title:'Chat BCH', body:'Có tin nhắn mới'}; }
+  var title=data.title || 'Chat BCH';
+  var options={
+    body: data.body || '',
+    icon: './icon.png',
+    badge: './icon.png',
+    data: { url: './index.html' }
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', function(e){
+  e.notification.close();
+  var targetUrl = (e.notification.data && e.notification.data.url) || './index.html';
+  e.waitUntil(
+    self.clients.matchAll({type:'window', includeUncontrolled:true}).then(function(list){
+      for(var i=0;i<list.length;i++){
+        if('focus' in list[i]) return list[i].focus();
+      }
+      if(self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
+});

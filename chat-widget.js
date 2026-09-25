@@ -17,6 +17,8 @@
   var chatBooted=false;
   var replyingTo=null;      // {id, nguoi_gui, noi_dung} — tin đang được trả lời, null nếu không trả lời gì
   var LASTREAD_PREFIX='bch_chat_lastread_'; // + tên người dùng
+  var VAPID_PUBLIC_KEY='BCCz7LRK3h3WSSHLTp_JbGY8B-Qvpg8JW_2P8yWj02noNhaD9Z0iJ4_0MIvCL_SVTaCUWgtvwWuK6oGSYDBoMPM';
+  var pushSubscribed=false;
 
   function esc(s){
     return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -115,6 +117,7 @@
       updateBadges();
       setTimeout(function(){ document.getElementById('cw-input').focus(); },50);
       scrollToBottom(true);
+      subscribeToPush(); // hỏi quyền + đăng ký nhận thông báo, chỉ hỏi 1 lần (trình duyệt tự nhớ)
     }
   }
 
@@ -271,6 +274,7 @@
     try{
       await sc.from('chat_messages').insert(payload);
       cancelReply();
+      notifyMentions(v, chatUser.ten); // chạy nền, không chờ/không chặn nếu lỗi
     }catch(e){
       alert('Gửi tin nhắn lỗi: '+e.message);
     }
@@ -308,7 +312,71 @@
     inp.focus();
   }
 
-  // ---------- Khởi động: chờ có tài khoản đã đăng nhập rồi mới bật widget ----------
+  // ---------- Đăng ký nhận thông báo đẩy (push) ----------
+  function urlBase64ToUint8Array(base64String){
+    var padding='='.repeat((4 - base64String.length % 4) % 4);
+    var base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+    var rawData=atob(base64);
+    var outputArray=new Uint8Array(rawData.length);
+    for(var i=0;i<rawData.length;++i) outputArray[i]=rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  async function subscribeToPush(){
+    if(pushSubscribed)return;
+    if(!('serviceWorker' in navigator) || !('PushManager' in window))return; // trình duyệt không hỗ trợ (vd Safari cũ)
+    try{
+      var perm=Notification.permission;
+      if(perm==='default') perm=await Notification.requestPermission();
+      if(perm!=='granted')return; // người dùng từ chối, không ép
+      var reg=await navigator.serviceWorker.ready;
+      var sub=await reg.pushManager.getSubscription();
+      if(!sub){
+        sub=await reg.pushManager.subscribe({
+          userVisibleOnly:true,
+          applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+      }
+      var json=sub.toJSON();
+      await sc.from('push_subscriptions').upsert({
+        ten: chatUser.ten,
+        endpoint: json.endpoint,
+        p256dh: json.keys.p256dh,
+        auth: json.keys.auth
+      }, {onConflict:'endpoint'});
+      pushSubscribed=true;
+    }catch(e){ /* im lặng bỏ qua — không có thông báo cũng không chặn dùng chat bình thường */ }
+  }
+
+  // ---------- Gửi thông báo đẩy tới đúng người bị @ nhắc (không thông báo cho chính người gửi) ----------
+  function extractMentionNames(text){
+    var found=[];
+    var re=/@([\p{L}0-9_.]+(?:\s[\p{L}0-9_.]+){0,2})/gu;
+    var m;
+    while((m=re.exec(text))){
+      if(chatKnownNames[m[1]] && found.indexOf(m[1])<0) found.push(m[1]);
+    }
+    return found;
+  }
+
+  async function notifyMentions(text, senderName){
+    var names=extractMentionNames(text).filter(function(n){ return n!==senderName; });
+    for(var i=0;i<names.length;i++){
+      try{
+        await fetch(SURL+'/functions/v1/send-mention-push', {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'Authorization':'Bearer '+SKEY,
+            'apikey':SKEY
+          },
+          body:JSON.stringify({ten:names[i], tin_nhan:text, nguoi_gui:senderName})
+        });
+      }catch(e){ /* không chặn gửi tin nếu bắn thông báo lỗi */ }
+    }
+  }
+
+
   function boot(user){
     if(chatBooted)return; // tránh khởi động 2 lần nếu sự kiện bắn nhiều hơn 1 lần
     chatBooted=true;
