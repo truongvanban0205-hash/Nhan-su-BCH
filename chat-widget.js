@@ -199,12 +199,39 @@
     return text.indexOf('@'+name)>=0;
   }
 
+  // So trực tiếp với đúng danh sách tên đã biết (ưu tiên tên DÀI hơn trước, tránh khớp nhầm 1 phần tên)
+  // — thay cho cách đoán "tối đa 3 từ sau @" cũ, vốn bị nuốt nhầm chữ phía sau với tên có 1-2 từ.
+  function findMentionsInText(text){
+    var names=Object.keys(chatKnownNames).sort(function(a,b){return b.length-a.length;});
+    var found=[]; // {name, start, end}
+    var idx=0;
+    while((idx=text.indexOf('@',idx))>=0){
+      var rest=text.slice(idx+1);
+      for(var i=0;i<names.length;i++){
+        if(rest.indexOf(names[i])===0){
+          var after=rest.charAt(names[i].length);
+          if(!after || !/[\p{L}0-9_.]/u.test(after)){
+            found.push({name:names[i], start:idx, end:idx+1+names[i].length});
+            break;
+          }
+        }
+      }
+      idx+=1;
+    }
+    return found;
+  }
+
   function highlightMentions(text){
-    var e=esc(text);
-    return e.replace(/@([\p{L}0-9_.]+(?:\s[\p{L}0-9_.]+){0,2})/gu,function(full,name){
-      if(chatKnownNames[name]) return '<b style="color:#0F2A5C;background:#FCF3D9;padding:0 3px;border-radius:4px;">@'+name+'</b>';
-      return full;
+    var hits=findMentionsInText(text);
+    if(!hits.length) return esc(text);
+    var out=''; var pos=0;
+    hits.forEach(function(h){
+      out+=esc(text.slice(pos,h.start));
+      out+='<b style="color:#0F2A5C;background:#FCF3D9;padding:0 3px;border-radius:4px;">@'+esc(h.name)+'</b>';
+      pos=h.end;
     });
+    out+=esc(text.slice(pos));
+    return out;
   }
 
   function scrollToBottom(force){
@@ -351,11 +378,9 @@
   // ---------- Gửi thông báo đẩy tới đúng người bị @ nhắc (không thông báo cho chính người gửi) ----------
   function extractMentionNames(text){
     var found=[];
-    var re=/@([\p{L}0-9_.]+(?:\s[\p{L}0-9_.]+){0,2})/gu;
-    var m;
-    while((m=re.exec(text))){
-      if(chatKnownNames[m[1]] && found.indexOf(m[1])<0) found.push(m[1]);
-    }
+    findMentionsInText(text).forEach(function(h){
+      if(found.indexOf(h.name)<0) found.push(h.name);
+    });
     return found;
   }
 
