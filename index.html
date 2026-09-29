@@ -1129,11 +1129,6 @@ async function exportFullReport(){
     }
   }catch(e){}
 
-  // Đảm bảo số liệu hôm nay (đang nhập trên máy) đã được ghi lên server trước khi xuất —
-  // tránh biểu đồ/lịch sử thiếu ngày chỉ vì chưa kịp mergeSave.
-  try{ if(typeof mergeSave==='function' && !vDate) await mergeSave(); }catch(e){}
-  try{ if(typeof mmtbMergeSave==='function' && !mmtbVDate) await mmtbMergeSave(); }catch(e){}
-
   // Lấy dữ liệu hôm nay + 7 ngày gần nhất cho cả 2 module
   var n=new Date();
   var tk=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());
