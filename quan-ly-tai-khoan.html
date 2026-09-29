@@ -740,6 +740,7 @@ async function loadCauHinhNS(){
   duAnCache = d1 || [];
   duAnCache.sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); });
   loaiCaCache = d2 || [];
+  loaiCaCache.sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); });
   tenCaRiengCache = d3 || [];
   loaiMayCache = (d4 || []).map(function(m){
     return Object.assign({}, m, { nhom: (m.nhom === 'phu_tro' ? 'phu_tro' : 'thi_cong') });
@@ -799,6 +800,38 @@ async function doiViTriDuAn(id, huong){
     p_pass: currentAdminPass, p_id1: a.id, p_id2: b.id
   });
   if(error){ alert("Không đổi vị trí được: " + (error.message||"")); return; }
+  await loadCauHinhNS();
+  renderCauHinhAll();
+}
+
+
+async function doiViTriLoaiCa(id, huong){
+  const idx = loaiCaCache.findIndex(x=>x.id===id);
+  if(idx < 0) return;
+  const doiIdx = idx + huong;
+  if(doiIdx < 0 || doiIdx >= loaiCaCache.length) return;
+  const a = loaiCaCache[idx];
+  const b = loaiCaCache[doiIdx];
+  const { error } = await sb.rpc("admin_doi_thu_tu_loai_ca", {
+    p_pass: currentAdminPass, p_id1: a.id, p_id2: b.id
+  });
+  if(error){ alert("Không đổi vị trí ca được: " + (error.message||"")); return; }
+  await loadCauHinhNS();
+  renderCauHinhAll();
+}
+
+async function doiViTriLoaiMay(id, huong, nhom){
+  const list = loaiMayCache.filter(m => (nhom==='phu_tro') ? (m.nhom==='phu_tro') : (m.nhom!=='phu_tro'));
+  const idx = list.findIndex(x=>x.id===id);
+  if(idx < 0) return;
+  const doiIdx = idx + huong;
+  if(doiIdx < 0 || doiIdx >= list.length) return;
+  const a = list[idx];
+  const b = list[doiIdx];
+  const { error } = await sb.rpc("admin_doi_thu_tu_loai_may", {
+    p_pass: currentAdminPass, p_id1: a.id, p_id2: b.id
+  });
+  if(error){ alert("Không đổi vị trí máy được: " + (error.message||"")); return; }
   await loadCauHinhNS();
   renderCauHinhAll();
 }
@@ -881,20 +914,33 @@ function renderListDuAn(){
 
 function renderListLoaiCa(){
   const el = document.getElementById("listLoaiCa");
-  if(loaiCaCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có ca nào.</div>'; return; }
-  el.innerHTML = loaiCaCache.map(c => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);gap:8px; ${c.an?'opacity:.5;':''}">
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:${c.la_nghi?'#c62828':'var(--muted)'};cursor:pointer;white-space:nowrap;">
-        <input type="radio" name="loaiNghi" value="${c.id}" data-set-nghi="${c.id}" ${c.la_nghi?'checked':''}>
-        Là Nghỉ
-      </label>
-      <span style="flex:1;">${nl2br(c.ten_mac_dinh)}${c.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${c.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
-      <span style="white-space:nowrap;">
-        <button class="icon-btn" data-rename-ca="${c.id}">✏️</button>
-        <button class="icon-btn" data-toggle-ca="${c.id}">${c.an?'👁️':'🙈'}</button>
+  if(!el) return;
+  if(loaiCaCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:14px;text-align:center;">Chưa có ca nào.</div>'; return; }
+  el.innerHTML = loaiCaCache.map((c, i) => `
+    <div class="cfg-item" style="${c.an?'opacity:.55;':''}">
+      <div class="cfg-item-top">
+        <div class="cfg-item-order">
+          <button class="icon-btn" data-up-ca="${c.id}" title="Đưa lên" ${i===0?'disabled':''}>↑</button>
+          <button class="icon-btn" data-down-ca="${c.id}" title="Đưa xuống" ${i===loaiCaCache.length-1?'disabled':''}>↓</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:${c.la_nghi?'var(--bad)':'var(--muted)'};cursor:pointer;white-space:nowrap;margin:0;flex-shrink:0;">
+          <input type="radio" name="loaiNghi" value="${c.id}" data-set-nghi="${c.id}" ${c.la_nghi?'checked':''}>
+          Nghỉ
+        </label>
+        <div class="cfg-item-name">${nl2br(c.ten_mac_dinh)}${c.mac_dinh?' <span style="color:var(--muted);font-size:11px;font-weight:500;">(mặc định)</span>':''}${c.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</div>
+      </div>
+      <div class="cfg-item-actions">
+        <button class="icon-btn" data-rename-ca="${c.id}">✏️ Đổi tên</button>
+        <button class="icon-btn" data-toggle-ca="${c.id}">${c.an?'👁️ Hiện':'🙈 Ẩn'}</button>
         ${c.mac_dinh?'':`<button class="icon-btn reject" data-del-ca="${c.id}">Xoá</button>`}
-      </span>
+      </div>
     </div>`).join("");
+  el.querySelectorAll("[data-up-ca]").forEach(btn=>{
+    btn.addEventListener("click", ()=> doiViTriLoaiCa(parseInt(btn.dataset.upCa), -1));
+  });
+  el.querySelectorAll("[data-down-ca]").forEach(btn=>{
+    btn.addEventListener("click", ()=> doiViTriLoaiCa(parseInt(btn.dataset.downCa), 1));
+  });
   el.querySelectorAll("[data-set-nghi]").forEach(radio=>{
     radio.addEventListener("change", async ()=>{
       const id = parseInt(radio.dataset.setNghi);
@@ -968,15 +1014,21 @@ function renderCauHinhAll(){
   renderTenCaRieng();
 }
 
-function bindLoaiMayList(el, list){
+function bindLoaiMayList(el, list, nhom){
   if(!el) return;
   if(!list.length){
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:14px;text-align:center;">Chưa có máy nào.</div>';
     return;
   }
-  el.innerHTML = list.map(m => `
+  el.innerHTML = list.map((m, i) => `
     <div class="cfg-item" style="${m.an?'opacity:.55;':''}">
-      <div class="cfg-item-name">${nl2br(m.ten)}${m.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${m.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</div>
+      <div class="cfg-item-top">
+        <div class="cfg-item-order">
+          <button class="icon-btn" data-up-may="${m.id}" title="Đưa lên" ${i===0?'disabled':''}>↑</button>
+          <button class="icon-btn" data-down-may="${m.id}" title="Đưa xuống" ${i===list.length-1?'disabled':''}>↓</button>
+        </div>
+        <div class="cfg-item-name">${nl2br(m.ten)}${m.mac_dinh?' <span style="color:var(--muted);font-size:11px;font-weight:500;">(mặc định)</span>':''}${m.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</div>
+      </div>
       <div class="cfg-item-actions">
         <button class="icon-btn" data-rename-may="${m.id}">✏️ Đổi tên</button>
         <button class="icon-btn" data-toggle-may="${m.id}">${m.an?'👁️ Hiện':'🙈 Ẩn'}</button>
@@ -984,6 +1036,12 @@ function bindLoaiMayList(el, list){
         ${m.mac_dinh?'':`<button class="icon-btn reject" data-del-may="${m.id}">Xoá</button>`}
       </div>
     </div>`).join("");
+  el.querySelectorAll("[data-up-may]").forEach(btn=>{
+    btn.addEventListener("click", ()=> doiViTriLoaiMay(parseInt(btn.dataset.upMay), -1, nhom));
+  });
+  el.querySelectorAll("[data-down-may]").forEach(btn=>{
+    btn.addEventListener("click", ()=> doiViTriLoaiMay(parseInt(btn.dataset.downMay), 1, nhom));
+  });
   el.querySelectorAll("[data-rename-may]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const id = parseInt(btn.dataset.renameMay);
@@ -1033,8 +1091,8 @@ function renderListLoaiMay(){
   const c2 = document.getElementById('countMayPhuTro');
   if(c1) c1.textContent = String(thiCong.length);
   if(c2) c2.textContent = String(phuTro.length);
-  bindLoaiMayList(document.getElementById('listLoaiMayThiCong'), thiCong);
-  bindLoaiMayList(document.getElementById('listLoaiMayPhuTro'), phuTro);
+  bindLoaiMayList(document.getElementById('listLoaiMayThiCong'), thiCong, 'thi_cong');
+  bindLoaiMayList(document.getElementById('listLoaiMayPhuTro'), phuTro, 'phu_tro');
 }
 
 async function themLoaiMay(nhom, inputId){
