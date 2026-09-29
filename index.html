@@ -1160,136 +1160,154 @@ async function exportFullReport(){
     var d=new Date(n);d.setDate(n.getDate()-i);
     days7.push(d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()));
   }
+  function normNgayKey(n){
+    if(n==null) return '';
+    n=String(n);
+    return n.length>=10 ? n.slice(0,10) : n;
+  }
+  function unwrapNsPayload(d){
+    if(!d || typeof d!=='object') return null;
+    // Chuẩn: { projects, cols, data: { proj: { ca: { col: n } } } }
+    if(d.data && typeof d.data==='object' && !Array.isArray(d.data)){
+      return d;
+    }
+    // Cũ / lệch: cả payload chính là map dự án
+    if(!d.projects && !d.cols && !d.log && !d.bienDong){
+      var keys=Object.keys(d);
+      if(keys.length) return { projects:keys, cols:null, data:d };
+    }
+    return d;
+  }
+  function numVal(v){
+    if(typeof v==='number' && isFinite(v)) return v;
+    if(typeof v==='string' && v.trim()!=='' && !isNaN(Number(v))) return Number(v);
+    return null;
+  }
   var nsMap={},mmtbMap={};
-  nsHist.forEach(function(r){nsMap[r.ngay]=r.data;});
-  mmtbHist.forEach(function(r){mmtbMap[r.ngay]=r.data;});
-  if(nsToday)nsMap[tk]=nsToday;
-  if(mmtbToday)mmtbMap[tk]=mmtbToday;
+  nsHist.forEach(function(r){ nsMap[normNgayKey(r.ngay)] = unwrapNsPayload(r.data); });
+  mmtbHist.forEach(function(r){ mmtbMap[normNgayKey(r.ngay)] = r.data; });
+  if(nsToday) nsMap[normNgayKey(tk)] = unwrapNsPayload(nsToday);
+  if(mmtbToday) mmtbMap[normNgayKey(tk)] = mmtbToday;
 
   function sumNS(d){
+    d=unwrapNsPayload(d);
     if(!d)return null;
     var dt=d.data||{};
+    if(!dt || typeof dt!=='object') return null;
     var projs=d.projects||[];
-    // Nếu projects lưu không khớp key trong data (đổi ID/tên dự án) → lấy đúng key có trong data
+    // Nếu projects lưu không khớp key trong data → lấy đúng key có trong data
     if(!projs.length || !projs.some(function(p){return !!dt[p];})){
       projs=Object.keys(dt);
     }
-    // Cột: ưu tiên cols đã lưu của đúng ngày đó
+    if(!projs.length) return null;
     var cols=(d.cols&&d.cols.length)?d.cols:null;
-    // Mã ca: lấy TỪ DỮ LIỆU NGÀY ĐÓ — không dùng TYPES phiên hiện tại (đã từng làm ngày cũ về 0)
-    var typesSet={};
-    projs.forEach(function(p){
-      Object.keys(dt[p]||{}).forEach(function(ty){ typesSet[ty]=true; });
-    });
-    var types=Object.keys(typesSet);
-    if(!types.length) return null;
+    // Cộng mọi số trong data ngày đó (trừ dự án hỗ trợ). Không phụ thuộc TYPES/cols phiên hiện tại.
     var t=0, hit=0;
-    projs.forEach(function(p){
-      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p])return;
-      types.forEach(function(ty){
-        if(!dt[p]||!dt[p][ty])return;
+    function addProj(p){
+      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p]) return;
+      var block=dt[p];
+      if(!block || typeof block!=='object') return;
+      Object.keys(block).forEach(function(ty){
+        var cell=block[ty];
+        if(!cell || typeof cell!=='object') return;
         if(cols&&cols.length){
+          // Có cols: cộng theo cols, nếu không trúng key nào thì cộng toàn bộ cell
+          var localHit=0;
           cols.forEach(function(c){
-            var v=dt[p][ty][c.k];
-            if(typeof v==='number'){ t+=v; hit++; }
+            var n=numVal(cell[c.k]);
+            if(n!==null){ t+=n; hit++; localHit++; }
           });
+          if(localHit===0){
+            Object.keys(cell).forEach(function(ck){
+              var n=numVal(cell[ck]);
+              if(n!==null){ t+=n; hit++; }
+            });
+          }
         }else{
-          // Không có cols lưu kèm: cộng mọi số trong ô (tránh về 0 vì lệch key chức danh)
-          Object.keys(dt[p][ty]).forEach(function(ck){
-            var v=dt[p][ty][ck];
-            if(typeof v==='number'){ t+=v; hit++; }
+          Object.keys(cell).forEach(function(ck){
+            var n=numVal(cell[ck]);
+            if(n!==null){ t+=n; hit++; }
           });
         }
       });
-    });
-    // Có cấu trúc ngày đó nhưng không đọc được số nào → coi như null (thiếu dữ liệu), không vẽ thành 0 giả
-    if(hit===0 && t===0){
-      // Thử fallback: cộng mọi số trong data (phòng cols lệch key hoàn toàn)
-      var t2=0, hit2=0;
-      Object.keys(dt).forEach(function(p){
-        if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p])return;
-        Object.keys(dt[p]||{}).forEach(function(ty){
-          Object.keys(dt[p][ty]||{}).forEach(function(ck){
-            var v=dt[p][ty][ck];
-            if(typeof v==='number'){ t2+=v; hit2++; }
-          });
-        });
-      });
-      if(hit2===0) return null;
-      return t2;
     }
+    projs.forEach(addProj);
+    // Nếu projects liệt kê nhưng không đọc được gì — quét toàn bộ dt
+    if(hit===0){
+      Object.keys(dt).forEach(addProj);
+    }
+    if(hit===0) return null;
     return t;
   }
   function sumMMTB(d){
     if(!d)return null;
-    var dt=d.data||{},projs=d.projects||['CL-CR'];
-    var t=0;
+    var dt=d.data||{},projs=d.projects||[];
+    if(!projs.length || !projs.some(function(p){return !!dt[p];})) projs=Object.keys(dt||{});
+    var t=0, hit=0;
     projs.forEach(function(p){
       ['hoatdong','huhong','luukho'].forEach(function(s){
-        if(dt[p]&&dt[p][s])Object.values(dt[p][s]).forEach(function(v){t+=v||0;});
+        if(dt[p]&&dt[p][s])Object.keys(dt[p][s]).forEach(function(mk){
+          var n=numVal(dt[p][s][mk]);
+          if(n!==null){ t+=n; hit++; }
+        });
       });
     });
+    if(hit===0) return null;
     return t;
   }
   function sumNSDiLam(d){
+    d=unwrapNsPayload(d);
     if(!d)return null;
     var dt=d.data||{};
+    if(!dt || typeof dt!=='object') return null;
     var projs=d.projects||[];
-    if(!projs.length || !projs.some(function(p){return !!dt[p];})){
-      projs=Object.keys(dt);
-    }
+    if(!projs.length || !projs.some(function(p){return !!dt[p];})) projs=Object.keys(dt);
+    if(!projs.length) return null;
     var cols=(d.cols&&d.cols.length)?d.cols:null;
     var typesSet={};
-    projs.forEach(function(p){
-      Object.keys(dt[p]||{}).forEach(function(ty){ typesSet[ty]=true; });
-    });
+    projs.forEach(function(p){ Object.keys(dt[p]||{}).forEach(function(ty){ typesSet[ty]=true; }); });
     var types=Object.keys(typesSet);
-    if(!types.length) return null;
-    // Loại nghỉ: ưu tiên nghiKey() hiện tại nếu còn trong data ngày đó; không thì bỏ qua mã có chữ nghi
     var nk=null;
     try{ nk=nghiKey(); }catch(e){ nk=null; }
     if(nk && types.indexOf(nk)<0) nk=null;
     if(!nk){
-      types.forEach(function(ty){
-        if(/nghi/i.test(ty)) nk=ty;
-      });
+      types.forEach(function(ty){ if(/nghi/i.test(String(ty))) nk=ty; });
     }
     var t=0, hit=0;
-    projs.forEach(function(p){
-      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p])return;
-      types.forEach(function(ty){
+    function addProjDi(p){
+      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p]) return;
+      var block=dt[p];
+      if(!block || typeof block!=='object') return;
+      Object.keys(block).forEach(function(ty){
         if(nk && ty===nk) return;
-        if(!dt[p]||!dt[p][ty])return;
+        var cell=block[ty];
+        if(!cell || typeof cell!=='object') return;
         if(cols&&cols.length){
+          var localHit=0;
           cols.forEach(function(c){
-            var v=dt[p][ty][c.k];
-            if(typeof v==='number'){ t+=v; hit++; }
+            var n=numVal(cell[c.k]);
+            if(n!==null){ t+=n; hit++; localHit++; }
           });
+          if(localHit===0){
+            Object.keys(cell).forEach(function(ck){
+              var n=numVal(cell[ck]);
+              if(n!==null){ t+=n; hit++; }
+            });
+          }
         }else{
-          Object.keys(dt[p][ty]).forEach(function(ck){
-            var v=dt[p][ty][ck];
-            if(typeof v==='number'){ t+=v; hit++; }
+          Object.keys(cell).forEach(function(ck){
+            var n=numVal(cell[ck]);
+            if(n!==null){ t+=n; hit++; }
           });
         }
       });
-    });
-    if(hit===0 && t===0){
-      var t2=0, hit2=0;
-      Object.keys(dt).forEach(function(p){
-        if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p])return;
-        Object.keys(dt[p]||{}).forEach(function(ty){
-          if(nk && ty===nk) return;
-          Object.keys(dt[p][ty]||{}).forEach(function(ck){
-            var v=dt[p][ty][ck];
-            if(typeof v==='number'){ t2+=v; hit2++; }
-          });
-        });
-      });
-      if(hit2===0) return null;
-      return t2;
     }
+    projs.forEach(addProjDi);
+    if(hit===0) Object.keys(dt).forEach(addProjDi);
+    if(hit===0) return null;
     return t;
   }
+
   function sumMMTBHoatDong(d){
     if(!d)return null;
     var dt=d.data||{},projs=d.projects||['CL-CR'];
