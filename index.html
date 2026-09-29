@@ -1129,6 +1129,11 @@ async function exportFullReport(){
     }
   }catch(e){}
 
+  // Đảm bảo số liệu hôm nay (đang nhập trên máy) đã được ghi lên server trước khi xuất —
+  // tránh biểu đồ/lịch sử thiếu ngày chỉ vì chưa kịp mergeSave.
+  try{ if(typeof mergeSave==='function' && !vDate) await mergeSave(); }catch(e){}
+  try{ if(typeof mmtbMergeSave==='function' && !mmtbVDate) await mmtbMergeSave(); }catch(e){}
+
   // Lấy dữ liệu hôm nay + 7 ngày gần nhất cho cả 2 module
   var n=new Date();
   var tk=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());
@@ -1163,20 +1168,56 @@ async function exportFullReport(){
 
   function sumNS(d){
     if(!d)return null;
-    var dt=d.data||{},projs=d.projects||[];
-    // Chỉ cộng đúng các cột thật sự thuộc về ngày đó (d.cols) — không dùng Object.values
-    // cộng bừa mọi key còn sót trong dữ liệu (key cũ từ trước khi đổi hệ chức danh), tránh
-    // bị cộng trùng khi 1 ô có cả key cũ lẫn key mới cùng trỏ tới 1 số liệu.
-    var cols=(d.cols&&d.cols.length)?d.cols:COLS;
-    var t=0;
+    var dt=d.data||{};
+    var projs=d.projects||[];
+    // Nếu projects lưu không khớp key trong data (đổi ID/tên dự án) → lấy đúng key có trong data
+    if(!projs.length || !projs.some(function(p){return !!dt[p];})){
+      projs=Object.keys(dt);
+    }
+    // Cột: ưu tiên cols đã lưu của đúng ngày đó
+    var cols=(d.cols&&d.cols.length)?d.cols:null;
+    // Mã ca: lấy TỪ DỮ LIỆU NGÀY ĐÓ — không dùng TYPES phiên hiện tại (đã từng làm ngày cũ về 0)
+    var typesSet={};
     projs.forEach(function(p){
-      if(HO_TRO_PROJS[p])return; // dự án hỗ trợ: không tính vào Tổng NS trên biểu đồ 7 ngày
-      TYPES.forEach(function(ty){
-        if(dt[p]&&dt[p][ty]){
-          cols.forEach(function(c){ t+=(dt[p][ty][c.k]||0); });
+      Object.keys(dt[p]||{}).forEach(function(ty){ typesSet[ty]=true; });
+    });
+    var types=Object.keys(typesSet);
+    if(!types.length) return null;
+    var t=0, hit=0;
+    projs.forEach(function(p){
+      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p])return;
+      types.forEach(function(ty){
+        if(!dt[p]||!dt[p][ty])return;
+        if(cols&&cols.length){
+          cols.forEach(function(c){
+            var v=dt[p][ty][c.k];
+            if(typeof v==='number'){ t+=v; hit++; }
+          });
+        }else{
+          // Không có cols lưu kèm: cộng mọi số trong ô (tránh về 0 vì lệch key chức danh)
+          Object.keys(dt[p][ty]).forEach(function(ck){
+            var v=dt[p][ty][ck];
+            if(typeof v==='number'){ t+=v; hit++; }
+          });
         }
       });
     });
+    // Có cấu trúc ngày đó nhưng không đọc được số nào → coi như null (thiếu dữ liệu), không vẽ thành 0 giả
+    if(hit===0 && t===0){
+      // Thử fallback: cộng mọi số trong data (phòng cols lệch key hoàn toàn)
+      var t2=0, hit2=0;
+      Object.keys(dt).forEach(function(p){
+        if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p])return;
+        Object.keys(dt[p]||{}).forEach(function(ty){
+          Object.keys(dt[p][ty]||{}).forEach(function(ck){
+            var v=dt[p][ty][ck];
+            if(typeof v==='number'){ t2+=v; hit2++; }
+          });
+        });
+      });
+      if(hit2===0) return null;
+      return t2;
+    }
     return t;
   }
   function sumMMTB(d){
@@ -1192,19 +1233,61 @@ async function exportFullReport(){
   }
   function sumNSDiLam(d){
     if(!d)return null;
-    var dt=d.data||{},projs=d.projects||[];
-    var cols=(d.cols&&d.cols.length)?d.cols:COLS;
-    var nk=nghiKey();
-    var t=0;
+    var dt=d.data||{};
+    var projs=d.projects||[];
+    if(!projs.length || !projs.some(function(p){return !!dt[p];})){
+      projs=Object.keys(dt);
+    }
+    var cols=(d.cols&&d.cols.length)?d.cols:null;
+    var typesSet={};
     projs.forEach(function(p){
-      if(HO_TRO_PROJS[p])return; // dự án hỗ trợ: không tính vào Đi làm trên biểu đồ 7 ngày
-      TYPES.forEach(function(ty){
-        if(ty===nk) return; // bỏ qua loại Nghỉ, chỉ cộng đang đi làm
-        if(dt[p]&&dt[p][ty]){
-          cols.forEach(function(c){ t+=(dt[p][ty][c.k]||0); });
+      Object.keys(dt[p]||{}).forEach(function(ty){ typesSet[ty]=true; });
+    });
+    var types=Object.keys(typesSet);
+    if(!types.length) return null;
+    // Loại nghỉ: ưu tiên nghiKey() hiện tại nếu còn trong data ngày đó; không thì bỏ qua mã có chữ nghi
+    var nk=null;
+    try{ nk=nghiKey(); }catch(e){ nk=null; }
+    if(nk && types.indexOf(nk)<0) nk=null;
+    if(!nk){
+      types.forEach(function(ty){
+        if(/nghi/i.test(ty)) nk=ty;
+      });
+    }
+    var t=0, hit=0;
+    projs.forEach(function(p){
+      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p])return;
+      types.forEach(function(ty){
+        if(nk && ty===nk) return;
+        if(!dt[p]||!dt[p][ty])return;
+        if(cols&&cols.length){
+          cols.forEach(function(c){
+            var v=dt[p][ty][c.k];
+            if(typeof v==='number'){ t+=v; hit++; }
+          });
+        }else{
+          Object.keys(dt[p][ty]).forEach(function(ck){
+            var v=dt[p][ty][ck];
+            if(typeof v==='number'){ t+=v; hit++; }
+          });
         }
       });
     });
+    if(hit===0 && t===0){
+      var t2=0, hit2=0;
+      Object.keys(dt).forEach(function(p){
+        if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p])return;
+        Object.keys(dt[p]||{}).forEach(function(ty){
+          if(nk && ty===nk) return;
+          Object.keys(dt[p][ty]||{}).forEach(function(ck){
+            var v=dt[p][ty][ck];
+            if(typeof v==='number'){ t2+=v; hit2++; }
+          });
+        });
+      });
+      if(hit2===0) return null;
+      return t2;
+    }
     return t;
   }
   function sumMMTBHoatDong(d){
