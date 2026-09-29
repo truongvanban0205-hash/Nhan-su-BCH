@@ -719,18 +719,29 @@ let loaiMayCache = [];
 let tenNhomMayCache = { thi_cong: 'Máy thi công', phu_tro: 'Máy phụ trợ' };
 
 async function loadCauHinhNS(){
-  const [r1, r2, r3, r4, r5] = await Promise.all([
-    sb.rpc("cauhinh_lay_du_an"),
-    sb.rpc("cauhinh_lay_loai_ca"),
-    sb.rpc("cauhinh_lay_ten_ca_rieng"),
-    sb.rpc("cauhinh_lay_loai_may"),
-    sb.rpc("cauhinh_lay_ten_nhom_may").catch(function(){ return { data: null }; })
+  // Mỗi RPC độc lập — một cái lỗi không làm sập cả cấu hình
+  async function safeRpc(name){
+    try{
+      const r = await sb.rpc(name);
+      if(r && r.error){ console.warn("[loadCauHinhNS]", name, r.error); return null; }
+      return r ? r.data : null;
+    }catch(e){
+      console.warn("[loadCauHinhNS]", name, e);
+      return null;
+    }
+  }
+  const [d1, d2, d3, d4, d5] = await Promise.all([
+    safeRpc("cauhinh_lay_du_an"),
+    safeRpc("cauhinh_lay_loai_ca"),
+    safeRpc("cauhinh_lay_ten_ca_rieng"),
+    safeRpc("cauhinh_lay_loai_may"),
+    safeRpc("cauhinh_lay_ten_nhom_may")
   ]);
-  duAnCache = r1.data || [];
+  duAnCache = d1 || [];
   duAnCache.sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); });
-  loaiCaCache = r2.data || [];
-  tenCaRiengCache = r3.data || [];
-  loaiMayCache = (r4.data || []).map(function(m){
+  loaiCaCache = d2 || [];
+  tenCaRiengCache = d3 || [];
+  loaiMayCache = (d4 || []).map(function(m){
     return Object.assign({}, m, { nhom: (m.nhom === 'phu_tro' ? 'phu_tro' : 'thi_cong') });
   });
   loaiMayCache.sort(function(a,b){
@@ -739,8 +750,8 @@ async function loadCauHinhNS(){
     if(ga !== gb) return ga - gb;
     return (a.thu_tu||0) - (b.thu_tu||0);
   });
-  if(r5 && r5.data && r5.data.length){
-    r5.data.forEach(function(row){
+  if(d5 && d5.length){
+    d5.forEach(function(row){
       if(row.ma && row.ten) tenNhomMayCache[row.ma] = row.ten;
     });
   }
@@ -1035,9 +1046,12 @@ async function themLoaiMay(nhom, inputId){
   await loadCauHinhNS(); renderCauHinhAll();
 }
 
-document.getElementById("btnThemMayThiCong").addEventListener("click", ()=> themLoaiMay('thi_cong', 'inputMayMoiThiCong'));
-document.getElementById("btnThemMayPhuTro").addEventListener("click", ()=> themLoaiMay('phu_tro', 'inputMayMoiPhuTro'));
-document.getElementById("btnThemMay").addEventListener("click", ()=> themLoaiMay('thi_cong', 'inputMayMoiThiCong'));
+(function(){
+  function on(id, fn){ var el=document.getElementById(id); if(el) el.addEventListener("click", fn); }
+  on("btnThemMayThiCong", ()=> themLoaiMay('thi_cong', 'inputMayMoiThiCong'));
+  on("btnThemMayPhuTro", ()=> themLoaiMay('phu_tro', 'inputMayMoiPhuTro'));
+  on("btnThemMay", ()=> themLoaiMay('thi_cong', 'inputMayMoiThiCong'));
+})();
 
 async function luuTenNhomMay(ma, inputId){
   const ten = document.getElementById(inputId).value.trim();
@@ -1047,13 +1061,22 @@ async function luuTenNhomMay(ma, inputId){
   tenNhomMayCache[ma] = ten;
   showToast("✓ Đã lưu tên nhóm");
 }
-document.getElementById("btnLuuTenNhomThiCong").addEventListener("click", ()=> luuTenNhomMay('thi_cong', 'tenNhomThiCong'));
-document.getElementById("btnLuuTenNhomPhuTro").addEventListener("click", ()=> luuTenNhomMay('phu_tro', 'tenNhomPhuTro'));
+(function(){
+  function on(id, fn){ var el=document.getElementById(id); if(el) el.addEventListener("click", fn); }
+  on("btnLuuTenNhomThiCong", ()=> luuTenNhomMay('thi_cong', 'tenNhomThiCong'));
+  on("btnLuuTenNhomPhuTro", ()=> luuTenNhomMay('phu_tro', 'tenNhomPhuTro'));
+})();
 
 document.getElementById("btnCauHinhNS").addEventListener("click", async ()=>{
-  await loadCauHinhNS();
-  renderCauHinhAll();
+  // Luôn mở modal; lỗi tải cấu hình không chặn vào màn hình
   document.getElementById("modalCauHinh").classList.add("show");
+  try{
+    await loadCauHinhNS();
+    renderCauHinhAll();
+  }catch(e){
+    console.error("[CauHinhNS]", e);
+    alert("Không tải đủ cấu hình (kiểm tra SQL/RPC). Vẫn có thể xem giao diện.\n" + (e && e.message ? e.message : e));
+  }
 });
 document.getElementById("btnCloseCauHinh").addEventListener("click", ()=>{
   document.getElementById("modalCauHinh").classList.remove("show");
