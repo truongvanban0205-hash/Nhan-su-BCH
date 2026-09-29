@@ -10,125 +10,207 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg: #0d1117;
-    --panel: #151b23;
-    --panel2: #1c232d;
-    --border: #2a3340;
-    --text: #e6edf3;
-    --muted: #8b96a5;
+    --bg: #0b0f14;
+    --panel: #141a22;
+    --panel2: #1a222d;
+    --panel3: #222b38;
+    --border: #2a3544;
+    --border-soft: #243040;
+    --text: #e8eef6;
+    --muted: #8b9aab;
     --accent: #ff8a3d;
-    --accent-dim: #ff8a3d33;
-    --ok: #3fb950;
-    --ok-dim: #3fb95022;
-    --warn: #d29922;
-    --warn-dim: #d2992222;
-    --bad: #f85149;
-    --bad-dim: #f8514922;
+    --accent-dim: #ff8a3d28;
+    --accent-hover: #ff9d5c;
+    --ok: #3ecf8e;
+    --ok-dim: #3ecf8e22;
+    --warn: #e5a82e;
+    --warn-dim: #e5a82e22;
+    --bad: #f2555a;
+    --bad-dim: #f2555a22;
+    --blue: #4da3ff;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow: 0 12px 40px rgba(0,0,0,.45);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
-  *{box-sizing:border-box;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html{scroll-behavior:smooth;}
   body{
     margin:0; min-height:100vh; background:var(--bg); color:var(--text);
-    font-family:'Be Vietnam Pro',system-ui,sans-serif;
-    display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
+    font-family:'Be Vietnam Pro',system-ui,-apple-system,sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    padding:16px 14px calc(48px + var(--safe-bottom));
   }
   .topbar{
     width:100%; max-width:640px; display:flex; justify-content:space-between; align-items:center;
-    margin-bottom:20px;
+    margin-bottom:16px; gap:10px;
   }
-  .brand{font-size:14px; color:var(--muted); font-weight:600; letter-spacing:.02em;}
+  .brand{font-size:13px; color:var(--muted); font-weight:600; letter-spacing:.02em; line-height:1.35;}
   .brand b{color:var(--accent);}
   .linkbtn{
-    background:none; border:1px solid var(--border); color:var(--muted);
-    padding:7px 14px; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit;
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    padding:9px 14px; border-radius:10px; font-size:13px; font-weight:600;
+    cursor:pointer; font-family:inherit; white-space:nowrap; transition:border-color .15s, background .15s;
   }
-  .linkbtn:hover{border-color:var(--accent); color:var(--accent);}
+  .linkbtn:hover, .linkbtn:active{border-color:var(--accent); color:var(--accent);}
   .card{
     width:100%; max-width:440px; background:var(--panel); border:1px solid var(--border);
-    border-radius:16px; padding:32px 28px; box-shadow:0 10px 40px rgba(0,0,0,.3);
+    border-radius:var(--radius); padding:28px 22px; box-shadow:var(--shadow);
   }
-  .card.wide{max-width:98vw; width:1700px;}
-  h1{font-size:20px; margin:0 0 4px; font-weight:800;}
-  .sub{color:var(--muted); font-size:13px; margin:0 0 24px; line-height:1.5;}
-  label{display:block; font-size:13px; color:var(--muted); margin:0 0 6px; font-weight:500;}
-  input[type=date]{
-    padding:8px 10px; border-radius:8px; border:1px solid var(--border);
-    background:var(--panel2); color:var(--text); font-family:inherit; font-size:13px; margin-bottom:16px;
+  .card.wide{max-width:min(98vw, 1600px); width:100%;}
+  h1{font-size:20px; margin:0 0 4px; font-weight:800; letter-spacing:-.02em;}
+  .sub{color:var(--muted); font-size:13px; margin:0 0 20px; line-height:1.55;}
+  label{display:block; font-size:12px; color:var(--muted); margin:0 0 6px; font-weight:600; letter-spacing:.01em;}
+  input[type=date], input[type=time]{
+    width:100%; padding:11px 12px; border-radius:var(--radius-sm); border:1px solid var(--border);
+    background:var(--panel2); color:var(--text); font-family:inherit; font-size:14px; margin-bottom:14px;
   }
-  input[type=text], input[type=password], input[type=tel], select#moduleSelect{
-    width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
-    background:var(--panel2); color:var(--text); font-size:15px; font-family:inherit; margin-bottom:16px;
+  input[type=text], input[type=password], input[type=tel], select#moduleSelect, textarea{
+    width:100%; padding:12px 14px; border-radius:var(--radius-sm); border:1px solid var(--border);
+    background:var(--panel2); color:var(--text); font-size:15px; font-family:inherit; margin-bottom:14px;
   }
-  input:focus{outline:none; border-color:var(--accent);}
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim);}
   .btn{
-    width:100%; padding:13px; border-radius:10px; border:none; background:var(--accent);
+    width:100%; padding:13px; border-radius:var(--radius-sm); border:none; background:var(--accent);
     color:#1a1005; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit;
-    transition:filter .15s;
+    transition:filter .15s, transform .1s;
   }
-  .btn:hover{filter:brightness(1.08);}
-  .btn:disabled{opacity:.5; cursor:not-allowed;}
+  .btn:hover{filter:brightness(1.06);}
+  .btn:active{transform:scale(.98);}
+  .btn:disabled{opacity:.45; cursor:not-allowed; transform:none;}
   .btn.secondary{background:var(--panel2); color:var(--text); border:1px solid var(--border);}
-  .btn.small{width:auto; padding:8px 14px; font-size:13px;}
+  .btn.small{width:auto; padding:9px 14px; font-size:13px;}
   .btn.danger{background:var(--bad-dim); color:var(--bad); border:1px solid var(--bad);}
-  .msg{padding:14px 16px; border-radius:10px; font-size:14px; margin-bottom:16px; line-height:1.5; display:none;}
+  .msg{padding:12px 14px; border-radius:var(--radius-sm); font-size:13px; margin-bottom:14px; line-height:1.5; display:none;}
   .msg.show{display:block;}
   .msg.ok{background:var(--ok-dim); color:var(--ok); border:1px solid var(--ok);}
   .msg.warn{background:var(--warn-dim); color:var(--warn); border:1px solid var(--warn);}
   .msg.bad{background:var(--bad-dim); color:var(--bad); border:1px solid var(--bad);}
-  .info-row{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); font-size:14px;}
+  .info-row{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:11px 0; border-bottom:1px solid var(--border-soft); font-size:14px;}
   .info-row:last-child{border-bottom:none;}
-  .info-row span:first-child{color:var(--muted);}
-  .info-row span:last-child{font-weight:600;}
+  .info-row span:first-child{color:var(--muted); flex-shrink:0;}
+  .info-row span:last-child{font-weight:600; text-align:right;}
   .badges{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
-  .badge{font-size:11px; padding:3px 9px; border-radius:20px; background:var(--accent-dim); color:var(--accent); font-weight:600;}
+  .badge{font-size:11px; padding:4px 10px; border-radius:20px; background:var(--accent-dim); color:var(--accent); font-weight:600;}
   .toast{
-    position:fixed; top:20px; left:50%; transform:translateX(-50%);
-    background:var(--ok-dim); border:1px solid var(--ok); color:var(--ok);
-    padding:14px 22px; border-radius:12px; font-weight:600; font-size:14px;
-    z-index:999; box-shadow:0 10px 30px rgba(0,0,0,.4); animation:slidein .3s ease;
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    background:#163528; border:1px solid var(--ok); color:var(--ok);
+    padding:12px 20px; border-radius:12px; font-weight:600; font-size:13px;
+    z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,.45); animation:slidein .28s ease;
+    max-width:calc(100vw - 32px); text-align:center;
   }
-  @keyframes slidein{from{opacity:0; transform:translate(-50%,-20px);} to{opacity:1; transform:translate(-50%,0);}}
+  @keyframes slidein{from{opacity:0; transform:translate(-50%,-16px);} to{opacity:1; transform:translate(-50%,0);}}
   a.reset{color:var(--muted); font-size:12px; text-align:center; display:block; margin-top:14px; cursor:pointer; text-decoration:underline;}
 
-  /* Admin */
-  .admin-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;}
+  /* ===== Admin ===== */
+  .admin-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:12px;}
   .admin-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .admin-actions .linkbtn{font-size:12px; padding:8px 12px;}
   table{width:100%; border-collapse:collapse; font-size:13px;}
-  th,td{padding:9px 10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap;}
-  th{color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0; background:var(--panel);}
+  th,td{padding:10px 10px; border-bottom:1px solid var(--border-soft); text-align:left; white-space:nowrap;}
+  th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em; position:sticky; top:0; background:var(--panel); z-index:2;}
   tr.pending{background:var(--warn-dim);}
-  .status-pill{font-size:11px; padding:3px 10px; border-radius:20px; font-weight:700;}
+  .status-pill{font-size:11px; padding:4px 10px; border-radius:20px; font-weight:700;}
   .status-pill.da_duyet{background:var(--ok-dim); color:var(--ok);}
   .status-pill.cho_duyet{background:var(--warn-dim); color:var(--warn);}
   .status-pill.tu_choi{background:var(--bad-dim); color:var(--bad);}
-  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:12px; max-height:72vh; overflow-y:auto;}
+  .table-wrap{overflow:auto; border:1px solid var(--border); border-radius:12px; max-height:68vh; -webkit-overflow-scrolling:touch;}
   .col-freeze1{position:sticky; left:0; z-index:3; background:var(--panel);}
-  .col-freeze2{position:sticky; left:52px; z-index:3; background:var(--panel);}
-  .col-freeze3{position:sticky; left:150px; z-index:3; background:var(--panel);}
-  tr.pending .col-freeze1, tr.pending .col-freeze2, tr.pending .col-freeze3{background:#241d0f;}
+  .col-freeze2{position:sticky; left:48px; z-index:3; background:var(--panel);}
+  .col-freeze3{position:sticky; left:120px; z-index:3; background:var(--panel);}
+  tr.pending .col-freeze1, tr.pending .col-freeze2, tr.pending .col-freeze3{background:#2a2210;}
   th.col-freeze1, th.col-freeze2, th.col-freeze3{z-index:4;}
-  .admin-filters{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .admin-filters{display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap;}
   .admin-filters input, .admin-filters select{
-    padding:9px 12px; border-radius:8px; border:1px solid var(--border);
+    padding:10px 12px; border-radius:10px; border:1px solid var(--border);
     background:var(--panel2); color:var(--text); font-family:inherit; font-size:13px;
   }
-  .admin-filters input{flex:1; min-width:200px;}
+  .admin-filters input{flex:1; min-width:160px;}
   .count-pill{font-size:12px; color:var(--muted); align-self:center;}
-  .icon-btn{background:none; border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 9px; cursor:pointer; font-size:12px; margin-right:4px; font-family:inherit;}
+  .icon-btn{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; font-weight:600;
+    margin:2px; font-family:inherit; transition:border-color .12s, color .12s, background .12s;
+  }
   .icon-btn:hover{border-color:var(--accent); color:var(--accent);}
-  .icon-btn.approve{border-color:var(--ok); color:var(--ok);}
-  .icon-btn.reject{border-color:var(--bad); color:var(--bad);}
-  input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent); cursor:pointer;}
+  .icon-btn:disabled{opacity:.3; cursor:not-allowed;}
+  .icon-btn.approve{border-color:var(--ok); color:var(--ok); background:var(--ok-dim);}
+  .icon-btn.reject{border-color:var(--bad); color:var(--bad); background:var(--bad-dim);}
+  input[type=checkbox]{width:18px; height:18px; accent-color:var(--accent); cursor:pointer;}
+
+  /* ===== Modal — cuộn được trên mobile ===== */
   .modal-overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
-    align-items:center; justify-content:center; z-index:1000; padding:20px;
+    position:fixed; inset:0; background:rgba(4,8,14,.72); display:none;
+    align-items:flex-start; justify-content:center; z-index:1000;
+    padding:12px; padding-top:max(12px, env(safe-area-inset-top));
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
   }
   .modal-overlay.show{display:flex;}
-  .modal{background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:26px; width:100%; max-width:420px;}
-  .modal h3{margin:0 0 18px; font-size:17px;}
-  .modal-actions{display:flex; gap:10px; margin-top:6px;}
+  .modal{
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    padding:20px 16px 18px; width:100%; max-width:420px;
+    margin:auto 0; /* căn giữa khi content ngắn, vẫn scroll khi dài */
+    box-shadow:var(--shadow);
+  }
+  .modal h3{margin:0 0 14px; font-size:17px; font-weight:800; letter-spacing:-.02em;}
+  .modal-actions{display:flex; gap:10px; margin-top:14px; position:sticky; bottom:0; padding-top:8px; background:linear-gradient(transparent, var(--panel) 30%);}
   .modal-actions .btn{width:auto; flex:1;}
-  .loading{text-align:center; color:var(--muted); padding:30px; font-size:14px;}
-  footer{margin-top:20px; color:var(--muted); font-size:11px; text-align:center;}
+  .loading{text-align:center; color:var(--muted); padding:28px; font-size:14px;}
+  footer{margin-top:20px; color:var(--muted); font-size:11px; text-align:center; opacity:.8;}
+
+  /* ===== Config modal sections ===== */
+  .cfg-section{
+    background:var(--panel2); border:1px solid var(--border); border-radius:12px;
+    padding:14px; margin-bottom:14px;
+  }
+  .cfg-section-title{
+    font-size:13px; font-weight:800; margin:0 0 10px; color:var(--text);
+    display:flex; align-items:center; gap:8px;
+  }
+  .cfg-section-title span.badge-count{
+    background:var(--panel3); color:var(--muted); font-size:11px; font-weight:700;
+    padding:2px 8px; border-radius:20px;
+  }
+  .cfg-list{
+    border:1px solid var(--border-soft); border-radius:10px;
+    max-height:min(42vh, 320px); overflow-y:auto; -webkit-overflow-scrolling:touch;
+    margin-bottom:10px; background:var(--panel);
+  }
+  .cfg-item{
+    display:flex; flex-direction:column; gap:8px;
+    padding:12px 12px; border-bottom:1px solid var(--border-soft);
+  }
+  .cfg-item:last-child{border-bottom:none;}
+  .cfg-item-top{display:flex; align-items:flex-start; gap:8px;}
+  .cfg-item-name{flex:1; font-size:13px; font-weight:600; line-height:1.4; min-width:0; word-break:break-word;}
+  .cfg-item-order{display:flex; flex-direction:column; gap:3px; flex-shrink:0;}
+  .cfg-item-order .icon-btn{padding:5px 8px; margin:0; min-width:34px;}
+  .cfg-item-actions{display:flex; flex-wrap:wrap; gap:4px;}
+  .cfg-item-actions .icon-btn{margin:0; font-size:11px; padding:6px 9px;}
+  .cfg-add-row{display:flex; gap:8px; align-items:stretch;}
+  .cfg-add-row input{margin:0; flex:1; min-width:0;}
+  .cfg-add-row .btn{flex-shrink:0; white-space:nowrap;}
+  .cfg-grid-2{display:grid; grid-template-columns:1fr; gap:14px;}
+  @media (min-width:720px){
+    .cfg-grid-2{grid-template-columns:1fr 1fr;}
+    .modal{padding:24px 22px 20px;}
+    .cfg-list{max-height:min(38vh, 280px);}
+  }
+
+  /* Admin toolbar responsive */
+  @media (max-width:640px){
+    body{padding:12px 10px calc(40px + var(--safe-bottom));}
+    .card{padding:22px 16px;}
+    .card.wide{max-width:100%; border-radius:12px;}
+    .admin-head{flex-direction:column; align-items:stretch;}
+    .admin-actions{width:100%;}
+    .admin-actions .linkbtn{flex:1 1 calc(50% - 6px); text-align:center; font-size:11.5px; padding:10px 8px;}
+    .col-freeze3{left:100px;}
+    .topbar{max-width:100%;}
+  }
+  @media (min-width:900px){
+    .modal-overlay{align-items:center; padding:24px;}
+  }
 </style>
 </head>
 <body>
@@ -392,43 +474,47 @@
 
 <!-- ============ MODAL CẤU HÌNH NHÂN SỰ (DỰ ÁN / CA LÀM VIỆC) ============ -->
 <div class="modal-overlay" id="modalCauHinh">
-  <div class="modal" style="max-width:720px;">
-    <h3>Cấu hình chung — Dự án, Ca làm việc &amp; Loại máy MMTB</h3>
+  <div class="modal" style="max-width:760px;">
+    <h3>⚙️ Cấu hình chung</h3>
+    <p class="sub" style="margin-top:-6px;margin-bottom:14px;">Dự án · Ca làm việc · Loại máy MMTB — thay đổi áp dụng ngay cho báo cáo.</p>
 
-    <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:20px;">
-      <div style="flex:1; min-width:260px;">
-        <label>Danh sách Dự án</label>
-        <div id="listDuAn" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:180px; overflow-y:auto; margin-bottom:8px;"></div>
-        <div style="display:flex; gap:6px;">
-          <input type="text" id="inputDuAnMoi" placeholder="Tên dự án mới" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.getElementById('btnThemDuAn').click()">
-          <button class="btn small" id="btnThemDuAn">Thêm</button>
+    <div class="cfg-grid-2">
+      <div class="cfg-section">
+        <div class="cfg-section-title">📁 Dự án <span class="badge-count" id="countDuAn">0</span></div>
+        <div id="listDuAn" class="cfg-list"></div>
+        <div class="cfg-add-row">
+          <input type="text" id="inputDuAnMoi" placeholder="Tên dự án mới" onkeydown="if(event.key==='Enter')document.getElementById('btnThemDuAn').click()">
+          <button class="btn small" id="btnThemDuAn">+ Thêm</button>
         </div>
       </div>
-      <div style="flex:1; min-width:260px;">
-        <label>Danh sách Loại ca (áp dụng chung mọi dự án)</label>
-        <div id="listLoaiCa" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:180px; overflow-y:auto; margin-bottom:8px;"></div>
-        <div style="display:flex; gap:6px;">
-          <input type="text" id="inputCaMoi" placeholder="Tên ca mới (vd: Ca 3)" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.getElementById('btnThemCa').click()">
-          <button class="btn small" id="btnThemCa">Thêm</button>
+      <div class="cfg-section">
+        <div class="cfg-section-title">🕐 Loại ca <span class="badge-count" id="countLoaiCa">0</span></div>
+        <div id="listLoaiCa" class="cfg-list"></div>
+        <div class="cfg-add-row">
+          <input type="text" id="inputCaMoi" placeholder="Tên ca mới (vd: Ca 3)" onkeydown="if(event.key==='Enter')document.getElementById('btnThemCa').click()">
+          <button class="btn small" id="btnThemCa">+ Thêm</button>
         </div>
       </div>
     </div>
 
-    <div style="margin-bottom:20px;">
-      <label>Danh sách Loại máy (MMTB)</label>
-      <div id="listLoaiMay" style="border:1px solid var(--border); border-radius:10px; padding:8px; max-height:180px; overflow-y:auto; margin-bottom:8px;"></div>
-      <div style="display:flex; gap:6px;">
-        <input type="text" id="inputMayMoi" placeholder="Tên loại máy mới" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')document.getElementById('btnThemMay').click()">
-        <button class="btn small" id="btnThemMay">Thêm</button>
+    <div class="cfg-section">
+      <div class="cfg-section-title">🚜 Loại máy (MMTB) <span class="badge-count" id="countLoaiMay">0</span></div>
+      <div id="listLoaiMay" class="cfg-list"></div>
+      <div class="cfg-add-row">
+        <input type="text" id="inputMayMoi" placeholder="Tên loại máy mới" onkeydown="if(event.key==='Enter')document.getElementById('btnThemMay').click()">
+        <button class="btn small" id="btnThemMay">+ Thêm</button>
       </div>
     </div>
 
-    <label>Tên ca riêng theo từng dự án <span style="color:var(--muted); font-weight:400;">(để trống = dùng tên mặc định)</span></label>
-    <div class="table-wrap" style="max-height:260px;">
-      <table>
-        <thead><tr id="cauHinhHeadRow"></tr></thead>
-        <tbody id="cauHinhBodyRows"></tbody>
-      </table>
+    <div class="cfg-section">
+      <div class="cfg-section-title">🏷️ Tên ca riêng theo dự án</div>
+      <p class="sub" style="margin:0 0 10px;font-size:12px;">Để trống = dùng tên mặc định. Kéo ngang nếu nhiều cột.</p>
+      <div class="table-wrap" style="max-height:240px;">
+        <table>
+          <thead><tr id="cauHinhHeadRow"></tr></thead>
+          <tbody id="cauHinhBodyRows"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="modal-actions">
@@ -626,7 +712,6 @@ async function loadCauHinhNS(){
     sb.rpc("cauhinh_lay_loai_may")
   ]);
   duAnCache = r1.data || [];
-  // Sắp xếp theo thu_tu để nút ↑↓ và danh sách hiển thị đúng thứ tự
   duAnCache.sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); });
   loaiCaCache = r2.data || [];
   tenCaRiengCache = r3.data || [];
@@ -661,7 +746,6 @@ function nl2br(s){ return String(s==null?"":s).split("\n").join("<br>"); }
 
 // Đổi vị trí 2 dự án liền kề bằng cách hoán đổi thu_tu — không đụng dữ liệu báo cáo
 async function doiViTriDuAn(id, huong){
-  // huong: -1 = lên, +1 = xuống
   const idx = duAnCache.findIndex(x=>x.id===id);
   if(idx < 0) return;
   const doiIdx = idx + huong;
@@ -678,21 +762,25 @@ async function doiViTriDuAn(id, huong){
 
 function renderListDuAn(){
   const el = document.getElementById("listDuAn");
-  if(duAnCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có dự án nào.</div>'; return; }
+  const countEl = document.getElementById("countDuAn");
+  if(countEl) countEl.textContent = String(duAnCache.length);
+  if(duAnCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Chưa có dự án nào.</div>'; return; }
   el.innerHTML = duAnCache.map((d, i) => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);gap:6px;">
-      <span style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-        <button class="icon-btn" data-up-duan="${d.id}" title="Đưa lên" ${i===0?'disabled style="opacity:.3;cursor:not-allowed;"':''}>↑</button>
-        <button class="icon-btn" data-down-duan="${d.id}" title="Đưa xuống" ${i===duAnCache.length-1?'disabled style="opacity:.3;cursor:not-allowed;"':''}>↓</button>
-      </span>
-      <span style="flex:1;${(d.an_nhansu&&d.an_mmtb)?'opacity:.5;':''}">${nl2br(d.ten)}${d.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}</span>
-      <span style="white-space:nowrap;">
+    <div class="cfg-item">
+      <div class="cfg-item-top">
+        <div class="cfg-item-order">
+          <button class="icon-btn" data-up-duan="${d.id}" title="Đưa lên" ${i===0?'disabled':''}>↑</button>
+          <button class="icon-btn" data-down-duan="${d.id}" title="Đưa xuống" ${i===duAnCache.length-1?'disabled':''}>↓</button>
+        </div>
+        <div class="cfg-item-name" style="${(d.an_nhansu&&d.an_mmtb)?'opacity:.5;':''}">${nl2br(d.ten)}${d.mac_dinh?' <span style="color:var(--muted);font-size:11px;font-weight:500;">(mặc định)</span>':''}</div>
+      </div>
+      <div class="cfg-item-actions">
         <button class="icon-btn" data-rename-duan="${d.id}">✏️ Đổi tên</button>
-        <button class="icon-btn" data-toggle-duan-ns="${d.id}" style="${d.an_nhansu?'color:var(--bad);':''}">${d.an_nhansu?'🙈 NS: Ẩn':'👁️ NS: Hiện'}</button>
-        <button class="icon-btn" data-toggle-duan-mmtb="${d.id}" style="${d.an_mmtb?'color:var(--bad);':''}">${d.an_mmtb?'🙈 MMTB: Ẩn':'👁️ MMTB: Hiện'}</button>
-        <button class="icon-btn" data-toggle-duan-hotro="${d.id}" style="${d.ho_tro?'color:#1565c0;':''}" title="Dự án hỗ trợ: không tính vào Tổng/Đi làm/Nghỉ của BCH, vẫn tính vào Định biên">${d.ho_tro?'🤝 Hỗ trợ: Bật':'🤝 Hỗ trợ: Tắt'}</button>
+        <button class="icon-btn" data-toggle-duan-ns="${d.id}" style="${d.an_nhansu?'color:var(--bad);border-color:var(--bad);':''}">${d.an_nhansu?'🙈 NS Ẩn':'👁️ NS Hiện'}</button>
+        <button class="icon-btn" data-toggle-duan-mmtb="${d.id}" style="${d.an_mmtb?'color:var(--bad);border-color:var(--bad);':''}">${d.an_mmtb?'🙈 MMTB Ẩn':'👁️ MMTB Hiện'}</button>
+        <button class="icon-btn" data-toggle-duan-hotro="${d.id}" style="${d.ho_tro?'color:var(--blue);border-color:var(--blue);':''}" title="Dự án hỗ trợ: không tính vào Tổng/Đi làm/Nghỉ của BCH, vẫn tính vào Định biên">${d.ho_tro?'🤝 Hỗ trợ Bật':'🤝 Hỗ trợ Tắt'}</button>
         ${d.mac_dinh?'':`<button class="icon-btn reject" data-del-duan="${d.id}">Xoá</button>`}
-      </span>
+      </div>
     </div>`).join("");
   el.querySelectorAll("[data-up-duan]").forEach(btn=>{
     btn.addEventListener("click", ()=> doiViTriDuAn(parseInt(btn.dataset.upDuan), -1));
@@ -752,19 +840,23 @@ function renderListDuAn(){
 
 function renderListLoaiCa(){
   const el = document.getElementById("listLoaiCa");
-  if(loaiCaCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có ca nào.</div>'; return; }
+  const countEl = document.getElementById("countLoaiCa");
+  if(countEl) countEl.textContent = String(loaiCaCache.length);
+  if(loaiCaCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Chưa có ca nào.</div>'; return; }
   el.innerHTML = loaiCaCache.map(c => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);gap:8px; ${c.an?'opacity:.5;':''}">
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:${c.la_nghi?'#c62828':'var(--muted)'};cursor:pointer;white-space:nowrap;">
-        <input type="radio" name="loaiNghi" value="${c.id}" data-set-nghi="${c.id}" ${c.la_nghi?'checked':''}>
-        Là Nghỉ
-      </label>
-      <span style="flex:1;">${nl2br(c.ten_mac_dinh)}${c.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${c.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
-      <span style="white-space:nowrap;">
-        <button class="icon-btn" data-rename-ca="${c.id}">✏️</button>
-        <button class="icon-btn" data-toggle-ca="${c.id}">${c.an?'👁️':'🙈'}</button>
+    <div class="cfg-item" style="${c.an?'opacity:.55;':''}">
+      <div class="cfg-item-top">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:${c.la_nghi?'var(--bad)':'var(--muted)'};cursor:pointer;white-space:nowrap;margin:0;flex-shrink:0;">
+          <input type="radio" name="loaiNghi" value="${c.id}" data-set-nghi="${c.id}" ${c.la_nghi?'checked':''}>
+          Nghỉ
+        </label>
+        <div class="cfg-item-name">${nl2br(c.ten_mac_dinh)}${c.mac_dinh?' <span style="color:var(--muted);font-size:11px;font-weight:500;">(mặc định)</span>':''}${c.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</div>
+      </div>
+      <div class="cfg-item-actions">
+        <button class="icon-btn" data-rename-ca="${c.id}">✏️ Đổi tên</button>
+        <button class="icon-btn" data-toggle-ca="${c.id}">${c.an?'👁️ Hiện':'🙈 Ẩn'}</button>
         ${c.mac_dinh?'':`<button class="icon-btn reject" data-del-ca="${c.id}">Xoá</button>`}
-      </span>
+      </div>
     </div>`).join("");
   el.querySelectorAll("[data-set-nghi]").forEach(radio=>{
     radio.addEventListener("change", async ()=>{
@@ -779,7 +871,7 @@ function renderListLoaiCa(){
     btn.addEventListener("click", async ()=>{
       const id = parseInt(btn.dataset.renameCa);
       const c = loaiCaCache.find(x=>x.id===id);
-      const ten = await renameTextModal(`Đổi tên ca`, c.ten_mac_dinh);
+      const ten = await renameTextModal(`Đổi tên loại ca`, c.ten_mac_dinh);
       if(ten===null || !ten.trim()) return;
       const { error } = await sb.rpc("admin_doi_ten_ca", { p_pass: currentAdminPass, p_id: id, p_ten_moi: ten });
       if(error){ alert("Không đổi tên được."); return; }
@@ -816,9 +908,9 @@ function renderTenCaRieng(){
       const found = tenCaRiengCache.find(t=>t.du_an===d.ten && t.ma_ca===c.ma);
       const val = found ? found.ten_rieng : "";
       return `<td><input type="text" data-duan="${d.ten}" data-ma="${c.ma}" class="ten-rieng-input"
-        placeholder="${c.ten_mac_dinh}" value="${val}" style="margin:0;padding:6px 8px;font-size:12px;width:110px;"></td>`;
+        placeholder="${c.ten_mac_dinh}" value="${val}" style="margin:0;padding:8px 10px;font-size:12px;width:120px;min-width:100px;"></td>`;
     }).join("");
-    return `<tr><td>${d.ten}</td>${cells}</tr>`;
+    return `<tr><td style="font-weight:600;">${d.ten}</td>${cells}</tr>`;
   }).join("");
 
   body.querySelectorAll(".ten-rieng-input").forEach(inp=>{
@@ -841,15 +933,19 @@ function renderCauHinhAll(){
 
 function renderListLoaiMay(){
   const el = document.getElementById("listLoaiMay");
-  if(loaiMayCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có loại máy nào.</div>'; return; }
+  const countEl = document.getElementById("countLoaiMay");
+  if(countEl) countEl.textContent = String(loaiMayCache.length);
+  if(loaiMayCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Chưa có loại máy nào.</div>'; return; }
   el.innerHTML = loaiMayCache.map(m => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border); ${m.an?'opacity:.5;':''}">
-      <span>${nl2br(m.ten)}${m.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}${m.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</span>
-      <span style="white-space:nowrap;">
+    <div class="cfg-item" style="${m.an?'opacity:.55;':''}">
+      <div class="cfg-item-top">
+        <div class="cfg-item-name">${nl2br(m.ten)}${m.mac_dinh?' <span style="color:var(--muted);font-size:11px;font-weight:500;">(mặc định)</span>':''}${m.an?' <span style="color:var(--bad);font-size:11px;">— đang ẩn</span>':''}</div>
+      </div>
+      <div class="cfg-item-actions">
         <button class="icon-btn" data-rename-may="${m.id}">✏️ Đổi tên</button>
         <button class="icon-btn" data-toggle-may="${m.id}">${m.an?'👁️ Hiện':'🙈 Ẩn'}</button>
         ${m.mac_dinh?'':`<button class="icon-btn reject" data-del-may="${m.id}">Xoá</button>`}
-      </span>
+      </div>
     </div>`).join("");
   el.querySelectorAll("[data-rename-may]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
