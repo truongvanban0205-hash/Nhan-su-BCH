@@ -1629,7 +1629,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
     function tinhMmtb(proj){
       var hd=0,tong=0;
       var pd=(mmtbToday&&mmtbToday.data&&mmtbToday.data[proj])||{};
-      (mList||[]).forEach(function(m){
+      mmtbMayThiCongList(mList||[]).forEach(function(m){
         hd+=(pd.hoatdong&&pd.hoatdong[m.k])||0;
         tong+=(pd.hoatdong&&pd.hoatdong[m.k]||0)+(pd.huhong&&pd.huhong[m.k]||0)+(pd.luukho&&pd.luukho[m.k]||0);
       });
@@ -2065,15 +2065,31 @@ async function taiCauHinhLoaiMayMMTB(){
     var list = r.data;
     if(list && list.length){
       var active = list.filter(function(m){ return !m.an; });
-      active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
+      active.sort(function(a,b){
+        var ga = (a.nhom==='phu_tro') ? 1 : 0;
+        var gb = (b.nhom==='phu_tro') ? 1 : 0;
+        if(ga!==gb) return ga-gb;
+        return (a.thu_tu||0)-(b.thu_tu||0);
+      });
       if(active.length){
-        mmtbMachines = active.map(function(m){ return {k:m.ma, n:m.ten}; });
+        mmtbMachines = active.map(function(m){
+          return {k:m.ma, n:m.ten, nhom:(m.nhom==='phu_tro'?'phu_tro':'thi_cong')};
+        });
       }
     }
+    try{
+      var rn = await rpcCoThuLai('cauhinh_lay_ten_nhom_may');
+      if(rn && rn.data && rn.data.length){
+        rn.data.forEach(function(row){ if(row.ma && row.ten) MMTB_TEN_NHOM[row.ma]=row.ten; });
+      }
+    }catch(e2){}
   }catch(e){
     console.error('[taiCauHinhLoaiMayMMTB] Lỗi tải danh sách loại máy, đang dùng mặc định:', e);
-    // Lỗi mạng/Supabase -> giữ nguyên danh sách loại máy hiện có để trang vẫn chạy được
   }
+}
+function mmtbMayThiCongList(list){
+  list = list || mmtbMachines || [];
+  return list.filter(function(m){ return (m.nhom||'thi_cong')!=='phu_tro'; });
 }
 
 // Cầu nối: vớt lại dữ liệu đang "kẹt" dưới TÊN dự án cũ (trước khi có khoá theo ID)
@@ -2746,7 +2762,7 @@ async function renderCharts(){
     function tinhMmtb(proj){
       var hd=0,tong=0;
       var pd=mmtbData[proj]||{};
-      mmtbMachines.forEach(function(m){
+      mmtbMayThiCongList(mmtbMachines).forEach(function(m){
         hd+=(pd.hoatdong&&pd.hoatdong[m.k])||0;
         tong+=(pd.hoatdong&&pd.hoatdong[m.k]||0)+(pd.huhong&&pd.huhong[m.k]||0)+(pd.luukho&&pd.luukho[m.k]||0);
       });
@@ -3394,19 +3410,20 @@ async function init(){
 }
 // ============ MODULE MMTB ============
 var DEF_MACHINES=[
-  {k:'MayXucBanhXich',n:'Máy xúc (bánh xích)'},
-  {k:'MayXucBanhLop',n:'Máy xúc (bánh lốp)'},
-  {k:'MayUi',n:'Máy ủi'},
-  {k:'MayLu',n:'Máy lu'},
-  {k:'MaySan',n:'Máy san'},
-  {k:'XeBen',n:'Xe Ben'},
-  {k:'XeCauThung',n:'Xe cẩu thùng'},
-  {k:'XeNuoc',n:'Xe nước'}
+  {k:'MayXucBanhXich',n:'Máy xúc (bánh xích)',nhom:'thi_cong'},
+  {k:'MayXucBanhLop',n:'Máy xúc (bánh lốp)',nhom:'thi_cong'},
+  {k:'MayUi',n:'Máy ủi',nhom:'thi_cong'},
+  {k:'MayLu',n:'Máy lu',nhom:'thi_cong'},
+  {k:'MaySan',n:'Máy san',nhom:'thi_cong'},
+  {k:'XeBen',n:'Xe Ben',nhom:'thi_cong'},
+  {k:'XeCauThung',n:'Xe cẩu thùng',nhom:'thi_cong'},
+  {k:'XeNuoc',n:'Xe nước',nhom:'thi_cong'}
 ];
 var MMTB_STATUS=['hoatdong','huhong','luukho'];
 var MMTB_STATUS_LABEL=['Hoạt động','Hư hỏng','Lưu kho'];
+var MMTB_TEN_NHOM={thi_cong:'Máy thi công',phu_tro:'Máy phụ trợ'};
 
-var mmtbMachines=DEF_MACHINES.map(function(c){return {k:c.k,n:c.n};});
+var mmtbMachines=DEF_MACHINES.map(function(c){return {k:c.k,n:c.n,nhom:c.nhom||'thi_cong'};});
 var mmtbProjects=['CL-CR'];
 var mmtbData={};
 var mmtbNotes={}; // ghi chú tự do theo từng máy (không tách theo dự án)
@@ -3443,17 +3460,15 @@ function mmtbYkey(){var n=new Date();n.setDate(n.getDate()-1);return n.getFullYe
 function mmtbSetSS(m){document.getElementById('mmtb-ss').innerHTML=m;}
 
 function mmtbMergeMachines(saved){
-  // Loại máy MMTB giờ lấy 100% từ cấu hình chung (đã tải sẵn ở taiCauHinhLoaiMayMMTB()) — không
-  // dùng danh sách cũ đã lưu trên server nữa, giống hệt cách COLS đang làm cho Định biên. Việc
-  // thêm/đổi tên/ẩn-hiện/xoá loại máy giờ làm ở Quản lý chung, không tự quản lý cục bộ ở đây nữa.
-  return (mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES).map(function(c){return {k:c.k,n:c.n};});
+  return (mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES).map(function(c){
+    return {k:c.k,n:c.n,nhom:c.nhom||'thi_cong'};
+  });
 }
-// Dùng riêng cho XEM LỊCH SỬ — giữ NGUYÊN đúng danh sách máy của ngày đó, không đổi theo cấu hình
-// hiện tại (đúng nguyên tắc: dữ liệu ngày cũ phải giữ nguyên cấu trúc lúc lưu, không bị cấu hình
-// hiện tại đè lên — bài học từ vụ lịch sử Nhân sự bị về 0 trước đây).
 function mmtbHistMachines(saved){
-  if(saved&&saved.length) return saved.map(function(c){return {k:c.k,n:c.n};});
-  return (mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES).map(function(c){return {k:c.k,n:c.n};});
+  if(saved&&saved.length) return saved.map(function(c){return {k:c.k,n:c.n,nhom:c.nhom||'thi_cong'};});
+  return (mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES).map(function(c){
+    return {k:c.k,n:c.n,nhom:c.nhom||'thi_cong'};
+  });
 }
 
 function mmtbEnsureProj(proj){
