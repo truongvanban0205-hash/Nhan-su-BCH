@@ -4,8 +4,9 @@
 //   - biến toàn cục `sc` (Supabase client)
 //   - window.BCH_USER = {ten, msnv} SAU KHI đăng nhập xong (bchAuthGate)
 //     báo sẵn sàng qua sự kiện document 'bch-auth-ready'
-// Bảng dữ liệu dùng chung: chat_messages (id, nguoi_gui, noi_dung, created_at, reply_to_id)
-// RPC dùng thêm: lay_danh_sach_ten_da_duyet() — trả về TÊN người đã duyệt (không cần mật khẩu)
+// Bảng dữ liệu dùng chung: chat_messages (id, nguoi_gui, noi_dung, created_at, reply_to_id, anh_url)
+// RPC: lay_danh_sach_ten_da_duyet(), admin_xoa_chat_message(p_pass, p_id)
+// Storage bucket (tuỳ chọn): chat-images — để gửi ảnh
 // ============================================================
 (function(){
 
@@ -19,6 +20,8 @@
   var LASTREAD_PREFIX='bch_chat_lastread_'; // + tên người dùng
   var VAPID_PUBLIC_KEY='BCCz7LRK3h3WSSHLTp_JbGY8B-Qvpg8JW_2P8yWj02noNhaD9Z0iJ4_0MIvCL_SVTaCUWgtvwWuK6oGSYDBoMPM';
   var pushSubscribed=false;
+  var CHAT_EMOJIS=['😀','😂','😅','😊','😍','🥰','😎','🤔','👍','👎','👏','🙏','🔥','✅','❌','⚠️','❤️','💪','🎉','📌','📷','🫡','🤝','💯'];
+  var chatUploading=false;
 
   function esc(s){
     return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -77,7 +80,20 @@
       +'.cw-msg-bubble{padding:7px 11px;border-radius:11px;font-size:13px;word-break:break-word;white-space:pre-wrap;'
       +'max-width:100%;cursor:pointer;}'
       +'.cw-quote{font-size:10.5px;opacity:0.85;border-left:2.5px solid currentColor;padding-left:6px;margin-bottom:4px;'
-      +'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}';
+      +'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}'
+      +'#cw-tools{display:flex;align-items:center;gap:4px;padding:4px 8px 0;background:#fff;border-top:1px solid #eee;flex-wrap:wrap;}'
+      +'#cw-emoji-panel{display:none;padding:6px 8px;background:#fafafa;border-top:1px solid #eee;flex-wrap:wrap;gap:4px;}'
+      +'#cw-emoji-panel button{border:none;background:transparent;font-size:20px;cursor:pointer;padding:2px 4px;line-height:1.2;border-radius:6px;}'
+      +'#cw-emoji-panel button:hover{background:#eee;}'
+      +'.cw-toolbtn{border:1px solid #ddd;background:#f7f8fa;border-radius:8px;padding:5px 8px;cursor:pointer;font-size:15px;line-height:1;}'
+      +'.cw-toolbtn:hover{border-color:#0F2A5C;}'
+      +'.cw-msg-img{max-width:100%;max-height:220px;border-radius:8px;margin-top:4px;display:block;cursor:zoom-in;}'
+      +'.cw-msg-actions{display:flex;gap:6px;margin-top:2px;}'
+      +'.cw-msg-actions button{border:none;background:transparent;font-size:11px;color:#888;cursor:pointer;padding:0;}'
+      +'.cw-msg-actions button:hover{color:#e53935;}'
+      +'#cw-img-preview{display:none;padding:6px 10px;background:#f5f5f5;border-top:1px solid #eee;font-size:12px;align-items:center;gap:8px;}'
+      +'#cw-img-preview img{height:48px;width:auto;border-radius:6px;}'
+      +'#cw-img-preview .cw-rb-x{cursor:pointer;color:#888;font-weight:800;}';
     document.head.appendChild(style);
 
     var bubble=document.createElement('div');
@@ -92,6 +108,13 @@
       '<div id="cw-head">💬 Chat BCH <span class="cw-close" id="cw-closebtn">✕</span></div>'
       +'<div id="cw-msgs"><div style="font-size:12px;color:#aaa;text-align:center;">Đang tải tin nhắn...</div></div>'
       +'<div id="cw-replybar"><div class="cw-rb-text" id="cw-rb-text"></div><div class="cw-rb-x" id="cw-rb-x">✕</div></div>'
+      +'<div id="cw-img-preview"><img id="cw-img-thumb" alt=""><span id="cw-img-name" style="flex:1;color:#555;"></span><span class="cw-rb-x" id="cw-img-clear">✕</span></div>'
+      +'<div id="cw-emoji-panel"></div>'
+      +'<div id="cw-tools">'
+        +'<button type="button" class="cw-toolbtn" id="cw-btn-emoji" title="Cảm xúc">😊</button>'
+        +'<button type="button" class="cw-toolbtn" id="cw-btn-img" title="Gửi ảnh">🖼️</button>'
+        +'<input type="file" id="cw-file" accept="image/*" style="display:none">'
+      +'</div>'
       +'<div id="cw-inputrow">'
         +'<div id="cw-mention"></div>'
         +'<input id="cw-input" type="text" placeholder="Nhập tin nhắn... (@ để nhắc tên)">'
@@ -102,11 +125,62 @@
     document.getElementById('cw-closebtn').onclick=toggleOpen;
     document.getElementById('cw-rb-x').onclick=cancelReply;
     document.getElementById('cw-send').onclick=sendMsg;
+    document.getElementById('cw-btn-emoji').onclick=toggleEmojiPanel;
+    document.getElementById('cw-btn-img').onclick=function(){ document.getElementById('cw-file').click(); };
+    document.getElementById('cw-file').onchange=onPickImage;
+    document.getElementById('cw-img-clear').onclick=clearPendingImage;
+    var emoPanel=document.getElementById('cw-emoji-panel');
+    emoPanel.innerHTML=CHAT_EMOJIS.map(function(e){
+      return '<button type="button" data-emo="'+e+'">'+e+'</button>';
+    }).join('');
+    emoPanel.querySelectorAll('button').forEach(function(b){
+      b.onclick=function(){ insertEmoji(b.getAttribute('data-emo')); };
+    });
     var inp=document.getElementById('cw-input');
     inp.addEventListener('keydown',function(e){
       if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMsg(); }
     });
     inp.addEventListener('input',onInput);
+  }
+
+  var pendingImageFile=null;
+
+  function toggleEmojiPanel(){
+    var p=document.getElementById('cw-emoji-panel');
+    if(!p)return;
+    p.style.display = p.style.display==='flex' ? 'none' : 'flex';
+  }
+  function insertEmoji(emo){
+    var inp=document.getElementById('cw-input');
+    if(!inp)return;
+    var start=inp.selectionStart||inp.value.length;
+    var end=inp.selectionEnd||inp.value.length;
+    var v=inp.value;
+    inp.value=v.slice(0,start)+emo+v.slice(end);
+    var pos=start+emo.length;
+    inp.focus();
+    try{ inp.setSelectionRange(pos,pos); }catch(e){}
+  }
+  function onPickImage(e){
+    var f=(e.target.files&&e.target.files[0])||null;
+    e.target.value='';
+    if(!f)return;
+    if(!/^image\//.test(f.type)){ alert('Chỉ chọn file ảnh.'); return; }
+    if(f.size > 5*1024*1024){ alert('Ảnh tối đa 5MB.'); return; }
+    pendingImageFile=f;
+    var box=document.getElementById('cw-img-preview');
+    var thumb=document.getElementById('cw-img-thumb');
+    var nameEl=document.getElementById('cw-img-name');
+    if(thumb) thumb.src=URL.createObjectURL(f);
+    if(nameEl) nameEl.textContent=f.name+' ('+Math.round(f.size/1024)+' KB)';
+    if(box) box.style.display='flex';
+  }
+  function clearPendingImage(){
+    pendingImageFile=null;
+    var box=document.getElementById('cw-img-preview');
+    var thumb=document.getElementById('cw-img-thumb');
+    if(thumb) thumb.src='';
+    if(box) box.style.display='none';
   }
 
   function toggleOpen(){
@@ -175,13 +249,21 @@
         chatMsgs.push(payload.new);
         chatKnownNames[payload.new.nguoi_gui]=true;
         renderMsgs();
-        var mentionsMe = chatUser && mentionsName(payload.new.noi_dung, chatUser.ten);
+        var mentionsMe = chatUser && mentionsName(payload.new.noi_dung||'', chatUser.ten);
         var fromOther = !chatUser || payload.new.nguoi_gui!==chatUser.ten;
         if(chatOpen){
-          setLastReadNow(); // đang mở sẵn -> coi như đọc luôn tin mới tới
+          setLastReadNow();
         }
         updateBadges();
-        if(fromOther && mentionsMe && !chatOpen) bumpBubble();
+        // Rung icon khi có tin mới từ người khác (kể cả không @)
+        if(fromOther && !chatOpen) bumpBubble();
+      })
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'chat_messages'},function(payload){
+        var id=payload.old && payload.old.id;
+        if(id==null)return;
+        chatMsgs=chatMsgs.filter(function(m){ return m.id!==id; });
+        renderMsgs();
+        updateBadges();
       })
       .subscribe();
   }
@@ -258,20 +340,59 @@
       var quoteHtml='';
       if(m.reply_to_id){
         var orig=findMsgById(m.reply_to_id);
-        var quoteText = orig ? (orig.nguoi_gui+': '+truncate(orig.noi_dung,40)) : 'Tin nhắn trước đó';
+        var qBody = orig ? (orig.anh_url && !orig.noi_dung ? '[Ảnh]' : truncate(orig.noi_dung,40)) : '';
+        var quoteText = orig ? (orig.nguoi_gui+': '+qBody) : 'Tin nhắn trước đó';
         quoteHtml='<div class="cw-quote">'+esc(quoteText)+'</div>';
       }
+      var bodyHtml = (m.noi_dung ? highlightMentions(m.noi_dung) : '');
+      var imgHtml = m.anh_url
+        ? '<img class="cw-msg-img" src="'+esc(m.anh_url)+'" alt="ảnh" loading="lazy" data-full="'+esc(m.anh_url)+'">'
+        : '';
       return '<div class="cw-msg-row" style="align-self:'+(mine?'flex-end':'flex-start')+';">'
         +'<div class="cw-msg-meta" style="'+(mine?'text-align:right;':'')+'">'+esc(m.nguoi_gui)+' · '+fmtTime(m.created_at)+'</div>'
         +'<div class="cw-msg-bubble" data-id="'+m.id+'" style="background:'+(mine?'#0F2A5C':'#eef1f5')+';color:'+(mine?'#fff':'#1a1a1a')+';" title="Bấm để trả lời">'
-          +quoteHtml+highlightMentions(m.noi_dung)
+          +quoteHtml+bodyHtml+imgHtml
+        +'</div>'
+        +'<div class="cw-msg-actions" style="'+(mine?'justify-content:flex-end;':'')+'">'
+          +'<button type="button" data-reply="'+m.id+'">Trả lời</button>'
+          +'<button type="button" data-del="'+m.id+'" title="Chỉ Quản lý (admin) được xóa">Xóa</button>'
         +'</div>'
         +'</div>';
     }).join('');
     el.querySelectorAll('.cw-msg-bubble').forEach(function(b){
-      b.onclick=function(){ startReply(parseInt(b.getAttribute('data-id'))); };
+      b.onclick=function(ev){
+        if(ev.target && ev.target.tagName==='IMG'){
+          window.open(ev.target.getAttribute('data-full')||ev.target.src, '_blank');
+          return;
+        }
+        startReply(parseInt(b.getAttribute('data-id')));
+      };
+    });
+    el.querySelectorAll('[data-reply]').forEach(function(btn){
+      btn.onclick=function(ev){ ev.stopPropagation(); startReply(parseInt(btn.getAttribute('data-reply'))); };
+    });
+    el.querySelectorAll('[data-del]').forEach(function(btn){
+      btn.onclick=function(ev){ ev.stopPropagation(); deleteMsg(parseInt(btn.getAttribute('data-del'))); };
     });
     if(wasAtBottom) el.scrollTop=el.scrollHeight;
+  }
+
+  async function deleteMsg(id){
+    if(!id)return;
+    var m=findMsgById(id);
+    if(!m)return;
+    if(!confirm('Xóa tin nhắn này?\n(Chỉ Quản lý / admin mới xóa được)')) return;
+    var pass=prompt('Nhập mật khẩu Quản lý chung để xóa tin:');
+    if(pass==null || !String(pass).trim()) return;
+    try{
+      var r=await sc.rpc('admin_xoa_chat_message', { p_pass: String(pass).trim(), p_id: id });
+      if(r.error){ alert('Không xóa được: '+(r.error.message||'Sai mật khẩu hoặc chưa cấu hình SQL.')); return; }
+      chatMsgs=chatMsgs.filter(function(x){ return x.id!==id; });
+      renderMsgs();
+      updateBadges();
+    }catch(e){
+      alert('Không xóa được: '+(e.message||e));
+    }
   }
 
   // ---------- Trả lời trích dẫn ----------
@@ -280,7 +401,8 @@
     if(!m)return;
     replyingTo=m;
     var bar=document.getElementById('cw-replybar');
-    document.getElementById('cw-rb-text').textContent='Trả lời '+m.nguoi_gui+': '+truncate(m.noi_dung,50);
+    var preview = m.noi_dung ? truncate(m.noi_dung,50) : (m.anh_url ? '[Ảnh]' : '');
+    document.getElementById('cw-rb-text').textContent='Trả lời '+m.nguoi_gui+': '+preview;
     bar.style.display='flex';
     document.getElementById('cw-input').focus();
   }
@@ -289,21 +411,51 @@
     document.getElementById('cw-replybar').style.display='none';
   }
 
+  async function uploadChatImage(file){
+    var ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(!ext) ext='jpg';
+    var path='chat/'+Date.now()+'_'+Math.floor(Math.random()*1e6)+'.'+ext;
+    var up=await sc.storage.from('chat-images').upload(path, file, { contentType: file.type, upsert:false });
+    if(up.error) throw up.error;
+    var pub=sc.storage.from('chat-images').getPublicUrl(path);
+    return (pub && pub.data && pub.data.publicUrl) ? pub.data.publicUrl : null;
+  }
+
   async function sendMsg(){
     var inp=document.getElementById('cw-input');
     var v=(inp.value||'').trim();
-    if(!v)return;
+    if(!v && !pendingImageFile)return;
     if(!chatUser){ alert('Chưa xác định được tài khoản đăng nhập, thử tải lại trang.'); return; }
-    inp.value='';
-    document.getElementById('cw-mention').style.display='none';
-    var payload={nguoi_gui:chatUser.ten, noi_dung:v};
+    if(chatUploading)return;
+    var payload={nguoi_gui:chatUser.ten, noi_dung:v||''};
     if(replyingTo) payload.reply_to_id=replyingTo.id;
     try{
+      chatUploading=true;
+      document.getElementById('cw-send').disabled=true;
+      if(pendingImageFile){
+        try{
+          var url=await uploadChatImage(pendingImageFile);
+          if(url) payload.anh_url=url;
+        }catch(imgErr){
+          alert('Gửi ảnh lỗi: '+(imgErr.message||imgErr)+'\nCần tạo bucket Storage tên "chat-images" (public) trên Supabase.');
+          return;
+        }
+      }
+      inp.value='';
+      document.getElementById('cw-mention').style.display='none';
+      clearPendingImage();
+      var emo=document.getElementById('cw-emoji-panel');
+      if(emo) emo.style.display='none';
       await sc.from('chat_messages').insert(payload);
       cancelReply();
-      notifyMentions(v, chatUser.ten); // chạy nền, không chờ/không chặn nếu lỗi
+      // Thông báo ra ngoài: @mention + mọi người đã đăng ký push (trừ người gửi)
+      notifyChatPush(v||(payload.anh_url?'[Ảnh]':''), chatUser.ten);
     }catch(e){
       alert('Gửi tin nhắn lỗi: '+e.message);
+    }finally{
+      chatUploading=false;
+      var btn=document.getElementById('cw-send');
+      if(btn) btn.disabled=false;
     }
   }
 
@@ -375,29 +527,37 @@
     }catch(e){ /* im lặng bỏ qua — không có thông báo cũng không chặn dùng chat bình thường */ }
   }
 
-  // ---------- Gửi thông báo đẩy tới đúng người bị @ nhắc (không thông báo cho chính người gửi) ----------
+  // ---------- Thông báo đẩy ra ngoài (kiểu Zalo) ----------
   function extractMentionNames(text){
     var found=[];
-    findMentionsInText(text).forEach(function(h){
+    findMentionsInText(text||'').forEach(function(h){
       if(found.indexOf(h.name)<0) found.push(h.name);
     });
     return found;
   }
-
-  async function notifyMentions(text, senderName){
-    var names=extractMentionNames(text).filter(function(n){ return n!==senderName; });
-    for(var i=0;i<names.length;i++){
-      try{
-        await fetch(SURL+'/functions/v1/send-mention-push', {
-          method:'POST',
-          headers:{
-            'Content-Type':'application/json',
-            'Authorization':'Bearer '+SKEY,
-            'apikey':SKEY
-          },
-          body:JSON.stringify({ten:names[i], tin_nhan:text, nguoi_gui:senderName})
-        });
-      }catch(e){ /* không chặn gửi tin nếu bắn thông báo lỗi */ }
+  async function pushToName(ten, tinNhan, nguoiGui){
+    try{
+      await fetch(SURL+'/functions/v1/send-mention-push', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+SKEY,
+          'apikey':SKEY
+        },
+        body:JSON.stringify({ten:ten, tin_nhan:tinNhan, nguoi_gui:nguoiGui})
+      });
+    }catch(e){}
+  }
+  async function notifyChatPush(text, senderName){
+    var targets={};
+    extractMentionNames(text).forEach(function(n){ if(n!==senderName) targets[n]=true; });
+    Object.keys(chatKnownNames).forEach(function(n){
+      if(n && n!==senderName) targets[n]=true;
+    });
+    var list=Object.keys(targets);
+    var preview = text ? String(text).slice(0,120) : 'Có tin nhắn mới';
+    for(var i=0;i<list.length;i++){
+      await pushToName(list[i], preview, senderName);
     }
   }
 
