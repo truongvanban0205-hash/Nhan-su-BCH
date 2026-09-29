@@ -626,6 +626,8 @@ async function loadCauHinhNS(){
     sb.rpc("cauhinh_lay_loai_may")
   ]);
   duAnCache = r1.data || [];
+  // Sắp xếp theo thu_tu để nút ↑↓ và danh sách hiển thị đúng thứ tự
+  duAnCache.sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); });
   loaiCaCache = r2.data || [];
   tenCaRiengCache = r3.data || [];
   loaiMayCache = r4.data || [];
@@ -657,12 +659,33 @@ function renameTextModal(title, defaultText){
 // Hiển thị tên có xuống dòng (\n) thành <br> khi render ra danh sách
 function nl2br(s){ return String(s==null?"":s).split("\n").join("<br>"); }
 
+// Đổi vị trí 2 dự án liền kề bằng cách hoán đổi thu_tu — không đụng dữ liệu báo cáo
+async function doiViTriDuAn(id, huong){
+  // huong: -1 = lên, +1 = xuống
+  const idx = duAnCache.findIndex(x=>x.id===id);
+  if(idx < 0) return;
+  const doiIdx = idx + huong;
+  if(doiIdx < 0 || doiIdx >= duAnCache.length) return;
+  const a = duAnCache[idx];
+  const b = duAnCache[doiIdx];
+  const { error } = await sb.rpc("admin_doi_thu_tu_du_an", {
+    p_pass: currentAdminPass, p_id1: a.id, p_id2: b.id
+  });
+  if(error){ alert("Không đổi vị trí được: " + (error.message||"")); return; }
+  await loadCauHinhNS();
+  renderCauHinhAll();
+}
+
 function renderListDuAn(){
   const el = document.getElementById("listDuAn");
   if(duAnCache.length === 0){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Chưa có dự án nào.</div>'; return; }
-  el.innerHTML = duAnCache.map(d => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);">
-      <span style="${(d.an_nhansu&&d.an_mmtb)?'opacity:.5;':''}">${nl2br(d.ten)}${d.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}</span>
+  el.innerHTML = duAnCache.map((d, i) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid var(--border);gap:6px;">
+      <span style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <button class="icon-btn" data-up-duan="${d.id}" title="Đưa lên" ${i===0?'disabled style="opacity:.3;cursor:not-allowed;"':''}>↑</button>
+        <button class="icon-btn" data-down-duan="${d.id}" title="Đưa xuống" ${i===duAnCache.length-1?'disabled style="opacity:.3;cursor:not-allowed;"':''}>↓</button>
+      </span>
+      <span style="flex:1;${(d.an_nhansu&&d.an_mmtb)?'opacity:.5;':''}">${nl2br(d.ten)}${d.mac_dinh?' <span style="color:var(--muted);font-size:11px;">(mặc định)</span>':''}</span>
       <span style="white-space:nowrap;">
         <button class="icon-btn" data-rename-duan="${d.id}">✏️ Đổi tên</button>
         <button class="icon-btn" data-toggle-duan-ns="${d.id}" style="${d.an_nhansu?'color:var(--bad);':''}">${d.an_nhansu?'🙈 NS: Ẩn':'👁️ NS: Hiện'}</button>
@@ -671,6 +694,12 @@ function renderListDuAn(){
         ${d.mac_dinh?'':`<button class="icon-btn reject" data-del-duan="${d.id}">Xoá</button>`}
       </span>
     </div>`).join("");
+  el.querySelectorAll("[data-up-duan]").forEach(btn=>{
+    btn.addEventListener("click", ()=> doiViTriDuAn(parseInt(btn.dataset.upDuan), -1));
+  });
+  el.querySelectorAll("[data-down-duan]").forEach(btn=>{
+    btn.addEventListener("click", ()=> doiViTriDuAn(parseInt(btn.dataset.downDuan), 1));
+  });
   el.querySelectorAll("[data-rename-duan]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const id = parseInt(btn.dataset.renameDuan);
