@@ -5074,28 +5074,49 @@ async function openDanhBa(){
   renderDanhBaList(document.getElementById('danhba-search').value);
 }
 function closeDanhBa(){
-  document.getElementById('danhba-overlay').classList.remove('show');
-  document.getElementById('danhba-detail').classList.remove('show');
+  var ov = document.getElementById('danhba-overlay');
+  var det = document.getElementById('danhba-detail');
+  if(ov) ov.classList.remove('show');
+  if(det) det.classList.remove('show');
+}
+function closeDanhBaDetail(){
+  var det = document.getElementById('danhba-detail');
+  if(det) det.classList.remove('show');
 }
 
-(function bindDanhBaUI(){
-  var closeBtn = document.getElementById('danhba-close');
-  if(closeBtn) closeBtn.onclick = closeDanhBa;
-  var search = document.getElementById('danhba-search');
-  if(search){
-    var t=null;
-    search.addEventListener('input', function(){
-      clearTimeout(t);
-      t=setTimeout(function(){ renderDanhBaList(search.value); }, 120);
-    });
+// Uỷ quyền sự kiện — không phụ thuộc thứ tự script/HTML
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if(!t) return;
+  if(t.id==='danhba-close' || (t.closest && t.closest('#danhba-close'))){
+    e.preventDefault();
+    closeDanhBa();
+    return;
   }
-  var det = document.getElementById('danhba-detail');
-  if(det){
-    det.addEventListener('click', function(e){ if(e.target===det) det.classList.remove('show'); });
+  if(t.id==='db-d-close' || (t.closest && t.closest('#db-d-close'))){
+    e.preventDefault();
+    closeDanhBaDetail();
+    return;
   }
-  var dc = document.getElementById('db-d-close');
-  if(dc) dc.onclick = function(){ document.getElementById('danhba-detail').classList.remove('show'); };
-})();
+  if(t.id==='danhba-detail'){
+    closeDanhBaDetail();
+  }
+});
+document.addEventListener('input', function(e){
+  if(e.target && e.target.id==='danhba-search'){
+    var q = e.target.value;
+    clearTimeout(window._dbSearchT);
+    window._dbSearchT = setTimeout(function(){ renderDanhBaList(q); }, 120);
+  }
+});
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    var det = document.getElementById('danhba-detail');
+    if(det && det.classList.contains('show')){ closeDanhBaDetail(); return; }
+    var ov = document.getElementById('danhba-overlay');
+    if(ov && ov.classList.contains('show')) closeDanhBa();
+  }
+});
 
 (async function bchAuthGate(){
   var LS_KEY = 'bch_nv_login_v2';
@@ -5312,7 +5333,7 @@ if('serviceWorker' in navigator){
 <div id="danhba-overlay">
   <div id="danhba-head">
     <h2>Danh <span>bạ</span></h2>
-    <button type="button" id="danhba-close" aria-label="Đóng">✕</button>
+    <button type="button" id="danhba-close" aria-label="Đóng" onclick="closeDanhBa()">✕</button>
   </div>
   <div id="danhba-search-wrap">
     <input id="danhba-search" type="search" placeholder="Tìm tên, SĐT, chức vụ..." autocomplete="off">
@@ -5330,7 +5351,7 @@ if('serviceWorker' in navigator){
       <a class="btn-call" id="db-d-call" href="#">📞 Gọi ngay</a>
       <button type="button" class="btn-copy" id="db-d-copy">📋 Sao chép số</button>
     </div>
-    <button type="button" class="btn-close-d" id="db-d-close">Đóng</button>
+    <button type="button" class="btn-close-d" id="db-d-close" onclick="document.getElementById('danhba-detail').classList.remove('show')">Đóng</button>
   </div>
 </div>
 
