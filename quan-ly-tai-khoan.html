@@ -294,6 +294,7 @@
       <button class="linkbtn" id="btnAddModule">+ Thêm quyền</button>
       <button class="linkbtn" id="btnAddEmp">+ Thêm nhân viên</button>
       <button class="linkbtn" id="btnImport">📥 Nhập Excel</button>
+      <button class="linkbtn" id="btnImportDanhBa">📞 Nhập danh bạ</button>
       <button class="linkbtn" id="btnExport">Xuất Excel</button>
       <button class="linkbtn" id="btnChangePass">Đổi mật khẩu</button>
       <button class="linkbtn" id="btnKhoaBaoCao">⏱️ Giờ khoá &amp; MK báo cáo</button>
@@ -339,6 +340,26 @@
     <div class="modal-actions">
       <button class="btn secondary" id="btnCancelEmp">Huỷ</button>
       <button class="btn" id="btnSaveEmp">Lưu</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============ MODAL NHẬP DANH BẠ EXCEL ============ -->
+<div class="modal-overlay" id="modalImportDanhBa">
+  <div class="modal" style="max-width:520px;">
+    <h3>📞 Nhập danh bạ từ Excel</h3>
+    <p class="sub" style="margin-top:0;">Chọn file báo cáo nhân sự (sheet <b>Danh Sách Nhân Sự</b>). Hệ thống lấy <b>Tên · Chức vụ · SĐT</b> (và mã NV nếu có).<br>Mỗi lần nhập sẽ <b>cập nhật / thêm</b> theo Mã nhân viên — không xoá tay những dòng không có trong file.</p>
+    <label>File Excel (.xlsx)</label>
+    <input type="file" id="fileImportDanhBa" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:8px;">
+    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:600;">
+      <input type="checkbox" id="dbReplaceAll"> Thay thế toàn bộ danh bạ bằng file này
+    </label>
+    <div id="dbImportPreview" style="display:none;margin-top:12px;max-height:220px;overflow:auto;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:8px;"></div>
+    <div id="dbImportResult" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:13px;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCancelImportDanhBa">Huỷ</button>
+      <button class="btn" id="btnConfirmImportDanhBa" disabled>Nhập vào danh bạ</button>
     </div>
   </div>
 </div>
@@ -1711,6 +1732,123 @@ document.getElementById("btnConfirmImport").addEventListener("click", async ()=>
   if(data.thieu_thong_tin) txt += ` ${data.thieu_thong_tin} dòng thiếu thông tin đã bỏ qua.`;
   box.textContent = txt;
   loadAdminData();
+});
+
+
+/* ================= NHẬP DANH BẠ EXCEL ================= */
+let dbImportRows = [];
+const modalImportDanhBa = document.getElementById('modalImportDanhBa');
+
+function dbPick(row, keys){
+  for(const k of keys){
+    if(row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '') return String(row[k]).trim();
+  }
+  // case-insensitive key match
+  const map = {};
+  Object.keys(row||{}).forEach(k=>{ map[String(k).trim().toLowerCase()] = row[k]; });
+  for(const k of keys){
+    const v = map[String(k).toLowerCase()];
+    if(v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+  }
+  return '';
+}
+function dbNormSdt(s){
+  s = String(s||'').replace(/[^\d+]/g,'');
+  if(!s) return '';
+  if(s.length===9 && s[0]!=='0') return '0'+s;
+  if(s.length===10 && s[0]!=='0') return '0'+s;
+  return s;
+}
+
+document.getElementById('btnImportDanhBa').addEventListener('click', ()=>{
+  dbImportRows = [];
+  document.getElementById('fileImportDanhBa').value = '';
+  document.getElementById('dbImportPreview').style.display = 'none';
+  document.getElementById('dbImportResult').style.display = 'none';
+  document.getElementById('btnConfirmImportDanhBa').disabled = true;
+  document.getElementById('dbReplaceAll').checked = false;
+  modalImportDanhBa.classList.add('show');
+});
+document.getElementById('btnCancelImportDanhBa').addEventListener('click', ()=> modalImportDanhBa.classList.remove('show'));
+
+document.getElementById('fileImportDanhBa').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const wb = XLSX.read(ev.target.result, {type:'array'});
+      // ưu tiên sheet tên có "Danh Sách" / "Nhân Sự"
+      let sheetName = wb.SheetNames.find(n=>/danh\s*sách|nhân\s*sự|nhan\s*su/i.test(n)) || wb.SheetNames[0];
+      // thử từng sheet nếu sheet đầu không ra cột tên
+      let rows = [];
+      const trySheets = [sheetName].concat(wb.SheetNames.filter(n=>n!==sheetName));
+      for(const sn of trySheets){
+        const ws = wb.Sheets[sn];
+        const json = XLSX.utils.sheet_to_json(ws, {defval:'', raw:false});
+        if(!json.length) continue;
+        const sample = json.slice(0,5);
+        const hasTen = sample.some(r => dbPick(r, ['TÊN NHÂN VIÊN','Ten nhan vien','Tên nhân viên','ten','Họ và tên','Họ tên','HOTEN']));
+        if(hasTen || sn===trySheets[trySheets.length-1]){
+          rows = json;
+          sheetName = sn;
+          break;
+        }
+      }
+      dbImportRows = rows.map((r,i)=>{
+        const ten = dbPick(r, ['TÊN NHÂN VIÊN','Tên nhân viên','Ten nhan vien','ten','Họ và tên','Họ tên','HOTEN','Họ Tên']);
+        const chuc = dbPick(r, ['CHỨC VỤ','Chức vụ','Chuc vu','chuc_vu','CHUC VU']);
+        const sdt = dbNormSdt(dbPick(r, ['SĐT','SDT','Số điện thoại','So dien thoai','sdt','Điện thoại']));
+        const msnv = dbPick(r, ['MÃ NHÂN VIÊN','Ma nhan vien','MSNV','msnv','Mã NV']);
+        const noi = dbPick(r, ['NƠI LÀM VIỆC','Nơi làm việc','Noi lam viec','vi_tri_lam_viec']);
+        const email = dbPick(r, ['EMAIL','Email','email']);
+        const ghi = dbPick(r, ['Ghi chú','GHI CHÚ','ghi_chu','Ghi Chu']);
+        const loi = !ten;
+        return {ten, chuc_vu:chuc, sdt, msnv, vi_tri_lam_viec:noi, email, ghi_chu:ghi, loi, stt:i+1};
+      }).filter(r=>r.ten);
+      const prev = document.getElementById('dbImportPreview');
+      prev.style.display = 'block';
+      prev.innerHTML = `<b>Sheet:</b> ${sheetName} · <b>${dbImportRows.length}</b> dòng có tên<br>` +
+        dbImportRows.slice(0,8).map(r=>`• ${r.ten} — ${r.chuc_vu||'—'} — ${r.sdt||'không SĐT'}`).join('<br>') +
+        (dbImportRows.length>8?`<br>… và ${dbImportRows.length-8} dòng khác`:'');
+      document.getElementById('btnConfirmImportDanhBa').disabled = dbImportRows.length===0;
+      document.getElementById('dbImportResult').style.display = 'none';
+    }catch(err){
+      alert('Không đọc được file: '+(err.message||err));
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+document.getElementById('btnConfirmImportDanhBa').addEventListener('click', async ()=>{
+  if(!dbImportRows.length) return;
+  const btn = document.getElementById('btnConfirmImportDanhBa');
+  btn.disabled = true; btn.textContent = 'Đang nhập...';
+  const replace = document.getElementById('dbReplaceAll').checked;
+  const payload = dbImportRows.map(r=>({
+    ten: r.ten,
+    chuc_vu: r.chuc_vu||null,
+    sdt: r.sdt||null,
+    msnv: r.msnv||null,
+    vi_tri_lam_viec: r.vi_tri_lam_viec||null,
+    email: r.email||null,
+    ghi_chu: r.ghi_chu||null
+  }));
+  const { data, error } = await sb.rpc('admin_import_danh_ba', {
+    p_pass: currentAdminPass,
+    p_ds: payload,
+    p_replace_all: replace
+  });
+  btn.disabled = false; btn.textContent = 'Nhập vào danh bạ';
+  const box = document.getElementById('dbImportResult');
+  box.style.display = 'block';
+  if(error){
+    box.style.background = '#fdecea'; box.style.color = '#c62828';
+    box.textContent = 'Lỗi: '+(error.message||'Chưa chạy SQL admin_import_danh_ba');
+    return;
+  }
+  box.style.background = '#e8f5e9'; box.style.color = '#2e7d32';
+  box.textContent = `✓ Đã nhập danh bạ: thêm ${data.them||0}, cập nhật ${data.cap_nhat||0}, tổng ${data.tong||payload.length}.`;
 });
 
 /* ================= KHỞI ĐỘNG ================= */
