@@ -252,6 +252,22 @@
   </div>
 </div>
 
+<!-- ============ MODAL BẮT BUỘC ĐỔI PIN ============ -->
+<div class="modal-overlay" id="modalForcePin">
+  <div class="modal">
+    <h3>🔐 Bắt buộc đổi mã PIN</h3>
+    <p class="sub" style="margin-top:0;">PIN tạm <b>0000</b> chỉ dùng lần đầu. Bạn phải đặt PIN mới (không được 0000) để tiếp tục.</p>
+    <label>PIN mới</label>
+    <input type="password" id="forcePinNew" placeholder="Tối thiểu 4 ký tự" maxlength="20" inputmode="numeric" autocomplete="new-password">
+    <label>Nhập lại PIN mới</label>
+    <input type="password" id="forcePinNew2" placeholder="Nhập lại" maxlength="20" inputmode="numeric" autocomplete="new-password">
+    <div class="msg" id="forcePinMsg"></div>
+    <div class="modal-actions">
+      <button class="btn" id="btnForcePinSave">Lưu PIN và vào hệ thống</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ MODAL MẬT KHẨU ADMIN ============ -->
 <div class="modal-overlay" id="modalPass">
   <div class="modal">
@@ -551,7 +567,7 @@ const SUPABASE_URL = "https://jqwjzvucwvlwbcgxhath.supabase.co";
 const SUPABASE_KEY = "sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const LS_KEY = "bch_nv_login";
+const LS_KEY = "bch_nv_login_v2"; // v2: bắt đăng nhập lại sau khi chuyển PIN
 let currentAdminPass = null;
 let modulesCache = [];
 let employeesCache = [];
@@ -589,10 +605,57 @@ function showStep1(){ nvStep1.style.display = "block"; nvStep2.style.display = "
 function showStep2(){ nvStep1.style.display = "none"; nvStep2.style.display = "block"; nvInfo.style.display = "none"; }
 function showInfo(){ nvStep1.style.display = "none"; nvStep2.style.display = "none"; nvInfo.style.display = "block"; }
 
-function renderApproved(d, ten, pin){
+var pendingForcePin = null; // {ten, pinCu, data}
+
+function canhBaoPinTam(pin){
+  return String(pin||'').trim() === '0000';
+}
+
+function renderApproved(d, ten, pin, forceDoi){
+  if(forceDoi || canhBaoPinTam(pin) || (d && d.phai_doi_pin)){
+    pendingForcePin = { ten: ten, pinCu: pin, data: d };
+    document.getElementById('forcePinNew').value = '';
+    document.getElementById('forcePinNew2').value = '';
+    hideMsg(document.getElementById('forcePinMsg'));
+    document.getElementById('modalForcePin').classList.add('show');
+    return;
+  }
   localStorage.setItem(LS_KEY, JSON.stringify({ten: ten, pin: pin, msnv: (d && d.msnv) || "", lastStatus:"da_duyet"}));
   location.href = "index.html";
 }
+
+document.getElementById('btnForcePinSave').addEventListener('click', async ()=>{
+  if(!pendingForcePin) return;
+  const p1 = document.getElementById('forcePinNew').value.trim();
+  const p2 = document.getElementById('forcePinNew2').value.trim();
+  const msg = document.getElementById('forcePinMsg');
+  if(p1.length < 4){ showMsg(msg,'bad','PIN mới tối thiểu 4 ký tự.'); return; }
+  if(p1 === '0000'){ showMsg(msg,'bad','Không được dùng lại PIN tạm 0000.'); return; }
+  if(p1 !== p2){ showMsg(msg,'bad','Hai lần nhập PIN không khớp.'); return; }
+  const btn = document.getElementById('btnForcePinSave');
+  btn.disabled = true; btn.textContent = 'Đang lưu...';
+  const { data, error } = await sb.rpc('doi_pin_cua_toi', {
+    p_ten: pendingForcePin.ten,
+    p_pin_cu: pendingForcePin.pinCu,
+    p_pin_moi: p1
+  });
+  btn.disabled = false; btn.textContent = 'Lưu PIN và vào hệ thống';
+  if(error || !data || data.status !== 'ok'){
+    showMsg(msg,'bad', (data && data.message) || (error && error.message) || 'Không đổi được PIN.');
+    return;
+  }
+  document.getElementById('modalForcePin').classList.remove('show');
+  const d = pendingForcePin.data || {};
+  localStorage.setItem(LS_KEY, JSON.stringify({
+    ten: pendingForcePin.ten,
+    pin: p1,
+    msnv: d.msnv || '',
+    lastStatus: 'da_duyet'
+  }));
+  pendingForcePin = null;
+  location.href = 'index.html';
+});
+
 
 function renderPending(ten, pin){
   showStep1();
@@ -611,7 +674,7 @@ document.getElementById("btnNv").addEventListener("click", async ()=>{
   btn.disabled = false; btn.textContent = "Đăng nhập";
   if(!res) return;
   if(res.status === "da_duyet"){
-    renderApproved(res.data, ten, pin);
+    renderApproved(res.data, ten, pin, !!(res.data && res.data.phai_doi_pin) || canhBaoPinTam(pin));
   } else if(res.status === "cho_duyet"){
     renderPending(ten, pin);
   } else if(res.status === "sai_pin"){
@@ -697,7 +760,7 @@ async function autoCheckSaved(){
   if(!res) return;
   if(res.status === "da_duyet"){
     if(saved.lastStatus === "cho_duyet") localStorage.setItem("bch_just_approved", "1");
-    renderApproved(res.data, saved.ten, saved.pin);
+    renderApproved(res.data, saved.ten, saved.pin, !!(res.data && res.data.phai_doi_pin) || canhBaoPinTam(saved.pin));
   } else if(res.status === "cho_duyet"){
     document.getElementById("nvTen").value = saved.ten;
     document.getElementById("nvPin").value = saved.pin || "";

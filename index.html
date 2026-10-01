@@ -4921,7 +4921,7 @@ document.addEventListener('click', function(e){
 })();
 
 (async function bchAuthGate(){
-  var LS_KEY = 'bch_nv_login';
+  var LS_KEY = 'bch_nv_login_v2';
   var LOGIN_PAGE = 'quan-ly-tai-khoan.html';
   var raw = localStorage.getItem(LS_KEY);
   if(!raw){ location.href = LOGIN_PAGE; return; }
@@ -4939,6 +4939,12 @@ document.addEventListener('click', function(e){
 
   if(!res || res.status !== 'da_duyet'){ location.href = LOGIN_PAGE; return; }
 
+  // PIN tạm 0000 hoặc server báo phải đổi PIN → đá về trang đăng nhập để đổi bắt buộc
+  if(res.data.phai_doi_pin || (saved.pin && String(saved.pin).trim()==='0000')){
+    localStorage.removeItem(LS_KEY);
+    location.href = LOGIN_PAGE;
+    return;
+  }
   // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
   window.BCH_QUYEN = res.data.quyen || {};
   window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv }; // để chat-widget.js (file riêng) lấy tên đã đăng nhập, không hỏi lại
