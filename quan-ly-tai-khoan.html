@@ -1778,39 +1778,80 @@ document.getElementById('fileImportDanhBa').addEventListener('change', (e)=>{
   reader.onload = (ev)=>{
     try{
       const wb = XLSX.read(ev.target.result, {type:'array'});
-      // ưu tiên sheet tên có "Danh Sách" / "Nhân Sự"
-      let sheetName = wb.SheetNames.find(n=>/danh\s*sách|nhân\s*sự|nhan\s*su/i.test(n)) || wb.SheetNames[0];
-      // thử từng sheet nếu sheet đầu không ra cột tên
-      let rows = [];
-      const trySheets = [sheetName].concat(wb.SheetNames.filter(n=>n!==sheetName));
-      for(const sn of trySheets){
-        const ws = wb.Sheets[sn];
-        const json = XLSX.utils.sheet_to_json(ws, {defval:'', raw:false});
-        if(!json.length) continue;
-        const sample = json.slice(0,5);
-        const hasTen = sample.some(r => dbPick(r, ['TÊN NHÂN VIÊN','Ten nhan vien','Tên nhân viên','ten','Họ và tên','Họ tên','HOTEN']));
-        if(hasTen || sn===trySheets[trySheets.length-1]){
-          rows = json;
-          sheetName = sn;
-          break;
-        }
+      function stripVN(s){
+        return String(s||'').toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+          .replace(/đ/g,'d');
       }
-      dbImportRows = rows.map((r,i)=>{
-        const ten = dbPick(r, ['TÊN NHÂN VIÊN','Tên nhân viên','Ten nhan vien','ten','Họ và tên','Họ tên','HOTEN','Họ Tên']);
-        const chuc = dbPick(r, ['CHỨC VỤ','Chức vụ','Chuc vu','chuc_vu','CHUC VU']);
-        const sdt = dbNormSdt(dbPick(r, ['SĐT','SDT','Số điện thoại','So dien thoai','sdt','Điện thoại']));
-        const msnv = dbPick(r, ['MÃ NHÂN VIÊN','Ma nhan vien','MSNV','msnv','Mã NV']);
-        const noi = dbPick(r, ['NƠI LÀM VIỆC','Nơi làm việc','Noi lam viec','vi_tri_lam_viec']);
-        const email = dbPick(r, ['EMAIL','Email','email']);
-        const ghi = dbPick(r, ['Ghi chú','GHI CHÚ','ghi_chu','Ghi Chu']);
-        const loi = !ten;
-        return {ten, chuc_vu:chuc, sdt, msnv, vi_tri_lam_viec:noi, email, ghi_chu:ghi, loi, stt:i+1};
-      }).filter(r=>r.ten);
+      function scoreSheetName(n){
+        const s = stripVN(n);
+        if(s.indexOf('danh sach')>=0 && (s.indexOf('nhan su')>=0 || s.indexOf('cbnv')>=0)) return 100;
+        if(s.indexOf('danh sach')>=0) return 80;
+        if(s.indexOf('nhan su')>=0 && s.indexOf('tuyen')<0) return 60;
+        if(s.indexOf('tuyen dung')>=0 || s.indexOf('bao cao')>=0) return 0;
+        return 10;
+      }
+      // Đọc 1 sheet: tìm dòng header có "TÊN NHÂN VIÊN" / "SĐT"
+      function parseSheet(sn){
+        const ws = wb.Sheets[sn];
+        if(!ws || !ws['!ref']) return [];
+        const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false});
+        if(!aoa.length) return [];
+        let headerIdx = -1;
+        for(let i=0;i<Math.min(aoa.length,30);i++){
+          const row = (aoa[i]||[]).map(c=>stripVN(c));
+          const joined = row.join(' | ');
+          if(row.some(c=>c.indexOf('ten nhan vien')>=0 || c==='ten' || c.indexOf('ho ten')>=0)
+             && (row.some(c=>c.indexOf('chuc vu')>=0 || c.indexOf('sdt')>=0 || c.indexOf('so dien thoai')>=0 || c.indexOf('ma nhan vien')>=0))){
+            headerIdx = i; break;
+          }
+          if(joined.indexOf('ten nhan vien')>=0 && joined.indexOf('sdt')>=0){ headerIdx = i; break; }
+        }
+        if(headerIdx < 0){
+          // fallback json keys
+          const json = XLSX.utils.sheet_to_json(ws, {defval:'', raw:false});
+          return json;
+        }
+        const headers = (aoa[headerIdx]||[]).map(h=>String(h||'').trim());
+        const out = [];
+        for(let r=headerIdx+1;r<aoa.length;r++){
+          const line = aoa[r]||[];
+          const obj = {};
+          headers.forEach((h,ci)=>{ if(h) obj[h] = line[ci] != null ? line[ci] : ''; });
+          out.push(obj);
+        }
+        return out;
+      }
+      // Chọn sheet điểm cao nhất + có nhiều dòng tên nhất
+      let best = {sn: wb.SheetNames[0], rows: [], score: -1, names: 0};
+      wb.SheetNames.forEach(sn=>{
+        const scName = scoreSheetName(sn);
+        const json = parseSheet(sn);
+        const mapped = json.map((r,i)=>{
+          const ten = dbPick(r, ['TÊN NHÂN VIÊN','Tên nhân viên','Ten nhan vien','ten','Họ và tên','Họ tên','HOTEN','Họ Tên','Tên NV']);
+          const chuc = dbPick(r, ['CHỨC VỤ','Chức vụ','Chuc vu','chuc_vu','CHUC VU']);
+          const sdt = dbNormSdt(dbPick(r, ['SĐT','SDT','Số điện thoại','So dien thoai','sdt','Điện thoại','Phone']));
+          const msnv = dbPick(r, ['MÃ NHÂN VIÊN','Ma nhan vien','MSNV','msnv','Mã NV','MANV']);
+          const noi = dbPick(r, ['NƠI LÀM VIỆC','Nơi làm việc','Noi lam viec','vi_tri_lam_viec']);
+          const email = dbPick(r, ['EMAIL','Email','email']);
+          const ghi = dbPick(r, ['Ghi chú','GHI CHÚ','ghi_chu','Ghi Chu']);
+          return {ten, chuc_vu:chuc, sdt, msnv, vi_tri_lam_viec:noi, email, ghi_chu:ghi, stt:i+1};
+        }).filter(r=>r.ten && !/^stt$/i.test(r.ten) && stripVN(r.ten).indexOf('ten nhan vien')<0);
+        const names = mapped.length;
+        const score = scName*1000 + names;
+        if(score > best.score){ best = {sn, rows: mapped, score, names}; }
+      });
+      dbImportRows = best.rows;
+      const sheetName = best.sn;
       const prev = document.getElementById('dbImportPreview');
       prev.style.display = 'block';
-      prev.innerHTML = `<b>Sheet:</b> ${sheetName} · <b>${dbImportRows.length}</b> dòng có tên<br>` +
-        dbImportRows.slice(0,8).map(r=>`• ${r.ten} — ${r.chuc_vu||'—'} — ${r.sdt||'không SĐT'}`).join('<br>') +
-        (dbImportRows.length>8?`<br>… và ${dbImportRows.length-8} dòng khác`:'');
+      if(!dbImportRows.length){
+        prev.innerHTML = `<b style="color:#c62828;">Không đọc được danh sách tên.</b><br>Sheet đang xét: <b>${sheetName}</b> (${best.names} dòng).<br>Các sheet trong file: ${wb.SheetNames.join(' · ')}<br>Hãy chọn đúng file có sheet "Danh Sách Nhân Sự".`;
+      } else {
+        prev.innerHTML = `<b>Sheet:</b> ${sheetName} · <b>${dbImportRows.length}</b> dòng có tên<br>` +
+          dbImportRows.slice(0,8).map(r=>`• ${r.ten} — ${r.chuc_vu||'—'} — ${r.sdt||'không SĐT'}`).join('<br>') +
+          (dbImportRows.length>8?`<br>… và ${dbImportRows.length-8} dòng khác`:'');
+      }
       document.getElementById('btnConfirmImportDanhBa').disabled = dbImportRows.length===0;
       document.getElementById('dbImportResult').style.display = 'none';
     }catch(err){
