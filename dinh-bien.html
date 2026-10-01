@@ -127,8 +127,12 @@ function renderTable(){
     </div></th>`;
   });
   html += '</tr></thead><tbody>';
-  rows.forEach(r=>{
+  rows.forEach((r, ri)=>{
     html += `<tr><td class="rowlabel ${r.an?'row-an':''}"><div class="rowflex">
+      ${unlocked?`<span class="ordbtn" style="display:inline-flex;flex-direction:column;gap:1px;margin-right:4px;">
+        <button type="button" class="icon-ord" data-up-cd="${r.id}" title="Đưa lên" ${ri===0?'disabled':''} style="border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:4px;padding:0 5px;font-size:11px;cursor:pointer;line-height:1.3;" ${ri===0?'disabled':''}>↑</button>
+        <button type="button" class="icon-ord" data-down-cd="${r.id}" title="Đưa xuống" ${ri===rows.length-1?'disabled':''} style="border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:4px;padding:0 5px;font-size:11px;cursor:pointer;line-height:1.3;">↓</button>
+      </span>`:''}
       <input type="text" data-rowid="${r.id}" class="rowname" value="${r.ten}" ${unlocked?'':'disabled'}>
       ${unlocked?`<span class="hidrow" data-hidrow="${r.id}" title="${r.an?'Hiện lại':'Ẩn khỏi báo cáo Nhân sự'}">${r.an?'👁':'🚫'}</span>`:''}
       ${unlocked?`<span class="delrow" data-delrow="${r.id}">✕</span>`:''}
@@ -212,6 +216,12 @@ function renderTable(){
       showMsg('ok','✓ Đã xoá cột.');
     });
   });
+  tbl.querySelectorAll('[data-up-cd]').forEach(btn=>{
+    btn.addEventListener('click', ()=> doiViTriChucDanh(parseInt(btn.dataset.upCd), -1));
+  });
+  tbl.querySelectorAll('[data-down-cd]').forEach(btn=>{
+    btn.addEventListener('click', ()=> doiViTriChucDanh(parseInt(btn.dataset.downCd), 1));
+  });
 }
 
 // Dán khối dữ liệu copy từ Excel — tách theo dòng (\n) và cột (\t), điền liên tiếp từ ô đang click
@@ -248,10 +258,28 @@ async function taiDuLieuNam(){
     sb.rpc('dinhbien_lay_gia_tri_nam', { p_nam: curNam })
   ]);
   rows = rowRes.data || [];
+  rows.sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); });
   cols = colRes.data || [];
+  cols.sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); });
   values = {};
   (valRes.data || []).forEach(v=>{ values[vKey(v.chuc_danh_id, v.cot_id)] = v.so_luong; });
   renderTable();
+}
+
+// Đổi vị trí 2 chức danh liền kề — chỉ đổi thu_tu, không đụng số liệu định biên / báo cáo đã nhập
+async function doiViTriChucDanh(id, huong){
+  const idx = rows.findIndex(x=>x.id===id);
+  if(idx < 0) return;
+  const doiIdx = idx + huong;
+  if(doiIdx < 0 || doiIdx >= rows.length) return;
+  const a = rows[idx];
+  const b = rows[doiIdx];
+  const { error } = await sb.rpc('dinhbien_doi_thu_tu_chuc_danh', {
+    p_pass: dinhBienPass, p_id1: a.id, p_id2: b.id
+  });
+  if(error){ showMsg('bad','Không đổi vị trí được: '+(error.message||'')); return; }
+  await taiDuLieuNam();
+  showMsg('ok','✓ Đã đổi thứ tự — báo cáo Nhân sự sẽ xếp cột theo thứ tự mới (tải lại trang báo cáo).');
 }
 
 function renderNamSelect(){

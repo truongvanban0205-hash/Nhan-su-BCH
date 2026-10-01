@@ -2008,7 +2008,9 @@ async function taiDinhBienChucDanh(){
   try{
     var r = await sc.rpc('dinhbien_lay_danh_sach_chuc_danh');
     if(r.data && r.data.length){
-      COLS = r.data.filter(function(c){ return !c.an; }).map(function(c){ return {k:'cd_'+c.id, n:(c.ten_tat && c.ten_tat.trim()) ? c.ten_tat : c.ten}; });
+      // Thứ tự cột báo cáo NS = thu_tu trên Định biên (đổi ↑↓ bên Định biên là nhảy theo)
+      var list = r.data.slice().sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
+      COLS = list.filter(function(c){ return !c.an; }).map(function(c){ return {k:'cd_'+c.id, n:(c.ten_tat && c.ten_tat.trim()) ? c.ten_tat : c.ten}; });
     }
   }catch(e){ /* lỗi mạng/chưa chạy patch -> giữ nguyên COLS mặc định để trang vẫn chạy được */ }
 }
