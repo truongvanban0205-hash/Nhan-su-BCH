@@ -212,26 +212,34 @@
 <!-- ============ TRANG NHÂN VIÊN ============ -->
 <div class="card" id="viewNhanVien">
   <h1 id="nvTitle">Đăng nhập</h1>
-  <p class="sub" id="nvSub">Nhập đúng Họ tên và MSNV để vào hệ thống. Nếu bạn chưa có trong danh sách, hệ thống sẽ hỏi thêm thông tin để đăng ký mới.</p>
+  <p class="sub" id="nvSub">Nhập <b>Họ tên</b> và <b>mã PIN</b>. Không cần MSNV.</p>
 
   <div class="msg" id="nvMsg"></div>
 
   <div id="nvStep1">
     <label>Họ và tên</label>
-    <input type="text" id="nvTen" placeholder="Ví dụ: Nguyễn Văn A" onkeydown="if(event.key==='Enter')document.getElementById('nvMsnv').focus()">
-    <label>Mã số nhân viên (MSNV)</label>
-    <input type="text" id="nvMsnv" placeholder="Ví dụ: 3719358" inputmode="numeric" onkeydown="if(event.key==='Enter')document.getElementById('btnNv').click()">
-    <button class="btn" id="btnNv">Tra cứu</button>
+    <input type="text" id="nvTen" placeholder="Ví dụ: Nguyễn Văn A" onkeydown="if(event.key==='Enter')document.getElementById('nvPin').focus()" autocomplete="username">
+    <label>Mã PIN</label>
+    <input type="password" id="nvPin" placeholder="4–8 ký tự" inputmode="numeric" maxlength="20" onkeydown="if(event.key==='Enter')document.getElementById('btnNv').click()" autocomplete="current-password">
+    <input type="hidden" id="nvMsnv" value="">
+    <button class="btn" id="btnNv">Đăng nhập</button>
+    <a class="reset" id="btnToReg" style="margin-top:10px;display:block;">Chưa có tài khoản? Đăng ký mới</a>
   </div>
 
   <div id="nvStep2" style="display:none;">
-    <p class="sub" style="margin-top:0;">Không tìm thấy bạn trong danh sách. Vui lòng nhập thêm thông tin để gửi yêu cầu đăng ký:</p>
+    <p class="sub" style="margin-top:0;">Đăng ký tài khoản mới — Quản lý sẽ duyệt trước khi vào được hệ thống.</p>
+    <label>Họ và tên</label>
+    <input type="text" id="nvTenReg" placeholder="Họ tên đầy đủ">
+    <label>Mã PIN (tự đặt, dùng để đăng nhập)</label>
+    <input type="password" id="nvPinReg" placeholder="4–8 ký tự" maxlength="20" inputmode="numeric">
+    <label>Nhập lại PIN</label>
+    <input type="password" id="nvPinReg2" placeholder="Nhập lại PIN" maxlength="20" inputmode="numeric">
     <label>Chức vụ</label>
     <input type="text" id="nvChucVu" placeholder="Ví dụ: Nhân viên kỹ thuật hiện trường" onkeydown="if(event.key==='Enter')document.getElementById('nvSdt').focus()">
     <label>Số điện thoại</label>
     <input type="tel" id="nvSdt" placeholder="Ví dụ: 0912345678" onkeydown="if(event.key==='Enter')document.getElementById('btnDangKyMoi').click()">
     <button class="btn" id="btnDangKyMoi">Gửi đăng ký</button>
-    <a class="reset" id="btnBackStep1">‹ Quay lại</a>
+    <a class="reset" id="btnBackStep1">‹ Quay lại đăng nhập</a>
   </div>
 
   <div id="nvInfo" style="display:none; margin-top:6px;">
@@ -306,6 +314,8 @@
     <input type="text" id="empTen">
     <label>MSNV <span style="color:var(--muted);font-weight:400;">(tuỳ chọn — không dùng đăng nhập)</span></label>
     <input type="text" id="empMsnv">
+    <label>Mã PIN đăng nhập <span style="color:var(--muted);font-weight:400;">(bắt buộc để vào app)</span></label>
+    <input type="text" id="empPin" placeholder="4–8 ký tự — để trống nếu không đổi" maxlength="20" inputmode="numeric" autocomplete="off">
     <label>Chức vụ</label>
     <input type="text" id="empChucVu">
     <label>SĐT</label>
@@ -617,7 +627,7 @@ document.getElementById("btnNv").addEventListener("click", async ()=>{
   }
 });
 
-document.getElementById("btnToReg").addEventListener("click", ()=>{
+var _btnToReg=document.getElementById("btnToReg"); if(_btnToReg) _btnToReg.addEventListener("click", ()=>{
   hideMsg(nvMsg);
   document.getElementById("nvTenReg").value = document.getElementById("nvTen").value.trim();
   document.getElementById("nvPinReg").value = "";
