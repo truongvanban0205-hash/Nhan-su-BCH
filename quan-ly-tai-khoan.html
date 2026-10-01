@@ -304,7 +304,7 @@
     <input type="hidden" id="empId">
     <label>Họ và tên</label>
     <input type="text" id="empTen">
-    <label>MSNV</label>
+    <label>MSNV <span style="color:var(--muted);font-weight:400;">(tuỳ chọn — không dùng đăng nhập)</span></label>
     <input type="text" id="empMsnv">
     <label>Chức vụ</label>
     <input type="text" id="empChucVu">
@@ -564,12 +564,12 @@ const nvMsg = document.getElementById("nvMsg");
 const nvStep1 = document.getElementById("nvStep1");
 const nvStep2 = document.getElementById("nvStep2");
 const nvInfo = document.getElementById("nvInfo");
-let pendingNewReg = null; // {ten, msnv} khi đang chờ nhập thêm chức vụ/sđt
+let pendingNewReg = null; // {ten, pin} khi đăng ký mới
 
-async function traCuu(ten, msnv, silent){
-  const { data, error } = await sb.rpc("tra_cuu", { p_ten: ten, p_msnv: msnv });
+async function traCuuPin(ten, pin, silent){
+  const { data, error } = await sb.rpc("tra_cuu_pin", { p_ten: ten, p_pin: pin });
   if (error){
-    if(!silent) showMsg(nvMsg, "bad", "Có lỗi xảy ra, vui lòng thử lại.");
+    if(!silent) showMsg(nvMsg, "bad", "Có lỗi xảy ra, vui lòng thử lại. (Cần chạy SQL tra_cuu_pin)");
     return null;
   }
   return data;
@@ -579,43 +579,52 @@ function showStep1(){ nvStep1.style.display = "block"; nvStep2.style.display = "
 function showStep2(){ nvStep1.style.display = "none"; nvStep2.style.display = "block"; nvInfo.style.display = "none"; }
 function showInfo(){ nvStep1.style.display = "none"; nvStep2.style.display = "none"; nvInfo.style.display = "block"; }
 
-function renderApproved(d, ten, msnv){
-  localStorage.setItem(LS_KEY, JSON.stringify({ten, msnv, lastStatus:"da_duyet"}));
+function renderApproved(d, ten, pin){
+  localStorage.setItem(LS_KEY, JSON.stringify({ten: ten, pin: pin, msnv: (d && d.msnv) || "", lastStatus:"da_duyet"}));
   location.href = "index.html";
 }
 
-function renderPending(ten, msnv){
+function renderPending(ten, pin){
   showStep1();
   showMsg(nvMsg, "warn", "Tài khoản của bạn đang chờ Ban chỉ huy phê duyệt. Vui lòng quay lại sau.");
-  localStorage.setItem(LS_KEY, JSON.stringify({ten, msnv, lastStatus:"cho_duyet"}));
+  localStorage.setItem(LS_KEY, JSON.stringify({ten: ten, pin: pin, lastStatus:"cho_duyet"}));
 }
 
 document.getElementById("btnNv").addEventListener("click", async ()=>{
   const ten = document.getElementById("nvTen").value.trim();
-  const msnv = document.getElementById("nvMsnv").value.trim();
-  if(!ten || !msnv){ showMsg(nvMsg, "bad", "Vui lòng nhập đầy đủ Họ tên và MSNV."); return; }
+  const pin = document.getElementById("nvPin").value.trim();
+  if(!ten || !pin){ showMsg(nvMsg, "bad", "Vui lòng nhập Họ tên và mã PIN."); return; }
+  if(pin.length < 4){ showMsg(nvMsg, "bad", "PIN tối thiểu 4 ký tự."); return; }
   const btn = document.getElementById("btnNv");
   btn.disabled = true; btn.textContent = "Đang kiểm tra...";
-  const res = await traCuu(ten, msnv);
-  btn.disabled = false; btn.textContent = "Tra cứu";
+  const res = await traCuuPin(ten, pin);
+  btn.disabled = false; btn.textContent = "Đăng nhập";
   if(!res) return;
   if(res.status === "da_duyet"){
-    renderApproved(res.data, ten, msnv);
+    renderApproved(res.data, ten, pin);
   } else if(res.status === "cho_duyet"){
-    renderPending(ten, msnv);
-  } else if(res.status === "sai_ten"){
-    showMsg(nvMsg, "bad", "MSNV đã tồn tại nhưng Họ tên không khớp. Vui lòng kiểm tra lại chính xác.");
+    renderPending(ten, pin);
+  } else if(res.status === "sai_pin"){
+    showMsg(nvMsg, "bad", "Sai mã PIN. Vui lòng thử lại hoặc liên hệ Ban chỉ huy đặt lại PIN.");
   } else if(res.status === "tu_choi"){
     showMsg(nvMsg, "bad", "Yêu cầu đăng ký của bạn đã bị từ chối. Vui lòng liên hệ Ban chỉ huy.");
   } else if(res.status === "khong_tim_thay"){
-    pendingNewReg = { ten, msnv };
-    hideMsg(nvMsg);
-    document.getElementById("nvChucVu").value = "";
-    document.getElementById("nvSdt").value = "";
-    showStep2();
+    showMsg(nvMsg, "bad", "Không tìm thấy tài khoản. Kiểm tra lại Họ tên/PIN hoặc bấm Đăng ký mới.");
+  } else if(res.status === "chua_co_pin"){
+    showMsg(nvMsg, "bad", "Tài khoản chưa có PIN. Liên hệ Ban chỉ huy cấp PIN trong Quản lý chung.");
   } else {
-    showMsg(nvMsg, "bad", res.message || "Vui lòng nhập đầy đủ thông tin.");
+    showMsg(nvMsg, "bad", res.message || "Đăng nhập không thành công.");
   }
+});
+
+document.getElementById("btnToReg").addEventListener("click", ()=>{
+  hideMsg(nvMsg);
+  document.getElementById("nvTenReg").value = document.getElementById("nvTen").value.trim();
+  document.getElementById("nvPinReg").value = "";
+  document.getElementById("nvPinReg2").value = "";
+  document.getElementById("nvChucVu").value = "";
+  document.getElementById("nvSdt").value = "";
+  showStep2();
 });
 
 document.getElementById("btnBackStep1").addEventListener("click", ()=>{
@@ -625,30 +634,46 @@ document.getElementById("btnBackStep1").addEventListener("click", ()=>{
 });
 
 document.getElementById("btnDangKyMoi").addEventListener("click", async ()=>{
-  if(!pendingNewReg) return;
+  const ten = document.getElementById("nvTenReg").value.trim();
+  const pin = document.getElementById("nvPinReg").value.trim();
+  const pin2 = document.getElementById("nvPinReg2").value.trim();
   const chucVu = document.getElementById("nvChucVu").value.trim();
   const sdt = document.getElementById("nvSdt").value.trim();
-  if(!chucVu || !sdt){ alert("Vui lòng nhập đầy đủ Chức vụ và Số điện thoại."); return; }
+  if(!ten || !pin || !chucVu || !sdt){ alert("Vui lòng nhập đủ Họ tên, PIN, Chức vụ và SĐT."); return; }
+  if(pin.length < 4){ alert("PIN tối thiểu 4 ký tự."); return; }
+  if(pin !== pin2){ alert("Hai lần nhập PIN không khớp."); return; }
   const btn = document.getElementById("btnDangKyMoi");
   btn.disabled = true; btn.textContent = "Đang gửi...";
-  const { data, error } = await sb.rpc("dang_ky_moi", {
-    p_ten: pendingNewReg.ten, p_msnv: pendingNewReg.msnv, p_chuc_vu: chucVu, p_sdt: sdt
+  // MSNV tự sinh phía server (hoặc tạm thời client) — không còn dùng để đăng nhập
+  const msnvAuto = "P" + Date.now().toString().slice(-10);
+  const { data, error } = await sb.rpc("dang_ky_moi_pin", {
+    p_ten: ten, p_pin: pin, p_chuc_vu: chucVu, p_sdt: sdt, p_msnv: msnvAuto
   });
   btn.disabled = false; btn.textContent = "Gửi đăng ký";
-  if(error || !data){ alert("Có lỗi xảy ra, vui lòng thử lại."); return; }
+  if(error || !data){
+    // fallback RPC cũ nếu chưa chạy SQL mới
+    const r2 = await sb.rpc("dang_ky_moi", {
+      p_ten: ten, p_msnv: msnvAuto, p_chuc_vu: chucVu, p_sdt: sdt
+    });
+    if(r2.error || !r2.data){ alert("Có lỗi xảy ra, vui lòng chạy SQL đăng ký PIN hoặc thử lại."); return; }
+    if(r2.data.status === "da_ton_tai"){ alert("Tài khoản vừa được đăng ký, vui lòng đăng nhập hoặc đổi tên."); showStep1(); return; }
+    // Gán PIN sau khi đăng ký (admin RPC) — nếu chưa có sẽ chờ admin cấp
+    try{ await sb.rpc("gan_pin_sau_dang_ky", { p_ten: ten, p_msnv: msnvAuto, p_pin: pin }); }catch(e){}
+    renderPending(ten, pin);
+    return;
+  }
   if(data.status === "da_ton_tai"){
-    alert("MSNV này vừa được đăng ký bởi người khác, vui lòng kiểm tra lại.");
+    alert("Họ tên này đã có tài khoản. Hãy đăng nhập bằng PIN hoặc liên hệ Ban chỉ huy.");
     showStep1(); return;
   }
-  renderPending(pendingNewReg.ten, pendingNewReg.msnv);
-  pendingNewReg = null;
+  renderPending(ten, pin);
 });
 
 document.getElementById("btnDangXuat").addEventListener("click", ()=>{
   localStorage.removeItem(LS_KEY);
   showStep1();
   document.getElementById("nvTen").value = "";
-  document.getElementById("nvMsnv").value = "";
+  document.getElementById("nvPin").value = "";
   hideMsg(nvMsg);
 });
 
@@ -657,15 +682,16 @@ async function autoCheckSaved(){
   if(!raw) return;
   let saved;
   try{ saved = JSON.parse(raw); } catch(e){ return; }
-  const res = await traCuu(saved.ten, saved.msnv, true);
+  if(!saved.ten || !saved.pin) return;
+  const res = await traCuuPin(saved.ten, saved.pin, true);
   if(!res) return;
   if(res.status === "da_duyet"){
     if(saved.lastStatus === "cho_duyet") localStorage.setItem("bch_just_approved", "1");
-    renderApproved(res.data, saved.ten, saved.msnv);
+    renderApproved(res.data, saved.ten, saved.pin);
   } else if(res.status === "cho_duyet"){
     document.getElementById("nvTen").value = saved.ten;
-    document.getElementById("nvMsnv").value = saved.msnv;
-    renderPending(saved.ten, saved.msnv);
+    document.getElementById("nvPin").value = saved.pin || "";
+    renderPending(saved.ten, saved.pin);
   }
 }
 
@@ -1380,22 +1406,39 @@ document.getElementById("btnCancelEmp").addEventListener("click", ()=> modalEmp.
 document.getElementById("btnSaveEmp").addEventListener("click", async ()=>{
   const id = document.getElementById("empId").value;
   const ten = document.getElementById("empTen").value.trim();
-  const msnv = document.getElementById("empMsnv").value.trim();
+  let msnv = document.getElementById("empMsnv").value.trim();
+  const pin = document.getElementById("empPin").value.trim();
   const chucVu = document.getElementById("empChucVu").value.trim();
   const sdt = document.getElementById("empSdt").value.trim();
-  if(!ten || !msnv){ alert("Vui lòng nhập Họ tên và MSNV."); return; }
+  if(!ten){ alert("Vui lòng nhập Họ tên."); return; }
+  if(!id && !pin){ alert("Thêm mới cần đặt mã PIN đăng nhập."); return; }
+  if(pin && pin.length < 4){ alert("PIN tối thiểu 4 ký tự."); return; }
+  if(!msnv) msnv = "P" + Date.now().toString().slice(-10);
 
+  let empId = id ? parseInt(id) : null;
   if(id){
     const { error } = await sb.rpc("admin_cap_nhat", {
-      p_pass: currentAdminPass, p_id: parseInt(id), p_ten: ten, p_msnv: msnv,
+      p_pass: currentAdminPass, p_id: empId, p_ten: ten, p_msnv: msnv,
       p_chuc_vu: chucVu, p_sdt: sdt, p_quyen: null, p_trang_thai: null
     });
-    if(error){ alert("Không lưu được, MSNV có thể đã tồn tại."); return; }
+    if(error){ alert("Không lưu được: " + (error.message||"")); return; }
   } else {
-    const { error } = await sb.rpc("admin_them_moi", {
+    const { data, error } = await sb.rpc("admin_them_moi", {
       p_pass: currentAdminPass, p_ten: ten, p_msnv: msnv, p_chuc_vu: chucVu, p_sdt: sdt, p_quyen: {}
     });
-    if(error){ alert("Không thêm được, MSNV có thể đã tồn tại."); return; }
+    if(error){ alert("Không thêm được: " + (error.message||"")); return; }
+    if(data && data.id) empId = data.id;
+  }
+  if(pin && empId){
+    const { error: e2 } = await sb.rpc("admin_dat_pin", {
+      p_pass: currentAdminPass, p_id: empId, p_pin: pin
+    });
+    if(e2){ alert("Đã lưu thông tin nhưng chưa gán được PIN: " + (e2.message||"Chạy SQL admin_dat_pin")); }
+  } else if(pin && !empId){
+    // Thử gán theo tên+msnv nếu không có id trả về
+    try{
+      await sb.rpc("admin_dat_pin_theo_msnv", { p_pass: currentAdminPass, p_msnv: msnv, p_pin: pin });
+    }catch(e){}
   }
   modalEmp.classList.remove("show");
   loadAdminData();

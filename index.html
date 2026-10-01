@@ -4931,7 +4931,9 @@ document.addEventListener('click', function(e){
 
   var res;
   try{
-    var r = await sc.rpc('tra_cuu', { p_ten: saved.ten, p_msnv: saved.msnv });
+    var r = saved.pin
+      ? await sc.rpc('tra_cuu_pin', { p_ten: saved.ten, p_pin: saved.pin })
+      : await sc.rpc('tra_cuu', { p_ten: saved.ten, p_msnv: saved.msnv });
     res = r.data;
   }catch(e){ res = null; }
 
