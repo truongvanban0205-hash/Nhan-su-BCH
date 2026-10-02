@@ -426,6 +426,10 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">📞</div>
         <div class="mod-title">Danh bạ</div>
       </div>
+      <div class="mod-tile c-db" data-quyen="ban_tin" onclick="goModuleBanTin()" style="border-color:rgba(66,165,245,.35);">
+        <div class="mod-icon">📰</div>
+        <div class="mod-title">Bản tin</div>
+      </div>
     </div>
     </div>
 
@@ -763,6 +767,13 @@ function goModule(name){
     return;
   }
   showScreen(name);
+}
+function goModuleBanTin(){
+  if(window.BCH_QUYEN && !window.BCH_QUYEN.ban_tin){
+    alert('Bạn chưa được cấp quyền Bản tin. Liên hệ Ban chỉ huy.');
+    return;
+  }
+  location.href = 'ban-tin.html';
 }
 function goModuleDinhBien(){
   var el = document.querySelector('.mod-tile.c-db');
@@ -5236,7 +5247,7 @@ document.addEventListener('keydown', function(e){
     greetSub.textContent = 'Chúc bạn một ngày làm việc vui vẻ!';
     headerDiv.appendChild(greetSub);
 
-    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', danh_ba:'Danh bạ' };
+    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', danh_ba:'Danh bạ', ban_tin:'Bản tin' };
     var overlay = document.createElement('div');
     overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5000;align-items:center;justify-content:center;padding:20px;';
     var quyenBadges = Object.keys(window.BCH_QUYEN).filter(function(k){return window.BCH_QUYEN[k];})

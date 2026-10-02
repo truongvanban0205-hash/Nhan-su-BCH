@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Bản tin trong ngày — BCH Cam Lâm</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#0b0f14; --panel:#131826; --panel2:#1a2233; --border:#252b3d;
+  --text:#e8ecf5; --muted:#8b93a8; --accent:#f9a825; --blue:#42a5f5;
+}
+*{box-sizing:border-box;}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:'Be Vietnam Pro',system-ui,sans-serif;}
+a{color:inherit;}
+.top{position:sticky;top:0;z-index:20;background:rgba(19,24,38,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;}
+.top h1{margin:0;font-size:17px;font-weight:800;flex:1;}
+.top h1 span{color:var(--accent);}
+.btn-back,.btn-ico{border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:linear-gradient(135deg,#f9a825,#ff8a3d);color:#111;border:none;border-radius:12px;padding:11px 16px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;}
+.wrap{max-width:560px;margin:0 auto;padding:14px 14px 100px;}
+.composer{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:14px;margin-bottom:16px;}
+.composer textarea{width:100%;min-height:88px;resize:vertical;border:1.5px solid var(--border);border-radius:12px;background:#0b0f14;color:var(--text);padding:12px;font-family:inherit;font-size:14px;line-height:1.45;}
+.composer textarea:focus{outline:none;border-color:var(--accent);}
+.composer input[type=text]{width:100%;border:1.5px solid var(--border);border-radius:12px;background:#0b0f14;color:var(--text);padding:10px 12px;font-family:inherit;font-size:14px;margin-bottom:8px;}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;}
+.themes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.theme-chip{width:36px;height:36px;border-radius:12px;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.theme-chip.on{border-color:#fff;box-shadow:0 0 0 2px var(--accent);}
+.icons{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;max-height:72px;overflow-y:auto;}
+.icons button{border:none;background:var(--panel2);border-radius:10px;font-size:18px;padding:6px 8px;cursor:pointer;}
+.icons button.on{outline:2px solid var(--accent);}
+.feed{display:flex;flex-direction:column;gap:14px;}
+.card{border-radius:18px;padding:14px 14px 12px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 24px rgba(0,0,0,.25);}
+.card .meta{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.card .av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:rgba(255,255,255,.2);}
+.card .who{font-weight:800;font-size:14px;}
+.card .when{font-size:11px;opacity:.75;margin-top:2px;}
+.card .icon-big{font-size:28px;line-height:1;}
+.card .title{font-size:16px;font-weight:800;margin:6px 0 6px;line-height:1.35;}
+.card .body{font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;opacity:.95;}
+.card .foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;opacity:.8;}
+.card .del{border:none;background:rgba(0,0,0,.2);color:inherit;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;font-family:inherit;}
+.empty{text-align:center;color:var(--muted);padding:40px 16px;font-size:13px;}
+#loading{text-align:center;padding:40px;color:var(--muted);}
+.fab{position:fixed;right:16px;bottom:20px;z-index:30;display:none;}
+@media(max-width:520px){
+  .composer-panel{display:none;}
+  .composer-panel.open{display:block;}
+  .fab{display:block;}
+}
+.muted{color:var(--muted);font-size:12px;}
+</style>
+</head>
+<body>
+<div class="top">
+  <a class="btn-back" href="index.html">← Trang chủ</a>
+  <h1>Bản <span>tin</span></h1>
+  <button type="button" class="btn-ico" id="btnReload" title="Làm mới">🔄</button>
+</div>
+
+<div class="wrap">
+  <div id="loading">Đang kiểm tra đăng nhập...</div>
+  <div id="app" style="display:none;">
+    <div class="composer composer-panel" id="composerPanel">
+      <div style="font-weight:800;margin-bottom:8px;">✍️ Đăng bản tin</div>
+      <input type="text" id="inpTitle" placeholder="Tiêu đề (tuỳ chọn)" maxlength="120">
+      <textarea id="inpBody" placeholder="Nội dung bản tin trong ngày..." maxlength="2000"></textarea>
+      <div class="muted" style="margin-top:6px;">Chọn giao diện</div>
+      <div class="themes" id="themeRow"></div>
+      <div class="muted" style="margin-top:8px;">Icon</div>
+      <div class="icons" id="iconRow"></div>
+      <div class="row">
+        <button type="button" class="btn-primary" id="btnPost">Đăng lên bảng tin</button>
+        <span class="muted" id="postStatus"></span>
+      </div>
+    </div>
+    <div class="feed" id="feed"></div>
+  </div>
+</div>
+
+<button type="button" class="btn-primary fab" id="fabCompose">+ Đăng tin</button>
+
+<script>
+const SUPABASE_URL = 'https://jqwjzvucwvlwbcgxhath.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const LS_KEY = 'bch_nv_login_v2';
+const LOGIN_PAGE = 'quan-ly-tai-khoan.html';
+
+const THEMES = [
+  {id:'sunset', label:'🌅', bg:'linear-gradient(135deg,#ff6b35,#f7c59f)', color:'#1a1208'},
+  {id:'ocean', label:'🌊', bg:'linear-gradient(135deg,#0077b6,#00b4d8)', color:'#fff'},
+  {id:'forest', label:'🌿', bg:'linear-gradient(135deg,#2d6a4f,#95d5b2)', color:'#08140f'},
+  {id:'night', label:'🌙', bg:'linear-gradient(135deg,#212529,#495057)', color:'#f8f9fa'},
+  {id:'gold', label:'⭐', bg:'linear-gradient(135deg,#f9a825,#fff3cd)', color:'#1a1400'},
+  {id:'rose', label:'🌸', bg:'linear-gradient(135deg,#d6336c,#fcc2d7)', color:'#1a0810'},
+  {id:'violet', label:'💜', bg:'linear-gradient(135deg,#7b2cbf,#e0aaff)', color:'#12081a'},
+  {id:'sky', label:'☁️', bg:'linear-gradient(135deg,#4cc9f0,#bde0fe)', color:'#062033'},
+];
+const ICONS = ['📢','✅','⚠️','🎉','📌','🔥','💪','🛠️','🚜','📋','⏰','🌟','💡','🫡','🙏','📣'];
+
+let user = null; // {ten, msnv, quyen}
+let selectedTheme = 'gold';
+let selectedIcon = '📢';
+let posts = [];
+
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function initials(ten){
+  ten = String(ten||'').trim();
+  if(!ten) return '?';
+  var p = ten.split(/\s+/);
+  if(p.length===1) return p[0].slice(0,2).toUpperCase();
+  return (p[0].charAt(0)+p[p.length-1].charAt(0)).toUpperCase();
+}
+function fmtTime(ts){
+  if(!ts) return '';
+  var d = new Date(ts);
+  var now = new Date();
+  var pad = n => (n<10?'0':'')+n;
+  var same = d.toDateString()===now.toDateString();
+  var t = pad(d.getHours())+':'+pad(d.getMinutes());
+  if(same) return 'Hôm nay · '+t;
+  return pad(d.getDate())+'/'+pad(d.getMonth()+1)+' · '+t;
+}
+function themeById(id){
+  return THEMES.find(t=>t.id===id) || THEMES[4];
+}
+
+function renderThemePicker(){
+  document.getElementById('themeRow').innerHTML = THEMES.map(t=>
+    `<button type="button" class="theme-chip ${t.id===selectedTheme?'on':''}" data-theme="${t.id}" style="background:${t.bg}" title="${t.id}">${t.label}</button>`
+  ).join('');
+  document.querySelectorAll('[data-theme]').forEach(b=>{
+    b.onclick=()=>{ selectedTheme=b.getAttribute('data-theme'); renderThemePicker(); };
+  });
+}
+function renderIconPicker(){
+  document.getElementById('iconRow').innerHTML = ICONS.map(ic=>
+    `<button type="button" class="${ic===selectedIcon?'on':''}" data-icon="${ic}">${ic}</button>`
+  ).join('');
+  document.querySelectorAll('[data-icon]').forEach(b=>{
+    b.onclick=()=>{ selectedIcon=b.getAttribute('data-icon'); renderIconPicker(); };
+  });
+}
+
+function renderFeed(){
+  var el = document.getElementById('feed');
+  if(!posts.length){
+    el.innerHTML = '<div class="empty">Chưa có bản tin nào.<br>Hãy là người đăng đầu tiên trong ngày ✍️</div>';
+    return;
+  }
+  el.innerHTML = posts.map(p=>{
+    var th = themeById(p.mau);
+    var mine = user && p.nguoi_gui===user.ten;
+    var canDel = mine || (user && user.quyen && user.quyen.ban_tin_admin);
+    return `<article class="card" style="background:${th.bg};color:${th.color};">
+      <div class="meta">
+        <div class="av">${esc(initials(p.nguoi_gui))}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="who">${esc(p.nguoi_gui||'Ẩn danh')}</div>
+          <div class="when">${esc(fmtTime(p.tao_luc))}</div>
+        </div>
+        <div class="icon-big">${esc(p.icon||'📢')}</div>
+      </div>
+      ${p.tieu_de?`<div class="title">${esc(p.tieu_de)}</div>`:''}
+      <div class="body">${esc(p.noi_dung||'')}</div>
+      <div class="foot">
+        <span>Bản tin BCH</span>
+        ${canDel?`<button type="button" class="del" data-del="${p.id}">Xoá</button>`:''}
+      </div>
+    </article>`;
+  }).join('');
+  el.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      if(!confirm('Xoá bản tin này?')) return;
+      var id = parseInt(btn.getAttribute('data-del'),10);
+      var {error} = await sb.rpc('ban_tin_xoa', {p_id: id, p_ten: user.ten});
+      if(error){ alert('Không xoá được: '+(error.message||'')); return; }
+      posts = posts.filter(x=>x.id!==id);
+      renderFeed();
+    };
+  });
+}
+
+async function loadPosts(){
+  var {data, error} = await sb.rpc('ban_tin_lay_danh_sach');
+  if(error){
+    document.getElementById('feed').innerHTML = '<div class="empty">Chưa cấu hình SQL bản tin hoặc lỗi tải.<br><small>'+esc(error.message)+'</small></div>';
+    return;
+  }
+  posts = data || [];
+  renderFeed();
+}
+
+async function dangBai(){
+  var title = document.getElementById('inpTitle').value.trim();
+  var body = document.getElementById('inpBody').value.trim();
+  if(!body){ alert('Nhập nội dung bản tin.'); return; }
+  var btn = document.getElementById('btnPost');
+  var st = document.getElementById('postStatus');
+  btn.disabled = true; st.textContent = 'Đang đăng...';
+  var {data, error} = await sb.rpc('ban_tin_dang', {
+    p_ten: user.ten,
+    p_msnv: user.msnv || '',
+    p_tieu_de: title || null,
+    p_noi_dung: body,
+    p_mau: selectedTheme,
+    p_icon: selectedIcon
+  });
+  btn.disabled = false; st.textContent = '';
+  if(error){ alert('Đăng lỗi: '+(error.message||'Chạy SQL ban_tin_*')); return; }
+  document.getElementById('inpTitle').value = '';
+  document.getElementById('inpBody').value = '';
+  if(data){ posts.unshift(data); renderFeed(); }
+  else await loadPosts();
+  document.getElementById('composerPanel').classList.remove('open');
+}
+
+async function boot(){
+  var raw = localStorage.getItem(LS_KEY);
+  if(!raw){ location.href = LOGIN_PAGE; return; }
+  var saved;
+  try{ saved = JSON.parse(raw); }catch(e){ location.href = LOGIN_PAGE; return; }
+  if(!saved.ten || !saved.pin){ location.href = LOGIN_PAGE; return; }
+
+  var {data:res} = await sb.rpc('tra_cuu_pin', {p_ten: saved.ten, p_pin: saved.pin});
+  if(!res || res.status!=='da_duyet'){ location.href = LOGIN_PAGE; return; }
+  user = {
+    ten: res.data.ten,
+    msnv: res.data.msnv,
+    quyen: res.data.quyen || {}
+  };
+  if(!user.quyen || !user.quyen.ban_tin){
+    document.getElementById('loading').innerHTML = 'Bạn chưa được cấp quyền <b>Bản tin</b>.<br><a class="btn-back" href="index.html" style="display:inline-block;margin-top:12px;">← Về trang chủ</a>';
+    return;
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  renderThemePicker();
+  renderIconPicker();
+  await loadPosts();
+
+  document.getElementById('btnPost').onclick = dangBai;
+  document.getElementById('btnReload').onclick = loadPosts;
+  document.getElementById('fabCompose').onclick = function(){
+    document.getElementById('composerPanel').classList.toggle('open');
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+}
+boot();
+</script>
+</body>
+</html>
