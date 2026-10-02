@@ -80,6 +80,18 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .mod-tile .mod-title{font-size:12px;font-weight:800;color:#fff;text-align:left;line-height:1.3;position:relative;z-index:1;}
 /* Trạng thái không có quyền: mờ đi thay vì ẩn hẳn — vẫn thấy mục có tồn tại */
 .mod-tile.locked{opacity:0.4;filter:grayscale(0.6);pointer-events:none;cursor:not-allowed;}
+
+/* Thông báo trang chủ — thẻ, không full-bar */
+#home-tb-list{width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;position:relative;z-index:1;}
+.home-tb-card{border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border-soft);background:var(--bg-card);}
+.home-tb-card.muc-info{border-left:4px solid #42a5f5;}
+.home-tb-card.muc-warn{border-left:4px solid #f9a825;background:rgba(249,168,37,.08);}
+.home-tb-card.muc-urgent{border-left:4px solid #ef5350;background:rgba(239,83,80,.1);}
+.home-tb-ico{font-size:18px;line-height:1.2;flex-shrink:0;}
+.home-tb-body{flex:1;min-width:0;font-size:13px;line-height:1.45;color:var(--txt);font-weight:600;}
+.home-tb-meta{font-size:11px;color:var(--txt-dim);font-weight:500;margin-top:4px;}
+.home-tb-close{border:none;background:transparent;color:var(--txt-dim);font-size:16px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;}
+
 .mod-tile.locked .mod-icon{box-shadow:none;}
 .mod-tile.locked::after{background:var(--border-soft);opacity:0.6;}
 .mod-tile.locked .mod-title::after{content:' 🔒';font-size:10px;}
@@ -402,6 +414,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <button onclick="bchRequestNotif();document.getElementById('home-notif-banner').style.display='none';" style="background:#fff;color:#1565c0;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">Bật ngay</button>
       </div>
       -->
+    <div id="home-tb-list"></div>
     <div class="mod-grid">
       <div class="mod-tile c-ns" data-quyen="bao_cao_nhan_su" onclick="goModule('ns')">
         <span class="mod-badge" id="badge-ns"></span>
@@ -5181,6 +5194,59 @@ document.addEventListener('keydown', function(e){
   }
 });
 
+
+async function renderHomeThongBao(){
+  var box = document.getElementById('home-tb-list');
+  if(!box) return;
+  box.innerHTML = '';
+  var list = [];
+  try{
+    var r = await sc.rpc('lay_danh_sach_thong_bao');
+    if(r.data && Array.isArray(r.data)) list = r.data;
+    else if(r.data && typeof r.data === 'object' && !Array.isArray(r.data)) list = [r.data];
+  }catch(e){
+    // fallback RPC cũ: 1 thông báo
+    try{
+      var r2 = await sc.rpc('lay_thong_bao_moi_nhat');
+      if(r2.data) list = [r2.data];
+    }catch(e2){}
+  }
+  if(!list || !list.length) return;
+
+  var icons = {info:'ℹ️', warn:'⚠️', urgent:'🚨'};
+  list.forEach(function(tb){
+    if(!tb || !tb.id) return;
+    var seenKey = 'bch_tb_seen_' + tb.id;
+    if(localStorage.getItem(seenKey)) return;
+    // hết hạn phía client (phòng server chưa lọc)
+    if(tb.het_han && new Date(tb.het_han) < new Date()) return;
+    var muc = (tb.muc_do || 'info').toLowerCase();
+    if(muc !== 'warn' && muc !== 'urgent') muc = 'info';
+    var card = document.createElement('div');
+    card.className = 'home-tb-card muc-' + muc;
+    card.setAttribute('data-tbid', tb.id);
+    var when = '';
+    try{
+      var d = new Date(tb.tao_luc);
+      when = (d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
+    }catch(e){}
+    card.innerHTML =
+      '<div class="home-tb-ico">'+(icons[muc]||'ℹ️')+'</div>'
+      +'<div class="home-tb-body">'
+      +  '<div></div>'
+      +  '<div class="home-tb-meta">'+(when?('Đăng '+when):'')+(tb.het_han?' · tự tắt có hạn':'')+'</div>'
+      +'</div>'
+      +'<button type="button" class="home-tb-close" title="Đã xem">✕</button>';
+    card.querySelector('.home-tb-body div').textContent = tb.noi_dung || '';
+    card.querySelector('.home-tb-close').onclick = function(){
+      localStorage.setItem(seenKey, '1');
+      card.remove();
+    };
+    box.appendChild(card);
+  });
+}
+
+
 (async function bchAuthGate(){
   var LS_KEY = 'bch_nv_login_v2';
   var LOGIN_PAGE = 'quan-ly-tai-khoan.html';
@@ -5286,27 +5352,8 @@ document.addEventListener('keydown', function(e){
 
   document.body.style.display = '';
 
-  // Bảng tin nội bộ — hiện thông báo mới nhất do Ban chỉ huy đăng (nếu chưa đóng)
-  try{
-    var { data: tb } = await sc.rpc('lay_thong_bao_moi_nhat');
-    if(tb){
-      var seenKey = 'bch_tb_seen_' + tb.id;
-      if(!localStorage.getItem(seenKey)){
-        var banner = document.createElement('div');
-        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#ff6f00,#e64a19);color:#fff;padding:12px 16px;font-size:13px;font-weight:700;z-index:9998;display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:0 2px 14px rgba(230,74,25,.5);border-bottom:2px solid #ffb300;';
-        banner.innerHTML = '<span>📢 <b>' + tb.noi_dung + '</b></span><span style="cursor:pointer;font-weight:800;padding:0 6px;flex-shrink:0;" id="bchTbClose">✕</span>';
-        document.body.appendChild(banner);
-        var bhH = banner.offsetHeight;
-        var bodyBasePad = 8; // khớp đúng padding gốc của body (xem CSS body{padding:8px;})
-        document.body.style.paddingTop = (bodyBasePad + bhH) + 'px';
-        document.getElementById('bchTbClose').addEventListener('click', function(){
-          localStorage.setItem(seenKey, '1');
-          banner.remove();
-          document.body.style.paddingTop = bodyBasePad + 'px';
-        });
-      }
-    }
-  }catch(e){}
+  // Thông báo hệ thống — nhiều thẻ trên trang chủ (không full-bar)
+  try{ await renderHomeThongBao(); }catch(e){}
 
   var hienThi = res.data.ten + (res.data.chuc_vu ? ' - ' + res.data.chuc_vu : '');
 

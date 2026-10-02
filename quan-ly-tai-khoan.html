@@ -484,15 +484,34 @@
     <!-- Pane giờ hạn Nhân sự/MMTB + Lịch nghiệm thu tạm ẩn (tính năng chấm cảnh báo đang tắt) — làm lại sau nếu cần -->
 
     <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px;">
-      <div style="font-weight:800; font-size:13px; margin-bottom:2px;">📢 Thông báo chung</div>
-      <p class="sub" style="margin:0 0 10px; font-size:12px;">Hiện cho mọi người khi họ mở app (trang báo cáo), dạng banner ở đầu trang.</p>
-      <div id="tbHienTai" style="font-size:13px; color:var(--muted); margin-bottom:12px;"></div>
+      <div style="font-weight:800; font-size:13px; margin-bottom:2px;">📢 Thông báo hệ thống (nhiều tin)</div>
+      <p class="sub" style="margin:0 0 10px; font-size:12px;">Hiện dạng <b>thẻ trên trang chủ</b> — không còn thanh cam full màn hình. Nội dung dài / chỉ đạo ngày → dùng mục <b>Bản tin</b>.</p>
+      <div id="tbHienTai" style="font-size:13px; color:var(--muted); margin-bottom:12px; max-height:180px; overflow:auto;"></div>
       <label style="font-size:12px;">Nội dung thông báo mới</label>
-      <textarea id="tbNoiDung" rows="3" placeholder="Ví dụ: Thứ 7 này BCH họp giao ban lúc 8h sáng tại văn phòng."
-        style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-family:inherit; font-size:14px; margin-bottom:12px; resize:vertical;"></textarea>
+      <textarea id="tbNoiDung" rows="3" placeholder="Ví dụ: App đã cập nhật Danh bạ — vào thử và báo lỗi nếu có."
+        style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-family:inherit; font-size:14px; margin-bottom:10px; resize:vertical;"></textarea>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="flex:1; min-width:140px;">
+          <label style="font-size:12px;">Mức độ</label>
+          <select id="tbMucDo" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;">
+            <option value="info">Thông tin</option>
+            <option value="warn">Lưu ý</option>
+            <option value="urgent">Khẩn</option>
+          </select>
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label style="font-size:12px;">Hiện trong (ngày)</label>
+          <select id="tbSoNgay" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;">
+            <option value="1">1 ngày</option>
+            <option value="3" selected>3 ngày</option>
+            <option value="7">7 ngày</option>
+            <option value="30">30 ngày</option>
+            <option value="0">Không hết hạn</option>
+          </select>
+        </div>
+      </div>
       <div id="tbErrMsg" class="msg bad" style="display:none;"></div>
       <div style="display:flex; gap:8px;">
-        <button class="btn danger small" id="btnXoaThongBao" style="flex:1;">Xoá thông báo hiện tại</button>
         <button class="btn small" id="btnDangThongBao" style="flex:1;">Đăng thông báo</button>
       </div>
     </div>
@@ -1283,13 +1302,45 @@ document.getElementById("btnThemCa").addEventListener("click", async ()=>{
 
 /* ================= QUẢN LÝ THÔNG BÁO (gộp: giờ hạn + thông báo chung) ================= */
 async function loadThongBaoHienTai(){
-  const { data } = await sb.rpc("lay_thong_bao_moi_nhat");
   const el = document.getElementById("tbHienTai");
-  if(data){
-    el.innerHTML = `<b>Đang hiện:</b> "${data.noi_dung}" <span style="opacity:.7;">(đăng lúc ${new Date(data.tao_luc).toLocaleString("vi-VN")})</span>`;
-  } else {
-    el.innerHTML = `<i>Hiện không có thông báo nào đang hiện.</i>`;
+  let list = [];
+  try{
+    const { data } = await sb.rpc("admin_lay_danh_sach_thong_bao", { p_pass: currentAdminPass });
+    list = data || [];
+  }catch(e){
+    const { data } = await sb.rpc("lay_thong_bao_moi_nhat");
+    if(data) list = [data];
   }
+  if(!list.length){
+    el.innerHTML = `<i>Chưa có thông báo đang hiện.</i>`;
+    return;
+  }
+  const mucLabel = {info:'Thông tin', warn:'Lưu ý', urgent:'Khẩn'};
+  el.innerHTML = list.map(tb=>{
+    const muc = mucLabel[tb.muc_do] || tb.muc_do || 'Thông tin';
+    const when = tb.tao_luc ? new Date(tb.tao_luc).toLocaleString("vi-VN") : '';
+    const han = tb.het_han ? (' · hết ' + new Date(tb.het_han).toLocaleDateString("vi-VN")) : '';
+    return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;font-size:12px;line-height:1.4;">
+        <b>[${muc}]</b> ${String(tb.noi_dung||'').replace(/</g,'&lt;')}
+        <div style="opacity:.7;margin-top:2px;">${when}${han}</div>
+      </div>
+      <button type="button" class="icon-btn reject" data-xoa-tb="${tb.id}" style="flex-shrink:0;">Xoá</button>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-xoa-tb]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('Xoá thông báo này?')) return;
+      const id = parseInt(btn.getAttribute('data-xoa-tb'),10);
+      const { error } = await sb.rpc('admin_xoa_thong_bao_id', { p_pass: currentAdminPass, p_id: id });
+      if(error){
+        // fallback: xoá hết kiểu cũ
+        await sb.rpc('admin_xoa_thong_bao', { p_pass: currentAdminPass });
+      }
+      await loadThongBaoHienTai();
+      showToast('✓ Đã xoá thông báo.');
+    });
+  });
 }
 
 document.getElementById("btnThongBao").addEventListener("click", async ()=>{
@@ -1305,25 +1356,38 @@ document.getElementById("btnCloseThongBao").addEventListener("click", ()=>{
 
 document.getElementById("btnDangThongBao").addEventListener("click", async ()=>{
   const noiDung = document.getElementById("tbNoiDung").value.trim();
+  const mucDo = document.getElementById("tbMucDo").value;
+  const soNgay = parseInt(document.getElementById("tbSoNgay").value, 10) || 0;
   const errEl = document.getElementById("tbErrMsg");
   errEl.style.display = "none";
   if(!noiDung){ alert("Vui lòng nhập nội dung thông báo."); return; }
-  const { error } = await sb.rpc("admin_dang_thong_bao", { p_pass: currentAdminPass, p_noi_dung: noiDung });
+  let error = null;
+  let r = await sb.rpc("admin_dang_thong_bao_v2", {
+    p_pass: currentAdminPass, p_noi_dung: noiDung, p_muc_do: mucDo, p_so_ngay: soNgay
+  });
+  error = r.error;
+  if(error){
+    // fallback RPC cũ
+    r = await sb.rpc("admin_dang_thong_bao", { p_pass: currentAdminPass, p_noi_dung: noiDung });
+    error = r.error;
+  }
   if(error){ errEl.textContent = "Không đăng được: " + error.message; errEl.style.display = "block"; return; }
   document.getElementById("tbNoiDung").value = "";
   await loadThongBaoHienTai();
   showToast("✓ Đã đăng thông báo mới.");
 });
 
-document.getElementById("btnXoaThongBao").addEventListener("click", async ()=>{
-  if(!confirm("Xoá thông báo đang hiện? Mọi người sẽ không thấy banner này nữa (cần tải lại trang mới thấy hết banner ở các trang đang mở sẵn).")) return;
-  const errEl = document.getElementById("tbErrMsg");
-  errEl.style.display = "none";
-  const { data, error } = await sb.rpc("admin_xoa_thong_bao", { p_pass: currentAdminPass });
-  if(error){ errEl.textContent = "Không xoá được: " + error.message; errEl.style.display = "block"; return; }
-  await loadThongBaoHienTai();
-  showToast(data > 0 ? ("✓ Đã xoá " + data + " thông báo.") : "Không có thông báo nào để xoá.");
-});
+// Xoá từng tin: nút trên danh sách (data-xoa-tb). Không còn xoá hàng loạt bằng 1 nút.
+var _btnXoaTbAll = document.getElementById("btnXoaThongBao");
+if(_btnXoaTbAll){
+  _btnXoaTbAll.addEventListener("click", async ()=>{
+    if(!confirm("Xoá TẤT CẢ thông báo đang hiện?")) return;
+    const { error } = await sb.rpc("admin_xoa_thong_bao", { p_pass: currentAdminPass });
+    if(error){ alert(error.message); return; }
+    await loadThongBaoHienTai();
+    showToast("✓ Đã xoá.");
+  });
+}
 
 // Handler "Lưu giờ hạn" tạm bỏ (nút đã ẩn khỏi giao diện cùng 2 pane giờ hạn) — làm lại sau nếu cần.
 
