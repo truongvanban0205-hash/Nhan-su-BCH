@@ -79,7 +79,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .mod-tile.c-db .mod-icon{background:linear-gradient(145deg,rgba(0,172,193,0.18),rgba(0,172,193,0.06));box-shadow:inset 0 0 0 1.5px rgba(0,172,193,0.4);}
 .mod-tile .mod-title{font-size:12px;font-weight:800;color:#fff;text-align:left;line-height:1.3;position:relative;z-index:1;}
 /* Trạng thái không có quyền: mờ đi thay vì ẩn hẳn — vẫn thấy mục có tồn tại */
-.mod-tile.locked{opacity:0.4;filter:grayscale(0.6);}
+.mod-tile.locked{opacity:0.4;filter:grayscale(0.6);pointer-events:none;cursor:not-allowed;}
 .mod-tile.locked .mod-icon{box-shadow:none;}
 .mod-tile.locked::after{background:var(--border-soft);opacity:0.6;}
 .mod-tile.locked .mod-title::after{content:' 🔒';font-size:10px;}
@@ -325,6 +325,22 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 #danhba-detail .btn-call{background:#2e7d32;color:#fff;}
 #danhba-detail .btn-copy{background:#252b3d;color:#e8ecf5;}
 #danhba-detail .btn-close-d{margin-top:12px;width:100%;padding:10px;border-radius:10px;border:none;background:transparent;color:#8b93a8;cursor:pointer;font-family:inherit;}
+
+#danhba-notice{display:none;position:fixed;inset:0;z-index:4010;background:rgba(0,0,0,.65);align-items:center;justify-content:center;padding:20px;}
+#danhba-notice.show{display:flex;}
+#danhba-notice .box{background:#131826;border:1px solid #252b3d;border-radius:16px;padding:22px 20px;max-width:360px;width:100%;color:#e8ecf5;}
+#danhba-notice h3{margin:0 0 10px;font-size:17px;font-weight:800;color:#f9a825;}
+#danhba-notice p{margin:0 0 10px;font-size:13px;line-height:1.5;color:#c5cad6;}
+#danhba-notice .btn-ok{width:100%;margin-top:8px;padding:12px;border:none;border-radius:12px;background:#f9a825;color:#111;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;}
+#danhba-warn{padding:8px 16px;font-size:11px;color:#8b93a8;background:#131826;border-bottom:1px solid #252b3d;line-height:1.4;}
+#danhba-overlay #danhba-watermark{pointer-events:none;position:absolute;inset:0;z-index:1;overflow:hidden;display:none;}
+#danhba-overlay.show #danhba-watermark{display:block;}
+#danhba-list{position:relative;z-index:2;}
+#danhba-head,#danhba-warn,#danhba-search-wrap,#danhba-count{position:relative;z-index:2;}
+.db-wm-inner{position:absolute;inset:-30%;display:flex;flex-wrap:wrap;align-content:flex-start;gap:32px 48px;transform:rotate(-24deg);opacity:0.08;}
+.db-wm-inner span{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;user-select:none;}
+#danhba-overlay{position:fixed;}
+
 </style>
 </head>
 <body style="display:none">
@@ -406,7 +422,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">📊</div>
         <div class="mod-title">Định biên</div>
       </div>
-      <div class="mod-tile c-db" onclick="openDanhBa()" style="border-color:rgba(249,168,37,.35);">
+      <div class="mod-tile c-db" data-quyen="danh_ba" onclick="openDanhBa()" style="border-color:rgba(249,168,37,.35);">
         <div class="mod-icon">📞</div>
         <div class="mod-title">Danh bạ</div>
       </div>
@@ -5067,11 +5083,47 @@ function openDanhBaDetail(x){
   document.getElementById('danhba-detail').classList.add('show');
 }
 
+var DANHBA_NOTICE_KEY = 'bch_danhba_da_hieu_v1';
+
+function dbBuildWatermark(ten){
+  var inner = document.getElementById('danhba-wm-inner');
+  if(!inner) return;
+  var label = (ten || 'BCH') + ' · ' + new Date().toLocaleDateString('vi-VN');
+  var html = '';
+  for(var i=0;i<48;i++) html += '<span>'+label+'</span>';
+  inner.innerHTML = html;
+}
+
+function dbShowNoticeThen(cont){
+  var notice = document.getElementById('danhba-notice');
+  if(!notice){ cont(); return; }
+  if(localStorage.getItem(DANHBA_NOTICE_KEY) === '1'){ cont(); return; }
+  notice.classList.add('show');
+  var btn = document.getElementById('danhba-notice-ok');
+  if(btn){
+    btn.onclick = function(){
+      localStorage.setItem(DANHBA_NOTICE_KEY, '1');
+      notice.classList.remove('show');
+      cont();
+    };
+  }
+}
+
 async function openDanhBa(){
-  document.getElementById('danhba-overlay').classList.add('show');
-  document.getElementById('danhba-count').textContent = 'Đang tải...';
-  await loadDanhBa(true);
-  renderDanhBaList(document.getElementById('danhba-search').value);
+  if(!window.BCH_QUYEN || !window.BCH_QUYEN.danh_ba){
+    alert('Bạn chưa được cấp quyền truy cập Danh bạ. Liên hệ Ban chỉ huy.');
+    return;
+  }
+  dbShowNoticeThen(async function(){
+    var ten = (window.BCH_USER && window.BCH_USER.ten) || '';
+    var v = document.getElementById('danhba-viewer');
+    if(v) v.textContent = ten || '—';
+    dbBuildWatermark(ten);
+    document.getElementById('danhba-overlay').classList.add('show');
+    document.getElementById('danhba-count').textContent = 'Đang tải...';
+    await loadDanhBa(true);
+    renderDanhBaList(document.getElementById('danhba-search').value);
+  });
 }
 function closeDanhBa(){
   var ov = document.getElementById('danhba-overlay');
@@ -5150,6 +5202,7 @@ document.addEventListener('keydown', function(e){
   document.querySelectorAll('.mod-tile[data-quyen]').forEach(function(el){
     var key = el.getAttribute('data-quyen');
     if(!window.BCH_QUYEN[key]) el.classList.add('locked');
+    else el.classList.remove('locked');
   });
 
   // Thống kê nhanh: chỉ hiện khối nào tương ứng với quyền đang có
@@ -5183,7 +5236,7 @@ document.addEventListener('keydown', function(e){
     greetSub.textContent = 'Chúc bạn một ngày làm việc vui vẻ!';
     headerDiv.appendChild(greetSub);
 
-    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu' };
+    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', danh_ba:'Danh bạ' };
     var overlay = document.createElement('div');
     overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5000;align-items:center;justify-content:center;padding:20px;';
     var quyenBadges = Object.keys(window.BCH_QUYEN).filter(function(k){return window.BCH_QUYEN[k];})
@@ -5335,11 +5388,13 @@ if('serviceWorker' in navigator){
     <h2>Danh <span>bạ</span></h2>
     <button type="button" id="danhba-close" aria-label="Đóng" onclick="closeDanhBa()">✕</button>
   </div>
+  <div id="danhba-warn">🔒 Chỉ dùng nội bộ BCH. Không chụp màn hình / gửi SĐT ra ngoài khi chưa được phép. Người xem: <b id="danhba-viewer">—</b></div>
   <div id="danhba-search-wrap">
     <input id="danhba-search" type="search" placeholder="Tìm tên, SĐT, chức vụ..." autocomplete="off">
   </div>
   <div id="danhba-count">Đang tải...</div>
   <div id="danhba-list"></div>
+  <div id="danhba-watermark" aria-hidden="true"><div class="db-wm-inner" id="danhba-wm-inner"></div></div>
 </div>
 <div id="danhba-detail">
   <div class="sheet">
@@ -5351,7 +5406,18 @@ if('serviceWorker' in navigator){
       <a class="btn-call" id="db-d-call" href="#">📞 Gọi ngay</a>
       <button type="button" class="btn-copy" id="db-d-copy">📋 Sao chép số</button>
     </div>
-    <button type="button" class="btn-close-d" id="db-d-close" onclick="document.getElementById('danhba-detail').classList.remove('show')">Đóng</button>
+    <button type="button" class="btn-close-d" id="db-d-close" onclick="closeDanhBaDetail()">Đóng</button>
+  </div>
+</div>
+<div id="danhba-notice">
+  <div class="box">
+    <h3>⚠️ Quy định sử dụng Danh bạ</h3>
+    <p>Danh bạ chỉ dùng để <b>liên lạc công việc nội bộ BCH</b>.</p>
+    <p>• Không chụp màn hình, không gửi danh sách / SĐT ra Zalo, Facebook hay người ngoài.<br>
+    • Không sử dụng cho mục đích cá nhân ngoài công việc.<br>
+    • Vi phạm có thể bị thu hồi quyền truy cập.</p>
+    <p style="font-size:12px;color:#8b93a8;">Bấm «Đã hiểu» để tiếp tục. Lần sau sẽ không hỏi lại trên máy này.</p>
+    <button type="button" class="btn-ok" id="danhba-notice-ok">Đã hiểu</button>
   </div>
 </div>
 
