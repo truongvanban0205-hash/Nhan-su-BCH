@@ -290,6 +290,7 @@
     </div>
     <div class="admin-actions">
       <button class="linkbtn" id="btnThongBao">🔔 Quản lý Thông báo</button>
+      <button class="linkbtn" id="btnDonVi">🏢 Đơn vị</button>
       <button class="linkbtn" id="btnCauHinhNS">Cấu hình Nhân sự</button>
       <button class="linkbtn" id="btnAddModule">+ Thêm quyền</button>
       <button class="linkbtn" id="btnAddEmp">+ Thêm nhân viên</button>
@@ -526,6 +527,24 @@
 <input type="hidden" id="inputGioHanNS">
 <input type="hidden" id="inputGioHanLDT">
 
+
+
+<!-- ============ MODAL ĐƠN VỊ (P1) ============ -->
+<div class="modal-overlay" id="modalDonVi">
+  <div class="modal" style="max-width:640px;">
+    <h3>🏢 Quản lý đơn vị</h3>
+    <p class="sub" style="margin-top:-6px;">4 đơn vị vận hành độc lập. Đơn vị 1 = app đang dùng (đổi tên được). Thêm / sửa / ẩn / ↑↓ — giống quản lý dự án.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <input type="text" id="inputDonViMoi" placeholder="Tên đơn vị mới" style="flex:1;min-width:180px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;">
+      <button class="btn small" id="btnThemDonVi">+ Thêm</button>
+    </div>
+    <div id="listDonVi" class="cfg-list" style="max-height:360px;overflow:auto;"></div>
+    <div class="msg" id="donViMsg" style="display:none;margin-top:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnCloseDonVi">Đóng</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ MODAL CẤU HÌNH NHÂN SỰ (DỰ ÁN / CA LÀM VIỆC) ============ -->
 <div class="modal-overlay" id="modalCauHinh">
@@ -1957,6 +1976,116 @@ document.getElementById('btnConfirmImportDanhBa').addEventListener('click', asyn
   box.style.background = '#e8f5e9'; box.style.color = '#2e7d32';
   box.textContent = `✓ Đã nhập danh bạ: thêm ${data.them||0}, cập nhật ${data.cap_nhat||0}, tổng ${data.tong||payload.length}.`;
 });
+
+
+/* ================= ĐƠN VỊ (P1) ================= */
+let donViCache = [];
+
+async function loadDonVi(){
+  const { data, error } = await sb.rpc('admin_lay_danh_sach_don_vi', { p_pass: currentAdminPass });
+  if(error){
+    // fallback public list
+    const r2 = await sb.rpc('lay_danh_sach_don_vi');
+    donViCache = r2.data || [];
+    if(r2.error) throw r2.error;
+  } else {
+    donViCache = data || [];
+  }
+  return donViCache;
+}
+
+function renderDonViList(){
+  const el = document.getElementById('listDonVi');
+  if(!el) return;
+  if(!donViCache.length){
+    el.innerHTML = '<i style="color:var(--muted);font-size:13px;">Chưa có đơn vị — chạy SQL tạo bảng don_vi.</i>';
+    return;
+  }
+  el.innerHTML = donViCache.map((d,i)=>{
+    const an = d.an ? 'opacity:.55;' : '';
+    const badge = d.an ? ' <span style="color:var(--muted);font-size:11px;">(đang ẩn)</span>' : '';
+    const mods = (d.modules && typeof d.modules==='object')
+      ? Object.keys(d.modules).filter(k=>d.modules[k]).join(', ')
+      : '';
+    return `<div class="cfg-item" style="${an}display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;font-size:13px;">${escapeHtml(d.ten||d.id)}${badge}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">mã: ${escapeHtml(d.id)}${mods?(' · module: '+escapeHtml(mods)):''}</div>
+      </div>
+      <button type="button" class="icon-btn" data-dv-up="${d.id}" title="Lên" ${i===0?'disabled':''}>↑</button>
+      <button type="button" class="icon-btn" data-dv-down="${d.id}" title="Xuống" ${i===donViCache.length-1?'disabled':''}>↓</button>
+      <button type="button" class="icon-btn" data-dv-rename="${d.id}">Sửa</button>
+      <button type="button" class="icon-btn reject" data-dv-toggle="${d.id}">${d.an?'Hiện':'Ẩn'}</button>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('[data-dv-rename]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const id = btn.getAttribute('data-dv-rename');
+      const cur = donViCache.find(x=>x.id===id);
+      const ten = prompt('Tên đơn vị mới:', cur?(cur.ten||''):'');
+      if(ten===null) return;
+      if(!ten.trim()){ alert('Tên không được trống'); return; }
+      const { error } = await sb.rpc('admin_doi_ten_don_vi', { p_pass: currentAdminPass, p_id: id, p_ten: ten.trim() });
+      if(error){ alert(error.message||'Không đổi được tên'); return; }
+      await loadDonVi(); renderDonViList();
+      showToast('✓ Đã đổi tên đơn vị');
+    };
+  });
+  el.querySelectorAll('[data-dv-toggle]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const id = btn.getAttribute('data-dv-toggle');
+      const { error } = await sb.rpc('admin_an_hien_don_vi', { p_pass: currentAdminPass, p_id: id });
+      if(error){ alert(error.message||'Không đổi được'); return; }
+      await loadDonVi(); renderDonViList();
+    };
+  });
+  el.querySelectorAll('[data-dv-up]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const id = btn.getAttribute('data-dv-up');
+      const { error } = await sb.rpc('admin_doi_thu_tu_don_vi', { p_pass: currentAdminPass, p_id: id, p_huong: 'up' });
+      if(error){ alert(error.message||'Không đổi thứ tự'); return; }
+      await loadDonVi(); renderDonViList();
+    };
+  });
+  el.querySelectorAll('[data-dv-down]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const id = btn.getAttribute('data-dv-down');
+      const { error } = await sb.rpc('admin_doi_thu_tu_don_vi', { p_pass: currentAdminPass, p_id: id, p_huong: 'down' });
+      if(error){ alert(error.message||'Không đổi thứ tự'); return; }
+      await loadDonVi(); renderDonViList();
+    };
+  });
+}
+
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.getElementById('btnDonVi').addEventListener('click', async ()=>{
+  const msg = document.getElementById('donViMsg');
+  msg.style.display = 'none';
+  try{
+    await loadDonVi();
+    renderDonViList();
+    document.getElementById('modalDonVi').classList.add('show');
+  }catch(e){
+    alert('Chưa có SQL đơn vị hoặc lỗi: '+(e.message||e)+'\n\nHãy chạy SQL tạo bảng don_vi trước.');
+  }
+});
+document.getElementById('btnCloseDonVi').addEventListener('click', ()=>{
+  document.getElementById('modalDonVi').classList.remove('show');
+});
+document.getElementById('btnThemDonVi').addEventListener('click', async ()=>{
+  const ten = document.getElementById('inputDonViMoi').value.trim();
+  if(!ten){ alert('Nhập tên đơn vị'); return; }
+  const { data, error } = await sb.rpc('admin_them_don_vi', { p_pass: currentAdminPass, p_ten: ten });
+  if(error){ alert(error.message||'Không thêm được'); return; }
+  document.getElementById('inputDonViMoi').value = '';
+  await loadDonVi(); renderDonViList();
+  showToast('✓ Đã thêm đơn vị');
+});
+
 
 /* ================= KHỞI ĐỘNG ================= */
 loadModules();
