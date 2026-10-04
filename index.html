@@ -392,7 +392,8 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       <div style="text-align:right" class="export-popover-wrap">
         <div class="home-avatar" id="home-avatar" onclick="toggleExportPopover()"><img src="icon.png" alt="VB"></div>
         <div class="export-popover" id="exportPopover">
-          <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo tổng hợp (ảnh)</button>
+          <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo đơn vị này (ảnh)</button>
+          <button onclick="toggleExportPopover();exportTongHop4DonVi();">📊 Xuất tổng hợp 4 đơn vị (ảnh)</button>
         </div>
       </div>
     </div>
@@ -414,6 +415,10 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <!-- HUB chọn đơn vị (giống folder) -->
     <div id="home-hub">
       <div class="hub-grid" id="home-hub-grid"></div>
+      <button type="button" id="btn-export-tong-hop-hub" onclick="exportTongHop4DonVi()"
+        style="width:100%;margin-top:14px;padding:14px;border-radius:12px;border:1.5px solid rgba(249,168,37,.5);background:linear-gradient(145deg,#2a1f0e,#1a140a);color:#f9a825;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer;">
+        📊 Xuất tổng hợp 4 đơn vị (ảnh)
+      </button>
     </div>
 
     <!-- Workspace trong đơn vị -->
@@ -1170,6 +1175,182 @@ function qsCloseModal(){
 var nsInited=false, mmtbInited=false, ldtInited=false;
 
 // ============ XUẤT BÁO CÁO TỔNG HỢP (ẢNH) ============
+
+/** P3 — Báo cáo tổng hợp 4 đơn vị (xuất ảnh, bảng gọn + CNCH/LXLM) */
+async function exportTongHop4DonVi(){
+  var pass=prompt('🔒 Mật khẩu để xuất báo cáo tổng hợp 4 đơn vị:');
+  if(pass===null)return;
+  if(!(await kiemTraMatKhauBaoCao(pass))){alert('❌ Sai mật khẩu!');return;}
+  toast('⏳ Đang tổng hợp 4 đơn vị...');
+
+  var n=new Date();
+  var tk=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());
+  var dateStr=p2(n.getDate())+'/'+p2(n.getMonth()+1)+'/'+n.getFullYear();
+
+  var units=[];
+  try{ units = await fetchDonViList(); }catch(e){ units=[]; }
+  if(!units.length){
+    alert('Chưa có danh sách đơn vị.');
+    return;
+  }
+
+  function numVal(v){
+    if(typeof v==='number' && isFinite(v)) return v;
+    if(typeof v==='string' && v.trim()!=='' && !isNaN(Number(v))) return Number(v);
+    return 0;
+  }
+  function unwrap(d){
+    if(!d||typeof d!=='object') return null;
+    if(d.data && typeof d.data==='object' && !Array.isArray(d.data)) return d;
+    return { data:d, projects:Object.keys(d), cols:null };
+  }
+  function sumNsPayload(raw){
+    var d=unwrap(raw);
+    if(!d) return {tong:0,diLam:0,nghi:0,cnchDl:0,cnchT:0,lxlmDl:0,lxlmT:0};
+    var dt=d.data||{};
+    var projs=d.projects||Object.keys(dt);
+    var cols=(d.cols&&d.cols.length)?d.cols:[];
+    var colByName={};
+    cols.forEach(function(c){ if(c&&c.n) colByName[c.n]=c.k; });
+    // fallback mã phổ biến
+    var kCnch=colByName['CNCH']||'CNCH';
+    var kLxlm=colByName['NV.LXLM']||colByName['LXLM']||'NVLXLM';
+
+    var tong=0, nghi=0, cnchT=0, lxlmT=0;
+    // đoán ca nghỉ: key chứa nghi hoặc cuối
+    var nghiKeys={};
+    projs.forEach(function(p){
+      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p]) return;
+      var block=dt[p]; if(!block||typeof block!=='object') return;
+      Object.keys(block).forEach(function(ty){
+        var low=String(ty).toLowerCase();
+        if(low.indexOf('nghi')>=0 || low==='nghỉ' || low==='off') nghiKeys[ty]=1;
+      });
+    });
+    projs.forEach(function(p){
+      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p]) return;
+      var block=dt[p]; if(!block||typeof block!=='object') return;
+      Object.keys(block).forEach(function(ty){
+        var cell=block[ty]; if(!cell||typeof cell!=='object') return;
+        var isNghi=!!nghiKeys[ty];
+        Object.keys(cell).forEach(function(ck){
+          var v=numVal(cell[ck]);
+          tong+=v;
+          if(isNghi) nghi+=v;
+          if(ck===kCnch || ck==='CNCH' || ck==='cd_cnch') cnchT+=v;
+          if(ck===kLxlm || ck==='NVLXLM' || ck==='NV.LXLM') lxlmT+=v;
+        });
+        // CNCH/LXLM trên từng ca — đã cộng theo key
+      });
+    });
+    // CNCH/LXLM: tách đi làm = tổng - nghỉ trên cùng cột (xấp xỉ: đếm lại không nghỉ)
+    var cnchDl=0,lxlmDl=0;
+    projs.forEach(function(p){
+      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p]) return;
+      var block=dt[p]; if(!block||typeof block!=='object') return;
+      Object.keys(block).forEach(function(ty){
+        if(nghiKeys[ty]) return;
+        var cell=block[ty]; if(!cell||typeof cell!=='object') return;
+        cnchDl+=numVal(cell[kCnch]||cell['CNCH']);
+        lxlmDl+=numVal(cell[kLxlm]||cell['NVLXLM']||cell['NV.LXLM']);
+      });
+    });
+    return {tong:tong, diLam:Math.max(0,tong-nghi), nghi:nghi, cnchDl:cnchDl, cnchT:cnchT, lxlmDl:lxlmDl, lxlmT:lxlmT};
+  }
+  function sumMmtbPayload(raw){
+    if(!raw||typeof raw!=='object') return {hd:0,tong:0};
+    var dt=raw.data||raw;
+    if(dt.data && typeof dt.data==='object') dt=dt.data;
+    var hd=0,tong=0;
+    Object.keys(dt||{}).forEach(function(p){
+      var block=dt[p]; if(!block||typeof block!=='object') return;
+      // status: hd/hh/lk or Vietnamese
+      Object.keys(block).forEach(function(st){
+        var cell=block[st];
+        if(typeof cell==='object'){
+          Object.keys(cell).forEach(function(mk){
+            var v=numVal(cell[mk]);
+            tong+=v;
+            var low=String(st).toLowerCase();
+            if(low.indexOf('hd')>=0||low.indexOf('hoat')>=0||low==='hoat_dong') hd+=v;
+          });
+        }
+      });
+    });
+    return {hd:hd,tong:tong};
+  }
+
+  var rows=[];
+  var tot={tong:0,diLam:0,nghi:0,cnchDl:0,cnchT:0,lxlmDl:0,lxlmT:0,mHd:0,mTong:0};
+  for(var i=0;i<units.length;i++){
+    var u=units[i];
+    var nsRaw=null, mRaw=null;
+    try{
+      var r1=await sc.from('nhansu').select('data').eq('ngay',tk).eq('don_vi_id',u.id).maybeSingle();
+      nsRaw=r1.data?r1.data.data:null;
+    }catch(e){}
+    try{
+      var r2=await sc.from('mmtb').select('data').eq('ngay',tk).eq('don_vi_id',u.id).maybeSingle();
+      mRaw=r2.data?r2.data.data:null;
+    }catch(e){}
+    var ns=sumNsPayload(nsRaw);
+    var mm=sumMmtbPayload(mRaw);
+    rows.push({ten:u.ten||u.id, ns:ns, mm:mm});
+    tot.tong+=ns.tong; tot.diLam+=ns.diLam; tot.nghi+=ns.nghi;
+    tot.cnchDl+=ns.cnchDl; tot.cnchT+=ns.cnchT;
+    tot.lxlmDl+=ns.lxlmDl; tot.lxlmT+=ns.lxlmT;
+    tot.mHd+=mm.hd; tot.mTong+=mm.tong;
+  }
+
+  function fmt2(a,b){ return (b? (a+'/'+b) : String(a||0)); }
+
+  var wrap=document.createElement('div');
+  wrap.id='rep4-wrap';
+  wrap.style.cssText='position:fixed;left:-9999px;top:0;width:900px;background:#0b1220;padding:20px;font-family:Be Vietnam Pro,Arial,sans-serif;color:#e8ecf5;';
+  var th='padding:10px 8px;border:1px solid #3d4a66;font-size:12px;text-align:center;';
+  var td='padding:9px 8px;border:1px solid #2a3550;font-size:12px;text-align:center;';
+  var html='<div style="text-align:center;margin-bottom:14px;">'
+    +'<div style="font-size:18px;font-weight:800;color:#f9a825;">KHỐI SAN LẤP - XÂY DỰNG HẠ TẦNG 3</div>'
+    +'<div style="font-size:15px;font-weight:800;margin-top:4px;color:#fff;">BÁO CÁO TỔNG HỢP 4 ĐƠN VỊ</div>'
+    +'<div style="font-size:12px;color:#9aa8c0;margin-top:4px;">Ngày '+dateStr+'</div>'
+    +'</div>';
+  html+='<table style="width:100%;border-collapse:collapse;background:#131826;">'
+    +'<tr style="background:#0F2A5C;">'
+    +'<th style="'+th+'color:#fff;text-align:left;">Chỉ tiêu</th>';
+  rows.forEach(function(r){ html+='<th style="'+th+'color:#f9a825;">'+String(r.ten).replace(/</g,'&lt;')+'</th>'; });
+  html+='<th style="'+th+'color:#fff;">Tổng</th></tr>';
+
+  function addRow(label, getter, totalVal){
+    html+='<tr><td style="'+td+'text-align:left;font-weight:700;color:#fff;">'+label+'</td>';
+    rows.forEach(function(r){ html+='<td style="'+td+'">'+getter(r)+'</td>'; });
+    html+='<td style="'+td+'font-weight:800;color:#f9a825;">'+totalVal+'</td></tr>';
+  }
+  addRow('Tổng NS', function(r){return r.ns.tong;}, tot.tong);
+  addRow('Đi làm', function(r){return r.ns.diLam;}, tot.diLam);
+  addRow('Nghỉ', function(r){return r.ns.nghi;}, tot.nghi);
+  addRow('CNCH (đi làm/tổng)', function(r){return fmt2(r.ns.cnchDl,r.ns.cnchT);}, fmt2(tot.cnchDl,tot.cnchT));
+  addRow('LXLM (đi làm/tổng)', function(r){return fmt2(r.ns.lxlmDl,r.ns.lxlmT);}, fmt2(tot.lxlmDl,tot.lxlmT));
+  addRow('SL.MMTB (HĐ/tổng)', function(r){return fmt2(r.mm.hd,r.mm.tong);}, fmt2(tot.mHd,tot.mTong));
+  html+='</table>';
+  html+='<div style="margin-top:12px;font-size:11px;color:#8b93a8;">Nguồn: số liệu đã lưu trong ngày của từng đơn vị · Xuất lúc '+p2(n.getHours())+':'+p2(n.getMinutes())+'</div>';
+  wrap.innerHTML=html;
+  document.body.appendChild(wrap);
+
+  try{
+    var canvas=await html2canvas(wrap,{scale:2,backgroundColor:'#0b1220',useCORS:true});
+    wrap.remove();
+    var a=document.createElement('a');
+    a.download='BaoCao_TongHop_4DonVi_'+tk+'.png';
+    a.href=canvas.toDataURL('image/png');
+    a.click();
+    toast('✅ Đã xuất tổng hợp 4 đơn vị');
+  }catch(e){
+    wrap.remove();
+    alert('Lỗi xuất ảnh: '+(e.message||e));
+  }
+}
+
+
 async function exportFullReport(){
   var pass=prompt('🔒 Mật khẩu để xuất báo cáo:');
   if(pass===null)return;
