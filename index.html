@@ -1994,23 +1994,56 @@ var DON_VI_LS = 'bch_don_vi_id';
 var DON_VI_TEN_LS = 'bch_don_vi_ten';
 window.BCH_DON_VI = localStorage.getItem(DON_VI_LS) || '';
 window.BCH_DON_VI_TEN = localStorage.getItem(DON_VI_TEN_LS) || '';
+try{ window.BCH_DON_VI_MODULES = JSON.parse(localStorage.getItem('bch_don_vi_modules')||'null'); }catch(e){ window.BCH_DON_VI_MODULES=null; }
 
 function getDonViId(){
   return window.BCH_DON_VI || localStorage.getItem(DON_VI_LS) || '';
 }
-function setDonVi(id, ten){
+function setDonVi(id, ten, modules){
   window.BCH_DON_VI = id || '';
   window.BCH_DON_VI_TEN = ten || id || '';
+  window.BCH_DON_VI_MODULES = modules || null;
   localStorage.setItem(DON_VI_LS, window.BCH_DON_VI);
   localStorage.setItem(DON_VI_TEN_LS, window.BCH_DON_VI_TEN);
+  try{ localStorage.setItem('bch_don_vi_modules', JSON.stringify(modules || null)); }catch(e){}
   var el = document.getElementById('home-don-vi-label');
   if(el) el.textContent = window.BCH_DON_VI_TEN || 'Chọn đơn vị';
+}
+function getDonViModules(){
+  if(window.BCH_DON_VI_MODULES) return window.BCH_DON_VI_MODULES;
+  try{ return JSON.parse(localStorage.getItem('bch_don_vi_modules')||'null'); }catch(e){ return null; }
+}
+/** Module được phép theo đơn vị (null = không giới hạn phía đơn vị) */
+function donViChoPhepModule(ma){
+  var mods = getDonViModules();
+  if(!mods || typeof mods !== 'object') return true; // chưa có cấu hình → không chặn
+  // Nếu object rỗng → không chặn
+  var keys = Object.keys(mods);
+  if(!keys.length) return true;
+  return !!mods[ma];
+}
+function applyDonViModuleVisibility(){
+  document.querySelectorAll('.mod-tile[data-quyen]').forEach(function(el){
+    var key = el.getAttribute('data-quyen');
+    var okDv = donViChoPhepModule(key);
+    var okUser = !window.BCH_QUYEN || !!window.BCH_QUYEN[key];
+    // Ẩn hẳn nếu đơn vị không hỗ trợ; mờ khóa nếu user không có quyền
+    if(!okDv){
+      el.style.display = 'none';
+    }else{
+      el.style.display = '';
+      if(window.BCH_QUYEN && !window.BCH_QUYEN[key]) el.classList.add('locked');
+      else el.classList.remove('locked');
+    }
+  });
 }
 function clearDonVi(){
   window.BCH_DON_VI = '';
   window.BCH_DON_VI_TEN = '';
+  window.BCH_DON_VI_MODULES = null;
   localStorage.removeItem(DON_VI_LS);
   localStorage.removeItem(DON_VI_TEN_LS);
+  localStorage.removeItem('bch_don_vi_modules');
 }
 
 var ORG_BRAND_HTML = '<span style="color:#42a5f5">KHỐI SAN LẤP</span> <span style="color:#fff">-</span> <span style="color:#ffa726">XÂY DỰNG HẠ TẦNG 3</span>';
@@ -2077,9 +2110,8 @@ async function renderDonViHub(){
     btn.onclick = function(){
       var id = btn.getAttribute('data-id');
       var row = rows.find(function(x){ return x.id===id; });
-      setDonVi(id, row?row.ten:id);
+      setDonVi(id, row?row.ten:id, row?row.modules:null);
       showDonViWorkspace();
-      // reload để NS/MMTB/cấu hình theo đúng đơn vị
       location.reload();
     };
   });
@@ -2157,15 +2189,21 @@ async function openDonViPicker(opts){
 }
 
 async function ensureDonViSelected(){
-  // Có đơn vị đã chọn → vào workspace
+  // Có đơn vị đã chọn → vào workspace (đồng bộ lại modules từ server)
   if(getDonViId()){
+    try{
+      var rows = await fetchDonViList();
+      var row = (rows||[]).find(function(x){ return x.id === getDonViId(); });
+      if(row) setDonVi(row.id, row.ten||row.id, row.modules||null);
+    }catch(e){}
     showDonViWorkspace();
+    applyDonViModuleVisibility();
     return true;
   }
   var rows = [];
   try{ rows = await fetchDonViList(); }catch(e){ rows = []; }
   if(!rows || !rows.length){
-    setDonVi('khanh_hoa', 'Cụm dự án Khánh Hòa');
+    setDonVi('khanh_hoa', 'Cụm dự án Khánh Hòa', null);
     showDonViWorkspace();
     return true;
   }
@@ -5538,11 +5576,7 @@ async function renderHomeThongBao(){
   await ensureDonViSelected();
   applyHomeBrand();
   document.dispatchEvent(new CustomEvent('bch-auth-ready', { detail: window.BCH_USER }));
-  document.querySelectorAll('.mod-tile[data-quyen]').forEach(function(el){
-    var key = el.getAttribute('data-quyen');
-    if(!window.BCH_QUYEN[key]) el.classList.add('locked');
-    else el.classList.remove('locked');
-  });
+  applyDonViModuleVisibility();
 
   // Thống kê nhanh: chỉ hiện khối nào tương ứng với quyền đang có
   var coNS = !!window.BCH_QUYEN.bao_cao_nhan_su;

@@ -303,6 +303,9 @@
     </div>
   </div>
   <div class="admin-filters" id="adminFilters" style="display:none;">
+    <select id="adminDonViSelect" title="Lọc theo đơn vị" style="min-width:160px;">
+      <option value="">Tất cả đơn vị</option>
+    </select>
     <input type="text" id="searchInput" placeholder="Tìm theo tên, MSNV hoặc chức vụ...">
     <select id="statusFilter">
       <option value="all">Tất cả trạng thái</option>
@@ -832,8 +835,12 @@ let searchQuery = "";
 let statusFilterVal = "all";
 
 function getFilteredSorted(){
+  const dvSel = document.getElementById('adminDonViSelect');
+  const dvFilter = dvSel ? dvSel.value : '';
+
   let list = employeesCache.filter(e=>{
     if(statusFilterVal !== "all" && e.trang_thai !== statusFilterVal) return false;
+  if(dvFilter){ list = list.filter(e => (e.don_vi_id||'khanh_hoa') === dvFilter); }
     if(searchQuery){
       const q = searchQuery.toLowerCase();
       return (e.ten||"").toLowerCase().includes(q) || (e.msnv||"").includes(q) || (e.chuc_vu||"").toLowerCase().includes(q);
@@ -1453,6 +1460,7 @@ async function loadAdminData(){
   document.getElementById("adminLoading").style.display = "block";
   document.getElementById("tableWrap").style.display = "none";
   await loadModules();
+  try{ await fillAdminDonViSelect(); }catch(e){}
   const { data, error } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass });
   if(error){
     showToast("Không tải được danh sách, vui lòng thử lại.");
@@ -1977,6 +1985,22 @@ document.getElementById('btnConfirmImportDanhBa').addEventListener('click', asyn
   box.textContent = `✓ Đã nhập danh bạ: thêm ${data.them||0}, cập nhật ${data.cap_nhat||0}, tổng ${data.tong||payload.length}.`;
 });
 
+
+/* ================= ADMIN LỌC ĐƠN VỊ ================= */
+async function fillAdminDonViSelect(){
+  const sel = document.getElementById('adminDonViSelect');
+  if(!sel) return;
+  try{
+    await loadDonVi();
+  }catch(e){}
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Tất cả đơn vị</option>' +
+    (donViCache||[]).map(d=>`<option value="${d.id}">${(d.ten||d.id).replace(/</g,'&lt;')}</option>`).join('');
+  if(cur) sel.value = cur;
+}
+if(document.getElementById('adminDonViSelect')){
+  document.getElementById('adminDonViSelect').addEventListener('change', ()=> renderAdminTable());
+}
 
 /* ================= ĐƠN VỊ (P1) ================= */
 let donViCache = [];
