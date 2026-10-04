@@ -2197,25 +2197,47 @@ async function openDonViPicker(opts){
 }
 
 async function ensureDonViSelected(){
-  // Có đơn vị đã chọn → vào workspace (đồng bộ lại modules từ server)
+  var rows = [];
+  try{ rows = await fetchDonViList(); }catch(e){ rows = []; }
+
+  // Lọc theo đơn vị được gán cho user (nếu có)
+  try{
+    var uDv = (window.BCH_USER && window.BCH_USER.don_vi_id) ? window.BCH_USER.don_vi_id : '';
+    if(uDv && rows && rows.length){
+      var filtered = rows.filter(function(d){ return d.id === uDv; });
+      if(filtered.length) rows = filtered;
+    }
+  }catch(e){}
+
+  // Đã chọn đơn vị trước đó và vẫn còn trong danh sách được phép
   if(getDonViId()){
-    try{
-      var rows = await fetchDonViList();
-      var row = (rows||[]).find(function(x){ return x.id === getDonViId(); });
-      if(row) setDonVi(row.id, row.ten||row.id, row.modules||null);
-    }catch(e){}
+    var cur = (rows||[]).find(function(x){ return x.id === getDonViId(); });
+    if(cur){
+      setDonVi(cur.id, cur.ten||cur.id, cur.modules||null);
+      showDonViWorkspace();
+      applyDonViModuleVisibility();
+      return true;
+    }
+    // Đơn vị cũ không còn / không được phép → chọn lại
+    clearDonVi();
+  }
+
+  if(!rows || !rows.length){
+    setDonVi('khanh_hoa', 'Cụm dự án Khánh Hòa', null);
     showDonViWorkspace();
     applyDonViModuleVisibility();
     return true;
   }
-  var rows = [];
-  try{ rows = await fetchDonViList(); }catch(e){ rows = []; }
-  if(!rows || !rows.length){
-    setDonVi('khanh_hoa', 'Cụm dự án Khánh Hòa', null);
+
+  // Chỉ 1 đơn vị → vào thẳng, không dừng ở hub
+  if(rows.length === 1){
+    setDonVi(rows[0].id, rows[0].ten||rows[0].id, rows[0].modules||null);
     showDonViWorkspace();
+    applyDonViModuleVisibility();
     return true;
   }
-  // Hiện hub 4 ô (không bottom-sheet)
+
+  // Nhiều đơn vị → hub 4 ô
   showDonViHub();
   return true;
 }
@@ -3809,8 +3831,9 @@ var nsRealtimePending=false;
 
 function subscribeNSRealtime(){
   if(nsRealtimeChannel){ try{sc.removeChannel(nsRealtimeChannel);}catch(e){} }
-  nsRealtimeChannel = sc.channel('ns_rt_'+tkey())
+  nsRealtimeChannel = sc.channel('ns_rt_'+tkey()+'_'+(getDonViId()||'khanh_hoa'))
     .on('postgres_changes', {event:'*', schema:'public', table:'nhansu', filter:'ngay=eq.'+tkey()}, function(payload){
+      try{ var row=(payload.new||payload.old||{}); if(row.don_vi_id && getDonViId() && row.don_vi_id!==getDonViId()) return; }catch(e){}
       if(vDate) return; // đang xem ngày cũ (chỉ đọc) — không áp cập nhật tức thời
       var incoming = payload.new && payload.new.data;
       if(!incoming) return;
@@ -4682,8 +4705,9 @@ var mmtbRealtimePending=false;
 
 function subscribeMMTBRealtime(){
   if(mmtbRealtimeChannel){ try{sc.removeChannel(mmtbRealtimeChannel);}catch(e){} }
-  mmtbRealtimeChannel = sc.channel('mmtb_rt_'+mmtbTkey())
+  mmtbRealtimeChannel = sc.channel('mmtb_rt_'+mmtbTkey()+'_'+(getDonViId()||'khanh_hoa'))
     .on('postgres_changes', {event:'*', schema:'public', table:'mmtb', filter:'ngay=eq.'+mmtbTkey()}, function(payload){
+      try{ var row=(payload.new||payload.old||{}); if(row.don_vi_id && getDonViId() && row.don_vi_id!==getDonViId()) return; }catch(e){}
       if(mmtbVDate) return;
       var incoming = payload.new && payload.new.data;
       if(!incoming) return;
