@@ -186,8 +186,18 @@ function renderFeed(){
   });
 }
 
+function getBanTinDonVi(){
+  return localStorage.getItem('bch_don_vi_id') || 'khanh_hoa';
+}
+
 async function loadPosts(){
-  var {data, error} = await sb.rpc('ban_tin_lay_danh_sach');
+  var dv = getBanTinDonVi();
+  var {data, error} = await sb.rpc('ban_tin_lay_danh_sach', { p_don_vi_id: dv });
+  if(error){
+    // fallback chưa chạy SQL tách đơn vị
+    var r2 = await sb.rpc('ban_tin_lay_danh_sach');
+    data = r2.data; error = r2.error;
+  }
   if(error){
     document.getElementById('feed').innerHTML = '<div class="empty">Chưa cấu hình SQL bản tin hoặc lỗi tải.<br><small>'+esc(error.message)+'</small></div>';
     return;
@@ -209,8 +219,16 @@ async function dangBai(){
     p_tieu_de: title || null,
     p_noi_dung: body,
     p_mau: selectedTheme,
-    p_icon: selectedIcon
+    p_icon: selectedIcon,
+    p_don_vi_id: getBanTinDonVi()
   });
+  if(error && /p_don_vi_id|Could not find the function/i.test(error.message||'')){
+    var r2 = await sb.rpc('ban_tin_dang', {
+      p_ten: user.ten, p_msnv: user.msnv || '', p_tieu_de: title || null,
+      p_noi_dung: body, p_mau: selectedTheme, p_icon: selectedIcon
+    });
+    data = r2.data; error = r2.error;
+  }
   btn.disabled = false; st.textContent = '';
   if(error){ alert('Đăng lỗi: '+(error.message||'Chạy SQL ban_tin_*')); return; }
   document.getElementById('inpTitle').value = '';

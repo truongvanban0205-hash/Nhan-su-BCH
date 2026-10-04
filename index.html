@@ -464,11 +464,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">🚜</div>
         <div class="mod-title">Báo cáo MMTB</div>
       </div>
-      <div class="mod-tile c-ldt" data-quyen="bao_lich_nghiem_thu" onclick="goModule('ldt')">
-        <span class="mod-badge" id="badge-ldt"></span>
-        <div class="mod-icon">📅</div>
-        <div class="mod-title">Lịch nghiệm thu</div>
-      </div>
+      <!-- Lịch nghiệm thu đã gỡ khỏi app -->
       <div class="mod-tile c-db" data-quyen="dinh_bien" onclick="goModuleDinhBien()">
         <div class="mod-icon">📊</div>
         <div class="mod-title">Định biên</div>
@@ -657,8 +653,8 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     </div>
   </div>
 </div>
-<!-- ============ MODULE LỊCH NGHIỆM THU ============ -->
-<div id="screen-ldt" class="app-screen">
+<!-- ============ MODULE LỊCH NGHIỆM THU — ĐÃ GỠ KHỎI APP ============ -->
+<div id="screen-ldt" class="app-screen" style="display:none !important;">
   <div class="back-bar">
     <button class="back-btn" onclick="showScreen('home')">← Quay lại</button>
   </div>
@@ -1388,23 +1384,12 @@ async function exportFullReport(){
   try{var r2=await sc.from('mmtb').select('data').eq('ngay',tk).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();mmtbToday=r2.data?r2.data.data:null;}catch(e){}
 
   // Định biên áp dụng cho ĐÚNG NGÀY đang xuất báo cáo (tự tìm mốc ngày gần nhất <= ngày đó)
-  // RPC trả về MẢNG [{chuc_danh_id, so_luong, ...}] — không phải map {id: số}
   var dinhBienThangNay={};
   try{
     var dbR=await rpcDinhBienDV('dinhbien_lay_gia_tri_ngay',{p_ngay:tk});
-    var dbRaw=dbR.data;
-    if(Array.isArray(dbRaw)){
-      dbRaw.forEach(function(row){
-        if(!row || row.chuc_danh_id==null) return;
-        dinhBienThangNay['cd_'+row.chuc_danh_id] = Number(row.so_luong)||0;
-      });
-    }else if(dbRaw && typeof dbRaw==='object'){
-      // fallback dạng map cũ { "17": 5 } hoặc { "17": {so_luong:5} }
-      Object.keys(dbRaw).forEach(function(id){
-        var v=dbRaw[id];
-        dinhBienThangNay['cd_'+id] = (v!=null && typeof v==='object') ? (Number(v.so_luong)||0) : (Number(v)||0);
-      });
-    }
+    var dbRaw=dbR.data||{};
+    // dbRaw trả về key là ID số (dạng text, VD "17") — đổi sang đúng mã cột "cd_17" đang dùng trong báo cáo
+    Object.keys(dbRaw).forEach(function(id){ dinhBienThangNay['cd_'+id]=dbRaw[id]; });
   }catch(e){}
 
   var nsHist=await sHist();
@@ -5419,8 +5404,8 @@ function bchTinhLichThongBao(){
   var ns=minus30(parseHM(GIO_HAN.gio_han_ns_mmtb));
   var ldt=minus30(parseHM(GIO_HAN.gio_han_nghiem_thu));
   return [
-    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'},
-    {h:ldt.h,m:ldt.m,id:'ldt_reminder',     title:'📅 Sắp hết giờ báo lịch!', body:'Còn 30 phút nữa là hết giờ báo Lịch nghiệm thu ngày mai (deadline '+(GIO_HAN.gio_han_nghiem_thu||'16:00:00').slice(0,5)+')'}
+    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'}
+    // Lịch nghiệm thu đã gỡ khỏi app — không còn nhắc
   ];
 }
 
@@ -5851,7 +5836,7 @@ async function renderHomeThongBao(){
   // Thống kê nhanh: chỉ hiện khối nào tương ứng với quyền đang có
   var coNS = !!window.BCH_QUYEN.bao_cao_nhan_su;
   var coMMTB = !!window.BCH_QUYEN.bao_cao_mmtb;
-  var coLDT = !!window.BCH_QUYEN.bao_lich_nghiem_thu;
+  // Lịch nghiệm thu đã gỡ khỏi app
   var elColNS = document.getElementById('qs-col-ns');
   var elColMMTB = document.getElementById('qs-col-mmtb');
   var elGroupNSMMTB = document.getElementById('qs-group-ns-mmtb');
@@ -5859,12 +5844,12 @@ async function renderHomeThongBao(){
   if(elColNS) elColNS.style.display = coNS ? '' : 'none';
   if(elColMMTB) elColMMTB.style.display = coMMTB ? '' : 'none';
   if(elGroupNSMMTB) elGroupNSMMTB.style.display = (coNS || coMMTB) ? '' : 'none';
-  if(elGroupLDT) elGroupLDT.style.display = coLDT ? '' : 'none';
+  if(elGroupLDT) elGroupLDT.style.display = 'none';
   // Nếu 2 cột NS/MMTB chỉ còn 1 cột hiện, cho nó chiếm trọn hàng thay vì lệch
   var elRow = document.querySelector('.qs-donut-row');
   if(elRow && (coNS !== coMMTB)) elRow.style.gridTemplateColumns = '1fr';
   var elNone = document.getElementById('qs-group-none');
-  if(elNone) elNone.style.display = (!coNS && !coMMTB && !coLDT) ? '' : 'none';
+  if(elNone) elNone.style.display = (!coNS && !coMMTB) ? '' : 'none';
 
   // Thêm dòng tên + nút xem thông tin tài khoản + đăng xuất (chỉ chèn thêm bằng JS)
   var headerDiv = document.querySelector('.home-header > div');

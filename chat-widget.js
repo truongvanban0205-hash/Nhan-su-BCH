@@ -222,9 +222,17 @@
   }
 
   // ---------- Dữ liệu: lịch sử chat + danh sách tên đã duyệt (làm mới định kỳ) ----------
+  function getChatDonVi(){
+    try{ return (window.getDonViId && getDonViId()) || localStorage.getItem('bch_don_vi_id') || 'khanh_hoa'; }
+    catch(e){ return localStorage.getItem('bch_don_vi_id') || 'khanh_hoa'; }
+  }
+
   async function loadHistory(){
     try{
-      var r=await sc.from('chat_messages').select('*').order('created_at',{ascending:false}).limit(100);
+      var dv=getChatDonVi();
+      var q=sc.from('chat_messages').select('*').order('created_at',{ascending:false}).limit(100);
+      try{ q=q.eq('don_vi_id', dv); }catch(e){}
+      var r=await q;
       chatMsgs=(r.data||[]).slice().reverse();
       chatMsgs.forEach(function(m){ chatKnownNames[m.nguoi_gui]=true; });
       renderMsgs();
@@ -244,8 +252,11 @@
 
   function subscribeRealtime(){
     if(chatRealtimeCh)return;
-    chatRealtimeCh=sc.channel('chat_messages_widget_rt')
+    var dv=getChatDonVi();
+    chatRealtimeCh=sc.channel('chat_messages_widget_rt_'+dv)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},function(payload){
+        // Chỉ nhận tin của đúng đơn vị đang vào
+        try{ if(payload.new && payload.new.don_vi_id && payload.new.don_vi_id!==dv) return; }catch(e){}
         chatMsgs.push(payload.new);
         chatKnownNames[payload.new.nguoi_gui]=true;
         renderMsgs();
@@ -427,7 +438,7 @@
     if(!v && !pendingImageFile)return;
     if(!chatUser){ alert('Chưa xác định được tài khoản đăng nhập, thử tải lại trang.'); return; }
     if(chatUploading)return;
-    var payload={nguoi_gui:chatUser.ten, noi_dung:v||''};
+    var payload={nguoi_gui:chatUser.ten, noi_dung:v||'', don_vi_id:getChatDonVi()};
     if(replyingTo) payload.reply_to_id=replyingTo.id;
     try{
       chatUploading=true;
