@@ -318,6 +318,10 @@ async function init(){
   document.getElementById('loadingBox').style.display='none';
   renderNamSelect();
   document.getElementById('appBox').style.display = 'block';
+  try{
+    var brand = document.querySelector('.brand');
+    if(brand && DON_VI_TEN) brand.innerHTML = '<span style="color:#fb8c00;font-weight:800">'+DON_VI_TEN+'</span> — Định biên';
+  }catch(e){}
   await taiDuLieuNam();
 }
 

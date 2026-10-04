@@ -58,6 +58,11 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .hub-card .hub-label{font-size:11px;color:#ffb74d;font-weight:700;margin-bottom:4px;}
 .hub-card .hub-name{font-size:14px;font-weight:800;line-height:1.3;color:#f9a825;}
 .hub-card .hub-arrow{color:#ffb74d;font-size:18px;font-weight:700;}
+.hub-card.locked{opacity:0.55;filter:grayscale(0.35);pointer-events:none;cursor:not-allowed;
+  border-color:#3a3f4d;background:linear-gradient(145deg,#141820,#0c1018);box-shadow:none;}
+.hub-card.locked .hub-name{color:#6b7280;}
+.hub-card.locked .hub-arrow{color:#4b5563;}
+.hub-card.locked .hub-lock{font-size:18px;margin-left:4px;}
 @media(max-width:360px){.hub-grid{grid-template-columns:1fr;}}
 
 .home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:50;}
@@ -415,11 +420,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <!-- HUB chọn đơn vị (giống folder) -->
     <div id="home-hub">
       <div class="hub-grid" id="home-hub-grid"></div>
-      <button type="button" id="btn-export-tong-hop-hub" onclick="exportTongHop4DonVi()"
-        style="width:100%;margin-top:14px;padding:14px;border-radius:12px;border:1.5px solid rgba(249,168,37,.5);background:linear-gradient(145deg,#2a1f0e,#1a140a);color:#f9a825;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer;">
-        📊 Xuất tổng hợp 4 đơn vị (ảnh)
-      </button>
-    </div>
+</div>
 
     <!-- Workspace trong đơn vị -->
     <div id="home-workspace" class="hide">
@@ -545,7 +546,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 </div>
 
 <div class="topbar">
-  <h1>Báo cáo nhân sự: BCH CL-CR/<span style="color:#f9a825;font-weight:900">VAL</span></h1>
+  <h1>Báo cáo nhân sự: <span id="hdr-ns-unit" style="color:#f9a825;font-weight:900">—</span></h1>
   <div class="tsub">
     <span id="dp" class="dpill"></span>
     <span id="ss">Đang tải...</span>
@@ -616,7 +617,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   </div>
 
   <div class="topbar">
-    <h1>🚜 Báo cáo MMTB: BCH CL-CR/<span style="color:#f9a825;font-weight:900">VAL</span></h1>
+    <h1>🚜 Báo cáo MMTB: <span id="hdr-mmtb-unit" style="color:#f9a825;font-weight:900">—</span></h1>
     <div class="tsub">
       <span id="mmtb-dp" class="dpill"></span>
       <span id="mmtb-ss">Đang tải...</span>
@@ -668,7 +669,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <div class="rotate-banner">📱 Xoay ngang điện thoại để xem bảng tốt hơn!</div>
 
   <div class="topbar">
-    <h1>📅 Báo Lịch nghiệm thu: BCH CL-CR/<span style="color:#f9a825;font-weight:900">VAL</span></h1>
+    <h1>📅 Báo Lịch nghiệm thu: <span id="hdr-ldt-unit" style="color:#f9a825;font-weight:900">—</span></h1>
     <div class="tsub">
       <span id="ldt-dp" class="dpill"></span>
       <span id="ldt-ss">Đang tải...</span>
@@ -1752,13 +1753,13 @@ async function exportFullReport(){
     +'<div style="text-align:center;white-space:nowrap;">'
       +'<div style="font-weight:900;font-size:22px;letter-spacing:0.4px;font-family:\'Be Vietnam Pro\',Arial,sans-serif;color:#0F2A5C;">BÁO CÁO NHÂN SỰ, MÁY MÓC THIẾT BỊ</div>'
       +'<div style="font-size:14px;font-weight:700;color:#333;font-family:\'Be Vietnam Pro\',Arial,sans-serif;margin-top:3px;">'
-        +'BCH DỰ ÁN CAM LÂM - CAM RANH &nbsp;·&nbsp; <span style="color:#c99404;">'+dateStr+'</span></div>'
+        +' '+getDonViTenBaoCao()+' &nbsp;·&nbsp; <span style="color:#c99404;">'+dateStr+'</span></div>'
     +'</div>'
     +'<div style="justify-self:end;">'+repWeatherHtml+'</div>'
     +'</div>'
     +'<div style="display:flex;gap:14px;margin-bottom:14px;align-items:flex-start;">'
     +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);flex:1;">'
-    +'<div style="font-size:16px;font-weight:800;color:#1a1a1a;margin-bottom:10px;">🚜 Báo cáo MMTB: BCH CL-CR/<span style="color:#f9a825">VAL</span></div>'
+    +'<div style="font-size:16px;font-weight:800;color:#1a1a1a;margin-bottom:10px;">🚜 Báo cáo MMTB: '+getDonViTenBaoCao()+'</div>'
     +'<div style="display:flex;gap:12px;align-items:flex-start;">'
     +'<table style="border-collapse:collapse;flex:1;">'
     +'<tr><th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">STT</th><th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Tên máy</th>'
@@ -1787,7 +1788,7 @@ async function exportFullReport(){
     +'</div>'
     +'</div>'
     +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);">'
-    +'<div style="font-size:16px;font-weight:800;color:#1a1a1a;margin-bottom:10px;">📋 Báo cáo nhân sự: BCH CL-CR/<span style="color:#f9a825">VAL</span></div>'
+    +'<div style="font-size:16px;font-weight:800;color:#1a1a1a;margin-bottom:10px;">📋 Báo cáo nhân sự: '+getDonViTenBaoCao()+'</div>'
     +'<div style="display:flex;gap:12px;align-items:flex-start;">'
     +'<table style="border-collapse:collapse;flex:1;">'
     +'<tr><th style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Dự án</th><th style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Ca làm việc</th>'+nsHeaderCols+'<th style="border:1px solid #c3cee6;padding:4px;background:#F7C31E">Tổng</th></tr>'
@@ -1931,7 +1932,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   var half=Math.ceil(rows.length/2);
   var colA=rows.slice(0,half), colB=rows.slice(half);
   var hasHoTroTitle=nsProjs.some(function(p){return HO_TRO_PROJS[p];});
-  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR'+(hasHoTroTitle?' <span style="font-weight:400;font-size:10px;color:#888;">(tại dự án Cam Ranh)</span>':'')+'</div>'
+  var html='<div style="font-weight:700;font-size:11.5px;color:#1565c0;">Báo cáo tổng hợp '+getDonViTenBaoCao()+(hasHoTroTitle?' <span style="font-weight:400;font-size:10px;color:#888;">(có dự án hỗ trợ)</span>':'')+'</div>'
     +'<div style="font-size:10px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+(dateStr||'')+'</div>';
   html+='<div style="display:flex;gap:14px;">'
     +'<div style="flex:1;min-width:0;">'+colA.map(rowHtml).join('')+'</div>'
@@ -2189,6 +2190,11 @@ try{ window.BCH_DON_VI_MODULES = JSON.parse(localStorage.getItem('bch_don_vi_mod
 function getDonViId(){
   return window.BCH_DON_VI || localStorage.getItem(DON_VI_LS) || '';
 }
+function getDonViTenBaoCao(){
+  var ten = window.BCH_DON_VI_TEN || localStorage.getItem(DON_VI_TEN_LS) || '';
+  if(ten) return String(ten).toUpperCase();
+  return 'CỤM DỰ ÁN KHÁNH HÒA';
+}
 function setDonVi(id, ten, modules){
   window.BCH_DON_VI = id || '';
   window.BCH_DON_VI_TEN = ten || id || '';
@@ -2198,6 +2204,12 @@ function setDonVi(id, ten, modules){
   try{ localStorage.setItem('bch_don_vi_modules', JSON.stringify(modules || null)); }catch(e){}
   var el = document.getElementById('home-don-vi-label');
   if(el) el.textContent = window.BCH_DON_VI_TEN || 'Chọn đơn vị';
+  try{
+    var tn = getDonViTenBaoCao();
+    ['hdr-ns-unit','hdr-mmtb-unit','hdr-ldt-unit'].forEach(function(id){
+      var n = document.getElementById(id); if(n) n.textContent = tn;
+    });
+  }catch(e){}
 }
 function getDonViModules(){
   if(window.BCH_DON_VI_MODULES) return window.BCH_DON_VI_MODULES;
@@ -2287,24 +2299,25 @@ async function renderDonViHub(){
   if(!grid) return;
   grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b93a8;padding:20px;">Đang tải...</div>';
   var rows = await fetchDonViList();
-  try{
-    var allowed = window.BCH_ALLOWED_DON_VI || (window.BCH_USER && window.BCH_USER.don_vi_ids) || [];
-    if(allowed && allowed.length && rows && rows.length){
-      rows = rows.filter(function(d){ return allowed.indexOf(String(d.id)) >= 0; });
-    }
-  }catch(e){}
   if(!rows.length){
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#ef5350;padding:16px;font-size:13px;">Chưa có đơn vị. Chạy SQL P1.</div>';
     return;
   }
+  var allowed = [];
+  try{
+    allowed = window.BCH_ALLOWED_DON_VI || (window.BCH_USER && window.BCH_USER.don_vi_ids) || [];
+    allowed = (allowed || []).map(function(x){ return String(x); });
+  }catch(e){ allowed = []; }
   grid.innerHTML = rows.map(function(d){
-    return '<button type="button" class="hub-card" data-id="'+String(d.id).replace(/"/g,'')+'">'
-      +'<span class="hub-ico">📁</span>'
-      +'<span class="hub-meta"><span class="hub-label">Dự án</span><span class="hub-name">'+escHtmlHub(d.ten||d.id)+'</span></span>'
-      +'<span class="hub-arrow">›</span>'
+    var ok = !allowed.length || allowed.indexOf(String(d.id)) >= 0;
+    var cls = ok ? 'hub-card' : 'hub-card locked';
+    return '<button type="button" class="'+cls+'" data-id="'+String(d.id).replace(/"/g,'')+'" '+(ok?'':'disabled')+'>'
+      +'<span class="hub-ico">'+(ok?'📁':'🔒')+'</span>'
+      +'<span class="hub-meta"><span class="hub-name">'+escHtmlHub(d.ten||d.id)+(ok?'':' <span class="hub-lock">🔒</span>')+'</span></span>'
+      +'<span class="hub-arrow">'+(ok?'›':'')+'</span>'
       +'</button>';
   }).join('');
-  grid.querySelectorAll('.hub-card').forEach(function(btn){
+  grid.querySelectorAll('.hub-card:not(.locked)').forEach(function(btn){
     btn.onclick = function(){
       var id = btn.getAttribute('data-id');
       var row = rows.find(function(x){ return x.id===id; });
@@ -3121,7 +3134,7 @@ function renderTable(){
   h+='<th class="stk s1" rowspan="2">Ca làm việc</th>';
   COLS.forEach(function(c){h+='<th>'+c.n+'</th>';});
   h+='<th style="background:#F7C31E;color:#0F2A5C;min-width:42px">Tổng</th>';
-  h+='<th style="min-width:280px;background:#e3e9f5;">Báo cáo tổng hợp BCH CL-CR</th>';
+  h+='<th style="min-width:280px;background:#e3e9f5;">Báo cáo tổng hợp '+getDonViTenBaoCao()+'</th>';
   h+='</tr></thead><tbody>';
 
   var chartRowspanTotal = (projects.length+1)*(TYPES.length+1);
@@ -3318,7 +3331,7 @@ async function renderCharts(){
   var now2=new Date();
   var dateStr=p2(now2.getDate())+'/'+p2(now2.getMonth()+1)+'/'+now2.getFullYear();
   var hasHoTroTitleLive=projects.some(function(p){return HO_TRO_PROJS[p];});
-  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;">Báo cáo tổng hợp BCH CL-CR'+(hasHoTroTitleLive?' <span style="font-weight:400;color:#888;">(tại dự án Cam Ranh)</span>':'')+'</div>'
+  var html='<div style="font-weight:700;font-size:10px;color:#1565c0;">Báo cáo tổng hợp '+getDonViTenBaoCao()+(hasHoTroTitleLive?' <span style="font-weight:400;color:#888;">(có dự án hỗ trợ)</span>':'')+'</div>'
     +'<div style="font-size:9px;color:#888;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0;">'+dateStr+'</div>';
   // Chia 2 cột song song nếu danh sách dài, đỡ kéo dài layout
   var half=Math.ceil(rows.length/2);
