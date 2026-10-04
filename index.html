@@ -2578,7 +2578,8 @@ function isNghiType(t){ return TYPES.length>0 && t===nghiKey(); }
 
 async function taiCauHinhCaLamViec(){
   try{
-    var r1 = await rpcCoThuLai('cauhinh_lay_loai_ca');
+    var _dvParam = { p_don_vi_id: getDonViId() || 'khanh_hoa' };
+    var r1 = await rpcCoThuLai('cauhinh_lay_loai_ca', _dvParam);
     var caList = r1.data;
     if(caList && caList.length > 0){
       // Lọc bỏ ca đang ẨN — giống hệt cách taiCauHinhDuAn() đang lọc dự án ẩn.
@@ -2599,7 +2600,8 @@ async function taiCauHinhCaLamViec(){
         NGHI_MA = flagged ? flagged.ma : (TYPES.length ? TYPES[TYPES.length-1] : null);
       }
     }
-    var r2 = await sc.rpc('cauhinh_lay_ten_ca_rieng');
+    var r2 = await sc.rpc('cauhinh_lay_ten_ca_rieng', { p_don_vi_id: getDonViId() || 'khanh_hoa' });
+    if(r2.error){ r2 = await sc.rpc('cauhinh_lay_ten_ca_rieng'); } // fallback chưa chạy SQL
     var rieng = r2.data || [];
     TEN_RIENG_MAP = {};
     rieng.forEach(function(t){
@@ -2632,13 +2634,25 @@ function fmtDL(soDau,soSau){
 // lần tải đầu tiên trong hầu hết trường hợp.
 async function rpcCoThuLai(tenHam, thamSo){
   var doTre=[1000,2000,4000];
+  var daThuFallback = false;
   for(var i=0;i<=doTre.length;i++){
     try{
       var r = await sc.rpc(tenHam, thamSo);
-      if(r.error) throw r.error;
+      if(r.error){
+        // Chưa chạy SQL tách đơn vị → hàm chưa nhận p_don_vi_id: thử lại không tham số
+        var msg = (r.error.message||'');
+        if(!daThuFallback && thamSo && thamSo.p_don_vi_id &&
+           (r.error.code==='PGRST202' || /Could not find the function|p_don_vi_id/i.test(msg))){
+          daThuFallback = true;
+          thamSo = null; // lần sau gọi không tham số
+          r = await sc.rpc(tenHam);
+          if(!r.error) return r;
+        }
+        throw r.error;
+      }
       return r;
     }catch(e){
-      if(i===doTre.length){ throw e; } // đã thử hết số lần, báo lỗi thật để nơi gọi ghi log
+      if(i===doTre.length){ throw e; }
       await new Promise(function(res){setTimeout(res,doTre[i]);});
     }
   }
@@ -2646,7 +2660,7 @@ async function rpcCoThuLai(tenHam, thamSo){
 
 async function taiCauHinhDuAn(){
   try{
-    var r = await rpcCoThuLai('cauhinh_lay_du_an');
+    var r = await rpcCoThuLai('cauhinh_lay_du_an', { p_don_vi_id: getDonViId() || 'khanh_hoa' });
     var list = r.data;
     if(list && list.length){
       // Tên hiển thị lấy từ TOÀN BỘ danh sách (kể cả đang ẩn) — để dữ liệu lịch sử cũ nhắc tới
@@ -2672,7 +2686,7 @@ async function taiCauHinhDuAn(){
 // Riêng ẨN/HIỆN thì tách biệt (an_mmtb) — 1 dự án có thể ẩn ở Nhân sự nhưng vẫn hiện ở MMTB.
 async function taiCauHinhDuAnMMTB(){
   try{
-    var r = await rpcCoThuLai('cauhinh_lay_du_an');
+    var r = await rpcCoThuLai('cauhinh_lay_du_an', { p_don_vi_id: getDonViId() || 'khanh_hoa' });
     var list = r.data;
     if(list && list.length){
       list.forEach(function(d){ PROJ_NAME['duan_'+d.id]=d.ten; });
@@ -2693,7 +2707,7 @@ async function taiCauHinhDuAnMMTB(){
 // (MayXucBanhXich, MayUi...) nên dữ liệu máy móc đã nhập từ trước không cần chuyển đổi gì cả.
 async function taiCauHinhLoaiMayMMTB(){
   try{
-    var r = await rpcCoThuLai('cauhinh_lay_loai_may');
+    var r = await rpcCoThuLai('cauhinh_lay_loai_may', { p_don_vi_id: getDonViId() || 'khanh_hoa' });
     var list = r.data;
     if(list && list.length){
       var active = list.filter(function(m){ return !m.an; });
@@ -2710,7 +2724,7 @@ async function taiCauHinhLoaiMayMMTB(){
       }
     }
     try{
-      var rn = await rpcCoThuLai('cauhinh_lay_ten_nhom_may');
+      var rn = await rpcCoThuLai('cauhinh_lay_ten_nhom_may', { p_don_vi_id: getDonViId() || 'khanh_hoa' });
       if(rn && rn.data && rn.data.length){
         rn.data.forEach(function(row){ if(row.ma && row.ten) MMTB_TEN_NHOM[row.ma]=row.ten; });
       }
