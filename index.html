@@ -495,65 +495,13 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       <div class="weather-forecast" id="weatherForecast"></div>
     </div>
 
-    <div class="qs-toggle-row">
-      <button type="button" class="qs-toggle-btn" id="qsToggleBtn" onclick="qsToggleStats()">
-        <span>📊 Thống kê nhanh — bấm để xem</span>
-        <span class="chev">▾</span>
-      </button>
-    </div>
+    <!-- Thống kê nhanh — ĐÃ BỎ theo yêu cầu -->
 
-    <div id="qsCollapseBody">
-    <div class="quickstats-head">
-      <span class="lbl">📊 THỐNG KÊ NHANH</span>
-      <span class="when">Hôm nay</span>
-    </div>
-
-    <div class="qs-group" id="qs-group-ns-mmtb">
-      <div class="qs-donut-row">
-        <div class="qs-donut-col" id="qs-col-ns">
-          <div class="qs-group-title">👥 Nhân sự</div>
-          <div class="qs-donut-wrap" id="qs-ns-donut-wrap">
-            <svg viewBox="0 0 120 120" id="qs-ns-donut-svg"></svg>
-            <div class="qs-donut-center">
-              <div class="qs-donut-num" id="qs-ns-donut-tong">-</div>
-              <div class="qs-donut-lbl">Tổng</div>
-            </div>
-          </div>
-          <div class="qs-donut-legend" id="qs-ns-legend"></div>
-        </div>
-        <div class="qs-donut-col" id="qs-col-mmtb">
-          <div class="qs-group-title">🚜 Máy móc thiết bị</div>
-          <div class="qs-donut-wrap" id="qs-mmtb-donut-wrap">
-            <svg viewBox="0 0 120 120" id="qs-mmtb-donut-svg"></svg>
-            <div class="qs-donut-center">
-              <div class="qs-donut-num" id="qs-mmtb-donut-tong">-</div>
-              <div class="qs-donut-lbl">Tổng</div>
-            </div>
-          </div>
-          <div class="qs-donut-legend" id="qs-mmtb-legend"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="qs-group" id="qs-group-ldt">
-      <div class="qs-group-title">📅 Lịch nghiệm thu</div>
-      <div class="quickstats-grid cols3" style="grid-template-columns:1fr;">
-        <div class="qstat-card qs-clickable" style="display:flex;align-items:center;gap:12px;background:var(--bg-card);border:1px solid var(--border-soft);" onclick="qsShowDetail('ldt')">
-          <div class="qstat-icon-circle" style="background:rgba(76,175,80,0.18);margin-bottom:0;width:42px;height:42px;font-size:18px;flex-shrink:0;">📅</div>
-          <div><div class="qstat-val c-gr" id="qs-ldt" style="color:#66bb6a">-</div><div class="qstat-lbl" style="color:var(--txt-dim)">Lịch nghiệm thu hôm nay</div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="qs-group" id="qs-group-none" style="display:none;">
-      <div style="text-align:center;color:var(--txt-dim);font-size:13px;padding:20px 0;">Bạn chưa được cấp quyền xem mục thống kê nào.</div>
-    </div>
-    </div><!-- /qsCollapseBody -->
 
   </div>
 </div>
 
-<div class="qs-modal-overlay" id="qs-modal-overlay" onclick="if(event.target===this)qsCloseModal()">
+<div class="qs-modal-overlay" id="qs-modal-overlay" style="display:none!important" onclick="if(event.target===this)qsCloseModal()">
   <div class="qs-modal-box">
     <div class="qs-modal-head">
       <span class="ttl" id="qs-modal-title">Chi tiết</span>
