@@ -1646,12 +1646,12 @@ async function exportFullReport(){
   // Render panel chi tiết Nhân sự
   var nsPanelEl=document.getElementById('reportNsChartPanel');
   var nsYesterday=nsMap[days7[5]]||null;
-  if(nsPanelEl)renderReportNsPanel(nsProjs,nsCols,nsData,nsYesterday,dateStr,mList,mmtbToday,(nsToday&&nsToday.bienDong)||{});
+  if(nsPanelEl)renderReportNsPanel(nsProjs,nsCols,nsData,nsYesterday,dateStr,mList,mmtbToday,(nsToday&&nsToday.bienDong)||{},(nsToday&&nsToday.ghiChuTuyChinh)||'');
 
   // Render panel chi tiết MMTB
   var mmtbPanelEl=document.getElementById('reportMmtbChartPanel');
   var mmtbYesterday=mmtbMap[days7[5]]||null;
-  if(mmtbPanelEl)renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterday,(mmtbToday&&mmtbToday.bienDong)||{});
+  if(mmtbPanelEl)renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterday,(mmtbToday&&mmtbToday.bienDong)||{},(mmtbToday&&mmtbToday.ghiChuTuyChinh)||'');
 
   await new Promise(function(res){setTimeout(res,300);});
   // Đảm bảo đã paint xong trước khi chụp (khắc phục hiện tượng panel lúc có lúc không)
@@ -1694,7 +1694,7 @@ function mergedMmtbMachines(){
   return mmtbMachines&&mmtbMachines.length?mmtbMachines:DEF_MACHINES;
 }
 
-function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmtbToday,nsBienDong){
+function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmtbToday,nsBienDong,nsGhiChuFree){
   nsBienDong=nsBienDong||{};
   var el=document.getElementById('reportNsChartPanel');
   if(!el)return;
@@ -1856,15 +1856,17 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
     var dau=cur>base?'+':'';
     bdRowsExp.push('<div style="margin-top:2px;"><b>'+c.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
   });
+  var _gcNs=(nsGhiChuFree!=null&&nsGhiChuFree!==undefined)?nsGhiChuFree:(typeof ghiChuTuyChinh==='string'?ghiChuTuyChinh:'');
   html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;font-size:10px;color:#555;">'
     +'<b>Ghi chú:</b>'
-    +(bdRowsExp.length ? bdRowsExp.join('') : ' Không có biến động so với ngày hôm trước')
+    +(bdRowsExp.length ? bdRowsExp.join('') : (!_gcNs.trim()?' Không có biến động so với ngày hôm trước':''))
+    +(_gcNs.trim()?((bdRowsExp.length?'<div style="margin-top:6px;">':'<div style="margin-top:3px;">')+fmtGhiChuHtml(_gcNs)+'</div>'):'')
     +'</div>';
   el.innerHTML=html;
 }
 
 
-function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterday,mmtbBienDongExp){
+function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterday,mmtbBienDongExp,mmtbGhiChuFree){
   mmtbBienDongExp=mmtbBienDongExp||{};
   var el=document.getElementById('reportMmtbChartPanel');
   if(!el)return;
@@ -1939,9 +1941,11 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
     var dau=cur>base?'+':'';
     bdRowsExpM.push('<div style="margin-top:2px;"><b>'+m.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
   });
-  html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-size:10px;color:#555;">'
+    var _gcM=(mmtbGhiChuFree!=null&&mmtbGhiChuFree!==undefined)?mmtbGhiChuFree:(typeof mmtbGhiChuTuyChinh==='string'?mmtbGhiChuTuyChinh:'');
+  html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-size:10px;color:#555;">' 
     +'<b>Ghi chú:</b>'
-    +(bdRowsExpM.length ? bdRowsExpM.join('') : ' Không có biến động so với ngày hôm trước')
+    +(bdRowsExpM.length ? bdRowsExpM.join('') : (!_gcM.trim()?' Không có biến động so với ngày hôm trước':''))
+    +(_gcM.trim()?((bdRowsExpM.length?'<div style="margin-top:6px;">':'<div style="margin-top:3px;">')+fmtGhiChuHtml(_gcM)+'</div>'):'')
     +'</div>';
   el.innerHTML=html;
 }
@@ -2405,6 +2409,7 @@ async function loadData(){
       data=migrateLegacyProjKeys(td.data||{});
       logItems=td.log||[];
       bienDong=td.bienDong||{};
+      ghiChuTuyChinh=td.ghiChuTuyChinh||'';
       pendingBienDong={};
       projects.forEach(function(p){ensureProj(p);});
       // Load ngày trước để so sánh mũi tên
@@ -2432,6 +2437,7 @@ async function loadData(){
       prevDayData=yd.data||{};
       logItems=[];
       bienDong={};
+      ghiChuTuyChinh='';
       pendingBienDong={};
       var pts=prev.ngay.split('-');
       setSS('📋 Copy từ '+pts[2]+'/'+pts[1]+'/'+pts[0]);
@@ -2443,6 +2449,7 @@ async function loadData(){
   data=initData();
   logItems=[];
   bienDong={};
+  ghiChuTuyChinh='';
   pendingBienDong={};
   setSS('🆕 Dữ liệu mới');
   renderTable();renderLog();
@@ -2501,6 +2508,7 @@ function niBlur(el){
 
 var pendingChanges={}; // {proj: {type: {col: value}}}
 var bienDong={}; // {colKey: {tong,huong,ma,chiTiet,nhan,ts,nguoi}} — lý do biến động chức danh, CHỈ áp dụng ngày hôm nay
+var ghiChuTuyChinh=''; // ghi chú tự do (xuống dòng được) — hiện khi không biến động hoặc kèm thêm
 var pendingBienDong={}; // {colKey: entryObj|null(null=đã xoá)} — theo dõi đúng key vừa đổi trong phiên này để merge khi lưu
 
 // Tổng 1 chức danh CỘNG DỒN toàn bộ dự án + toàn bộ ca (dùng để so sánh biến động & hiển thị Ghi chú)
@@ -2614,14 +2622,14 @@ async function mergeSave(askReason){
       logItems.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
       mergedLog=mergedLog.slice(0,50);
     }
-    var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong};
+    var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:ghiChuTuyChinh};
     if(ex.data){
       await sc.from('nhansu').update({data:payload}).eq('ngay',targetKey);
     }else{
       await sc.from('nhansu').insert({ngay:targetKey,data:payload});
     }
     // Cập nhật lại biến cục bộ theo bản đã merge (để không bị lệch UI)
-    projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;bienDong=mergedBienDong;
+    projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;bienDong=mergedBienDong;/* ghiChuTuyChinh giữ nguyên */
     pendingChanges={};
     pendingBienDong={};
     setSS('✅ Đã cập nhật');
@@ -2995,10 +3003,7 @@ async function renderCharts(){
       +'<b>'+c.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')
       +' <span style="color:#1565c0;">✎</span></div>');
   });
-  html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;font-size:10px;color:#555;">'
-    +'<b>Ghi chú:</b>'
-    +(bdRows.length ? bdRows.join('') : ' Không có biến động so với ngày hôm trước')
-    +'</div>';
+  html+=htmlGhiChuBlock('ns', bdRows.length ? bdRows.join('') : '');
   el.innerHTML=html;
 }
 
@@ -3447,6 +3452,81 @@ function bdFinish(chip,text){
   cb(entry);
 }
 
+
+function fmtGhiChuHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+function htmlGhiChuBlock(module, bdRowsHtml){
+  var free = module==='ns' ? ghiChuTuyChinh : mmtbGhiChuTuyChinh;
+  var auto = bdRowsHtml || '';
+  var body = '';
+  if(auto){
+    body = auto;
+    if(free && String(free).trim()){
+      body += '<div style="margin-top:6px;white-space:normal;line-height:1.4;">'+fmtGhiChuHtml(free)+'</div>';
+    }
+  }else{
+    if(free && String(free).trim()){
+      body = '<div style="margin-top:3px;white-space:normal;line-height:1.4;">'+fmtGhiChuHtml(free)+'</div>';
+    }else{
+      body = ' Không có biến động so với ngày hôm trước';
+    }
+  }
+  return '<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;font-size:10px;color:#555;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+    +'<b>Ghi chú:</b>'
+    +'<span style="color:#1565c0;cursor:pointer;font-weight:700;" onclick="suaGhiChuTuyChinh(\''+module+'\')" title="Sửa ghi chú tự do">✎ Sửa</span>'
+    +'</div>'
+    +body
+    +'</div>';
+}
+async function suaGhiChuTuyChinh(module){
+  var p=prompt('🔒 Mật khẩu quản lý để sửa ghi chú:');
+  if(p===null)return;
+  if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
+  var cur = module==='ns' ? (ghiChuTuyChinh||'') : (mmtbGhiChuTuyChinh||'');
+  openGhiChuEditor(module, cur);
+}
+function openGhiChuEditor(module, cur){
+  var ov=document.getElementById('gc-overlay');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='gc-overlay';
+    ov.style.cssText='position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:12px;';
+    ov.innerHTML='<div style="background:#fff;color:#222;width:100%;max-width:480px;border-radius:14px 14px 0 0;padding:16px;">'
+      +'<div style="font-weight:800;font-size:15px;margin-bottom:8px;">✏️ Ghi chú báo cáo</div>'
+      +'<div style="font-size:12px;color:#666;margin-bottom:8px;">Có thể Enter xuống dòng. Để trống = dùng câu mặc định khi không có biến động.</div>'
+      +'<textarea id="gc-text" rows="5" style="width:100%;border:1px solid #ccc;border-radius:10px;padding:10px;font-family:inherit;font-size:14px;resize:vertical;"></textarea>'
+      +'<div style="display:flex;gap:8px;margin-top:12px;">'
+      +'<button type="button" id="gc-cancel" style="flex:1;padding:10px;border-radius:10px;border:1px solid #ccc;background:#f5f5f5;font-weight:700;cursor:pointer;">Huỷ</button>'
+      +'<button type="button" id="gc-save" style="flex:1;padding:10px;border-radius:10px;border:none;background:#1565c0;color:#fff;font-weight:700;cursor:pointer;">Lưu</button>'
+      +'</div></div>';
+    document.body.appendChild(ov);
+  }
+  ov.style.display='flex';
+  var ta=document.getElementById('gc-text');
+  ta.value=cur||'';
+  ta.focus();
+  document.getElementById('gc-cancel').onclick=function(){ ov.style.display='none'; };
+  document.getElementById('gc-save').onclick=function(){
+    var v=(ta.value||'');
+    if(module==='ns'){
+      ghiChuTuyChinh=v;
+      ov.style.display='none';
+      renderCharts();
+      schSave();
+      toast('✅ Đã lưu ghi chú');
+    }else{
+      mmtbGhiChuTuyChinh=v;
+      ov.style.display='none';
+      mmtbRenderCharts();
+      mmtbSchSave();
+      toast('✅ Đã lưu ghi chú');
+    }
+  };
+}
+
+
 // Quản lý bấm vào 1 dòng Ghi chú đã có để SỬA lại lý do — yêu cầu đúng mật khẩu dùng chung với "Sửa ngày này"
 function suaLyDoBienDong(module,key){
   var store=module==='ns'?bienDong:mmtbBienDong;
@@ -3617,6 +3697,7 @@ var mmtbPieChart=null;
 var mmtbPendingChanges={};
 var mmtbPendingNotesChanges={};
 var mmtbBienDong={}; // {machKey: {tong,huong,ma,chiTiet,nhan,ts,nguoi}} — lý do biến động máy móc, CHỈ áp dụng ngày hôm nay
+var mmtbGhiChuTuyChinh='';
 var mmtbPendingBienDong={};
 
 // Tổng 1 loại máy CỘNG DỒN toàn bộ dự án + Hoạt động/Hư hỏng/Lưu kho
@@ -3746,6 +3827,7 @@ async function mmtbLoadData(){
       mmtbNotes=td.notes||{};
       mmtbLog=td.log||[];
       mmtbBienDong=td.bienDong||{};
+      mmtbGhiChuTuyChinh=td.ghiChuTuyChinh||'';
       mmtbPendingBienDong={};
       mmtbEnsureData();
       // Tải kèm dữ liệu hôm qua để so sánh tăng/giảm (mục "Ghi chú")
@@ -3773,6 +3855,7 @@ async function mmtbLoadData(){
       mmtbPrevDayData=yd.data||{};
       mmtbLog=[];
       mmtbBienDong={};
+      mmtbGhiChuTuyChinh='';
       mmtbPendingBienDong={};
       var pts=prev.ngay.split('-');
       mmtbSetSS('📋 Copy từ '+pts[2]+'/'+pts[1]+'/'+pts[0]);
@@ -3959,7 +4042,7 @@ async function mmtbMergeSave(askReason){
         else mergedBienDong[k]=mmtbPendingBienDong[k];
       });
     }
-    var payload={machines:mergedMachines,projects:mergedProjects,data:mergedData,notes:mergedNotes,log:mergedLog,bienDong:mergedBienDong};
+    var payload={machines:mergedMachines,projects:mergedProjects,data:mergedData,notes:mergedNotes,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:mmtbGhiChuTuyChinh};
     if(ex.data){
       await sc.from('mmtb').update({data:payload}).eq('ngay',targetKey);
     }else{
@@ -4271,10 +4354,7 @@ function mmtbRenderCharts(){
       +'<b>'+m.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')
       +' <span style="color:#1565c0;">✎</span></div>');
   });
-  html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-size:10px;color:#555;">'
-    +'<b>Ghi chú:</b>'
-    +(bdRowsM.length ? bdRowsM.join('') : ' Không có biến động so với ngày hôm trước')
-    +'</div>';
+  html+=htmlGhiChuBlock('mmtb', bdRowsM.length ? bdRowsM.join('') : '');
   el.innerHTML=html;
 }
 
