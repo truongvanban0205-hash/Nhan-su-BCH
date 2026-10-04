@@ -65,42 +65,66 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .hub-card.locked .hub-lock{font-size:18px;margin-left:4px;}
 @media(max-width:360px){.hub-grid{grid-template-columns:1fr;}}
 
-.home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:50;}
-.home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.25;}
-.brand-title{font-size:16px;font-weight:800;letter-spacing:0.2px;color:#fff;white-space:nowrap;}
-.greet-sub{font-size:12px;color:var(--txt-dim);margin-top:2px;order:3;}
-.home-header .sub{font-size:12px;color:var(--accent-blue);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:5px;}
-.home-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(124,77,255,0.5);overflow:hidden;background:#0a0e1a;border:2px solid rgba(124,77,255,0.3);cursor:pointer;transition:transform .15s;}
+/* ===== Header gọn + tile glass ===== */
+.home-header{width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;position:relative;z-index:50;}
+.hh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;}
+.hh-body{display:flex;flex-direction:column;gap:4px;}
+.home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.2;margin:0;}
+.brand-title{font-size:16px;font-weight:800;letter-spacing:0.2px;color:#fff;white-space:normal;}
+.brand-title.in-unit{font-size:22px;font-weight:900;letter-spacing:-0.2px;line-height:1.15;}
+.greet-sub{display:none!important;}
+.home-header .sub{font-size:12px;color:#90caf9;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:5px;}
+.home-header.in-unit .sub{display:none;}
+.ws-back-btn{display:none;align-items:center;gap:4px;padding:7px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);color:#e8ecf5;font-weight:700;font-size:12px;font-family:inherit;cursor:pointer;}
+.home-header.in-unit .ws-back-btn{display:inline-flex;}
+.ws-back-btn:active{background:rgba(255,167,38,.18);border-color:rgba(255,167,38,.4);color:#ffb74d;}
+.home-user-line{font-size:13px;color:#e8ecf5;font-weight:600;margin-top:2px;}
+.home-user-line a{color:#ffa726;font-weight:700;text-decoration:none;}
+.home-user-line a.logout{color:#64b5f6;}
+.home-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 18px rgba(255,167,38,0.35);overflow:hidden;background:#0a0e1a;border:2px solid rgba(255,167,38,0.4);cursor:pointer;transition:transform .15s;}
 .home-avatar:active{transform:scale(0.92);}
 .home-avatar img{width:100%;height:100%;object-fit:cover;object-position:center;}
 .export-popover-wrap{position:relative;z-index:200;}
-.export-popover{display:none;position:absolute;top:58px;right:0;z-index:210;background:var(--bg-card);border:1px solid var(--border-soft);box-shadow:0 8px 28px rgba(0,0,0,.45);
-  border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.5);padding:8px;min-width:210px;}
+.export-popover{display:none;position:absolute;top:52px;right:0;z-index:210;background:rgba(19,24,38,.94);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.55);padding:8px;min-width:220px;}
 .export-popover.show{display:block;}
-.export-popover button{width:100%;text-align:left;background:none;border:none;color:#fff;font-size:13px;font-weight:700;
-  padding:11px 12px;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;}
+.export-popover button{width:100%;text-align:left;background:none;border:none;color:#f0f3fa;font-size:13px;font-weight:700;
+  padding:11px 12px;border-radius:10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;}
 .export-popover button:active{background:rgba(255,255,255,0.08);}
-.home-cards{display:flex;flex-direction:column;gap:16px;width:100%;max-width:420px;position:relative;z-index:1;}
-.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.mod-tile{position:relative;background:linear-gradient(145deg,var(--bg-card),var(--bg-card2));border-radius:14px;padding:12px 12px;cursor:pointer;
-  display:flex;flex-direction:row;align-items:center;gap:10px;min-height:64px;
-  box-shadow:0 3px 14px rgba(0,0,0,0.35);border:1px solid var(--border-soft);transition:transform 0.15s,opacity .2s,filter .2s;overflow:hidden;}
-.mod-tile:active{transform:scale(0.96);}
-.mod-tile::after{content:'';position:absolute;top:0;bottom:0;left:0;width:3px;background:linear-gradient(180deg,var(--accent1),var(--accent2));opacity:0.9;}
-.mod-tile.c-ns{--accent1:#2196f3;--accent2:#64b5f6;}
-.mod-tile.c-mmtb{--accent1:#ff9800;--accent2:#ffc947;}
-.mod-tile.c-ldt{--accent1:#4caf50;--accent2:#81c784;}
-.mod-tile.c-hc{--accent1:#7c4dff;--accent2:#b388ff;}
-.mod-tile.c-db{--accent1:#00acc1;--accent2:#4dd0e1;}
-.mod-tile .mod-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;position:relative;z-index:1;}
-.mod-tile.c-ns .mod-icon{background:linear-gradient(145deg,rgba(33,150,243,0.18),rgba(33,150,243,0.06));box-shadow:inset 0 0 0 1.5px rgba(33,150,243,0.4);}
-.mod-tile.c-mmtb .mod-icon{background:linear-gradient(145deg,rgba(255,152,0,0.18),rgba(255,152,0,0.06));box-shadow:inset 0 0 0 1.5px rgba(255,152,0,0.4);}
-.mod-tile.c-ldt .mod-icon{background:linear-gradient(145deg,rgba(76,175,80,0.18),rgba(76,175,80,0.06));box-shadow:inset 0 0 0 1.5px rgba(76,175,80,0.4);}
-.mod-tile.c-hc .mod-icon{background:linear-gradient(145deg,rgba(124,77,255,0.18),rgba(124,77,255,0.06));box-shadow:inset 0 0 0 1.5px rgba(124,77,255,0.4);}
-.mod-tile.c-db .mod-icon{background:linear-gradient(145deg,rgba(0,172,193,0.18),rgba(0,172,193,0.06));box-shadow:inset 0 0 0 1.5px rgba(0,172,193,0.4);}
-.mod-tile .mod-title{font-size:12px;font-weight:800;color:#fff;text-align:left;line-height:1.3;position:relative;z-index:1;}
-/* Trạng thái không có quyền: mờ đi thay vì ẩn hẳn — vẫn thấy mục có tồn tại */
+.ws-meta-bar{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:10px 14px;
+  background:rgba(19,24,38,.8);border:1px solid rgba(255,255,255,.08);border-radius:14px;position:relative;z-index:1;}
+.ws-meta-bar .meta-left{font-size:12px;color:#c5cad6;font-weight:600;}
+.ws-meta-bar .meta-refresh{cursor:pointer;color:#64b5f6;font-weight:800;font-size:12px;display:flex;align-items:center;gap:5px;}
+.home-cards{display:flex;flex-direction:column;gap:12px;width:100%;max-width:420px;position:relative;z-index:1;}
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.mod-tile{position:relative;background:linear-gradient(145deg,rgba(22,28,42,.92),rgba(14,18,30,.95));border-radius:16px;padding:14px;cursor:pointer;
+  display:flex;flex-direction:row;align-items:center;gap:12px;min-height:74px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);transition:transform 0.15s;overflow:hidden;}
+.mod-tile:active{transform:scale(0.97);}
+.mod-tile::before{content:'';position:absolute;inset:0;border-radius:16px;background:radial-gradient(120% 80% at 0% 0%,color-mix(in srgb,var(--accent1) 20%,transparent),transparent 55%);pointer-events:none;}
+.mod-tile::after{content:'';position:absolute;top:0;bottom:0;left:0;width:3px;background:linear-gradient(180deg,var(--accent1),var(--accent2));border-radius:16px 0 0 16px;}
+.mod-tile.c-ns{--accent1:#42a5f5;--accent2:#90caf9;}
+.mod-tile.c-mmtb{--accent1:#ff9800;--accent2:#ffd54f;}
+.mod-tile.c-ldt{--accent1:#66bb6a;--accent2:#a5d6a7;}
+.mod-tile.c-hc{--accent1:#ab47bc;--accent2:#ce93d8;}
+.mod-tile.c-db{--accent1:#26c6da;--accent2:#80deea;}
+.mod-tile.c-dinh{--accent1:#26a69a;--accent2:#80cbc4;}
+.mod-tile.c-ban{--accent1:#5c6bc0;--accent2:#9fa8da;}
+.mod-tile.span2{grid-column:1 / -1;}
+.mod-tile .mod-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;position:relative;z-index:1;}
+.mod-tile.c-ns .mod-icon{background:linear-gradient(145deg,rgba(66,165,245,.28),rgba(66,165,245,.08));box-shadow:0 0 14px rgba(66,165,245,.22),inset 0 0 0 1.5px rgba(66,165,245,.45);}
+.mod-tile.c-mmtb .mod-icon{background:linear-gradient(145deg,rgba(255,152,0,.28),rgba(255,152,0,.08));box-shadow:0 0 14px rgba(255,152,0,.22),inset 0 0 0 1.5px rgba(255,152,0,.45);}
+.mod-tile.c-ldt .mod-icon{background:linear-gradient(145deg,rgba(102,187,106,.28),rgba(102,187,106,.08));box-shadow:inset 0 0 0 1.5px rgba(102,187,106,.4);}
+.mod-tile.c-hc .mod-icon{background:linear-gradient(145deg,rgba(171,71,188,.28),rgba(171,71,188,.08));box-shadow:0 0 14px rgba(171,71,188,.2),inset 0 0 0 1.5px rgba(171,71,188,.45);}
+.mod-tile.c-db .mod-icon{background:linear-gradient(145deg,rgba(38,198,218,.28),rgba(38,198,218,.08));box-shadow:inset 0 0 0 1.5px rgba(38,198,218,.45);}
+.mod-tile.c-dinh .mod-icon{background:linear-gradient(145deg,rgba(38,166,154,.28),rgba(38,166,154,.08));box-shadow:0 0 14px rgba(38,166,154,.2),inset 0 0 0 1.5px rgba(38,166,154,.45);}
+.mod-tile.c-ban .mod-icon{background:linear-gradient(145deg,rgba(92,107,192,.28),rgba(92,107,192,.08));box-shadow:0 0 14px rgba(92,107,192,.2),inset 0 0 0 1.5px rgba(92,107,192,.45);}
+.mod-tile .mod-title{font-size:13px;font-weight:800;color:#f5f7ff;text-align:left;line-height:1.25;position:relative;z-index:1;}
+.mod-tile .mod-sub{font-size:10px;font-weight:600;color:#9aa3b8;margin-top:2px;position:relative;z-index:1;}
 .mod-tile.locked{opacity:0.4;filter:grayscale(0.6);pointer-events:none;cursor:not-allowed;}
+.weather-card{margin-top:4px!important;}
 
 /* Thông báo trang chủ — thẻ, không full-bar */
 #home-tb-list{width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;position:relative;z-index:1;}
@@ -389,17 +413,22 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 <div id="screen-home" class="app-screen active">
   <div class="home-wrap">
     <img src="icon.png" class="home-watermark" alt="">
-    <div class="home-header">
-      <div style="display:flex;flex-direction:column;">
-        <h1 class="brand-title" id="home-brand-title" style="order:1;"><span style="color:#42a5f5">KHỐI SAN LẤP</span> <span style="color:#fff">-</span> <span style="color:#ffa726">XÂY DỰNG HẠ TẦNG 3</span></h1>
-        <div class="sub" style="order:4;">📅 <span id="home-date"></span></div>
-      </div>
-      <div style="text-align:right" class="export-popover-wrap">
-        <div class="home-avatar" id="home-avatar" onclick="toggleExportPopover()"><img src="icon.png" alt="VB"></div>
-        <div class="export-popover" id="exportPopover">
-          <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo đơn vị này (ảnh)</button>
-          <button onclick="toggleExportPopover();exportTongHop4DonVi();">📊 Xuất tổng hợp 4 đơn vị (ảnh)</button>
+    <div class="home-header" id="home-header">
+      <div class="hh-top">
+        <button type="button" id="home-don-vi-btn" class="ws-back-btn" onclick="backToDonViHub()">‹ Khối</button>
+        <div style="flex:1"></div>
+        <div class="export-popover-wrap">
+          <div class="home-avatar" id="home-avatar" onclick="toggleExportPopover()"><img src="icon.png" alt="VB"></div>
+          <div class="export-popover" id="exportPopover">
+            <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo đơn vị này (ảnh)</button>
+            <button onclick="toggleExportPopover();exportTongHop4DonVi();">📊 Xuất tổng hợp 4 đơn vị (ảnh)</button>
+          </div>
         </div>
+      </div>
+      <div class="hh-body">
+        <h1 class="brand-title" id="home-brand-title"><span style="color:#42a5f5">KHỐI SAN LẤP</span> <span style="color:#fff">-</span> <span style="color:#ffa726">XÂY DỰNG HẠ TẦNG 3</span></h1>
+        <div id="home-user-slot" class="home-user-line"></div>
+        <div class="sub">📅 <span id="home-date"></span></div>
       </div>
     </div>
 
@@ -424,66 +453,40 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
     <!-- Workspace trong đơn vị -->
     <div id="home-workspace" class="hide">
-    <!-- Về trang Khối -->
-    <div style="width:100%;max-width:420px;margin-bottom:10px;position:relative;z-index:1;">
-      <button type="button" id="home-don-vi-btn" onclick="backToDonViHub()"
-        style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid rgba(249,168,37,.45);background:var(--bg-card);color:#f9a825;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;">
-        ← Về trang Khối
-      </button>
-      <span id="home-don-vi-label" style="display:none;"></span>
-    </div>
-
-    <!-- Thanh cập nhật + làm mới (ngay dưới logo app) -->
-    <div style="width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;position:relative;z-index:1;">
-      <span style="font-size:11px;color:var(--txt-dim);">🕐 Cập nhật: <span id="qs-update-time">--:--</span> • <span id="qs-update-date">--/--/----</span></span>
-      <span id="home-refresh-btn" style="cursor:pointer;color:var(--accent-blue);font-weight:700;font-size:12px;display:flex;align-items:center;gap:5px;" onclick="homeRefresh()">
-        <span id="home-refresh-icon" style="display:inline-block;transition:transform 0.5s;">🔄</span> Làm mới
+    <span id="home-don-vi-label" style="display:none;"></span>
+    <div class="ws-meta-bar">
+      <span class="meta-left">📅 <span id="qs-update-date">--/--/----</span> · <span id="qs-update-time">--:--</span></span>
+      <span id="home-refresh-btn" class="meta-refresh" onclick="homeRefresh()">
+        <span id="home-refresh-icon" style="display:inline-block;transition:transform 0.5s;">↻</span> Làm mới
       </span>
     </div>
-
     <div class="home-cards">
-      <!-- Banner bật thông báo — TẠM TẮT HẲN (không đạt hiệu quả, để làm lại sau).
-      <div id="home-notif-banner" style="display:none;background:linear-gradient(135deg,#1565c0,#1976d2);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(21,101,192,0.35);">
-        <span style="font-size:26px;">🔔</span>
-        <div style="flex:1;">
-          <div style="font-weight:800;color:#fff;font-size:13px;">Bật thông báo nhắc nhở</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;" id="notif-banner-times">Nhắc 7:30 (NS/MMTB) và 15:30 (Nghiệm thu)</div>
-        </div>
-        <button onclick="bchRequestNotif();document.getElementById('home-notif-banner').style.display='none';" style="background:#fff;color:#1565c0;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">Bật ngay</button>
-      </div>
-      -->
     <div id="home-tb-list"></div>
     <div class="mod-grid">
       <div class="mod-tile c-ns" data-quyen="bao_cao_nhan_su" onclick="goModule('ns')">
         <span class="mod-badge" id="badge-ns"></span>
         <div class="mod-icon">📋</div>
-        <div class="mod-title">Báo cáo Nhân sự</div>
+        <div><div class="mod-title">Nhân sự</div><div class="mod-sub">Báo cáo nhân sự</div></div>
       </div>
       <div class="mod-tile c-mmtb" data-quyen="bao_cao_mmtb" onclick="goModule('mmtb')">
         <span class="mod-badge" id="badge-mmtb"></span>
         <div class="mod-icon">🚜</div>
-        <div class="mod-title">Báo cáo MMTB</div>
+        <div><div class="mod-title">MMTB</div><div class="mod-sub">Máy móc thiết bị</div></div>
       </div>
-      <div class="mod-tile c-ldt" data-quyen="bao_lich_nghiem_thu" onclick="goModule('ldt')">
-        <span class="mod-badge" id="badge-ldt"></span>
-        <div class="mod-icon">📅</div>
-        <div class="mod-title">Lịch nghiệm thu</div>
-      </div>
-      <div class="mod-tile c-db" data-quyen="dinh_bien" onclick="goModuleDinhBien()">
+      <div class="mod-tile c-dinh" data-quyen="dinh_bien" onclick="goModuleDinhBien()">
         <div class="mod-icon">📊</div>
-        <div class="mod-title">Định biên</div>
+        <div><div class="mod-title">Định biên</div><div class="mod-sub">Biên chế theo dự án</div></div>
       </div>
-      <div class="mod-tile c-db" data-quyen="danh_ba" onclick="openDanhBa()" style="border-color:rgba(249,168,37,.35);">
+      <div class="mod-tile c-hc" data-quyen="danh_ba" onclick="openDanhBa()">
         <div class="mod-icon">📞</div>
-        <div class="mod-title">Danh bạ</div>
+        <div><div class="mod-title">Danh bạ</div><div class="mod-sub">Liên hệ nội bộ</div></div>
       </div>
-      <div class="mod-tile c-db" data-quyen="ban_tin" onclick="goModuleBanTin()" style="border-color:rgba(66,165,245,.35);">
+      <div class="mod-tile c-ban span2" data-quyen="ban_tin" onclick="goModuleBanTin()">
         <div class="mod-icon">📰</div>
-        <div class="mod-title">Bản tin</div>
+        <div><div class="mod-title">Bản tin</div><div class="mod-sub">Tin tức & thông báo dự án</div></div>
       </div>
     </div>
     </div>
-
     </div><!-- /home-workspace -->
 
     <div class="weather-card" id="weatherCard">
@@ -658,7 +661,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   </div>
 </div>
 <!-- ============ MODULE LỊCH NGHIỆM THU ============ -->
-<div id="screen-ldt" class="app-screen">
+<div id="screen-ldt" class="app-screen" style="display:none!important;">
   <div class="back-bar">
     <button class="back-btn" onclick="showScreen('home')">← Quay lại</button>
   </div>
@@ -817,8 +820,24 @@ function qsToggleStats(){
   btn.querySelector('span').textContent = isOpen ? '📊 Thống kê nhanh' : '📊 Thống kê nhanh — bấm để xem';
 }
 
-// ============ THỜI TIẾT (Open-Meteo — miễn phí, không cần API key) ============
-var WEATHER_LAT=11.9214, WEATHER_LON=109.1591; // Cam Ranh, Khánh Hoà
+// ============ THỜI TIẾT (Open-Meteo) — theo đơn vị ==========
+var WEATHER_BY_DON_VI = {
+  khanh_hoa: { lat: 11.9214, lon: 109.1591, label: 'Cam Ranh, Khánh Hoà' },
+  lang_van:  { lat: 16.1200, lon: 108.1300, label: 'Làng Vân, Đà Nẵng' },
+  st99:      { lat: 21.0285, lon: 105.8542, label: 'Hà Nội (tạm ST99)' },
+  ha_tinh:   { lat: 18.3420, lon: 105.9060, label: 'Hà Tĩnh' }
+};
+function getWeatherLoc(){
+  var id = (typeof getDonViId === 'function' ? getDonViId() : '') || localStorage.getItem('bch_don_vi_id') || 'khanh_hoa';
+  var ten = (window.BCH_DON_VI_TEN || localStorage.getItem('bch_don_vi_ten') || '') + '';
+  id = String(id).toLowerCase().trim(); ten = ten.toLowerCase();
+  if(WEATHER_BY_DON_VI[id]) return WEATHER_BY_DON_VI[id];
+  if(/lang\s*van|làng\s*vân|đà\s*nẵng|da\s*nang/.test(id+' '+ten)) return WEATHER_BY_DON_VI.lang_van;
+  if(/st\s*99|st99/.test(id+' '+ten)) return WEATHER_BY_DON_VI.st99;
+  if(/ha\s*tinh|hà\s*tĩnh/.test(id+' '+ten)) return WEATHER_BY_DON_VI.ha_tinh;
+  return WEATHER_BY_DON_VI.khanh_hoa;
+}
+var WEATHER_LAT=11.9214, WEATHER_LON=109.1591; // fallback
 var WEATHER_ICONS_DAY={0:'☀️',1:'🌤️',2:'⛅',3:'☁️'};
 var WEATHER_ICONS_NIGHT={0:'🌙',1:'🌙',2:'☁️',3:'☁️'};
 var WEATHER_ICONS={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌦️',
@@ -845,7 +864,9 @@ function weatherDesc(c,isDay){
 
 async function loadWeather(){
   try{
-    var url='https://api.open-meteo.com/v1/forecast?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON
+    var loc=getWeatherLoc(); WEATHER_LAT=loc.lat; WEATHER_LON=loc.lon;
+    var locEl=document.querySelector('.weather-loc'); if(locEl) locEl.textContent='📍 '+loc.label;
+    var url='https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon
       +'&current=temperature_2m,weather_code,is_day'
       +'&daily=weather_code,temperature_2m_max,temperature_2m_min'
       +'&timezone=Asia%2FHo_Chi_Minh&forecast_days=5';
@@ -1369,13 +1390,13 @@ async function exportFullReport(){
   // đây là ảnh TĨNH nên chỉ lấy đúng số liệu tại thời điểm bấm xuất, không tự cập nhật sau đó.
   var repWeather=null;
   try{
-    var wUrl='https://api.open-meteo.com/v1/forecast?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON
+    var wLoc=getWeatherLoc(); var wUrl='https://api.open-meteo.com/v1/forecast?latitude='+wLoc.lat+'&longitude='+wLoc.lon
       +'&current=temperature_2m,weather_code,is_day&timezone=Asia%2FHo_Chi_Minh';
     var wRes=await fetch(wUrl);
     var wD=await wRes.json();
     if(wD&&wD.current){
       var wTime=wD.current.time?wD.current.time.split('T')[1].slice(0,5):'';
-      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code,wD.current.is_day),icon:weatherIcon(wD.current.weather_code,wD.current.is_day),time:wTime};
+      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code,wD.current.is_day),icon:weatherIcon(wD.current.weather_code,wD.current.is_day),time:wTime,label:wLoc.label};
     }
   }catch(e){}
 
@@ -1745,7 +1766,7 @@ async function exportFullReport(){
 
   var repWeatherHtml = repWeather ?
     ('<div style="text-align:right;color:#0F2A5C;">'
-      +'<div style="font-size:10px;color:#5a6b8c;">📍 '+(repWeather.time?'Lúc '+repWeather.time+' · ':'')+'Cam Ranh, Khánh Hoà</div>'
+      +'<div style="font-size:10px;color:#5a6b8c;">📍 '+(repWeather.time?'Lúc '+repWeather.time+' · ':'')+(repWeather.label||'—')+'</div>'
       +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">'
         +'<span style="font-size:22px;font-weight:800;color:#0F2A5C;">'+repWeather.temp+'°</span>'
         +'<span style="font-size:22px;">'+repWeather.icon+'</span>'
@@ -2259,13 +2280,19 @@ var ORG_BRAND_HTML = '<span style="color:#42a5f5">KHỐI SAN LẤP</span> <span 
 
 function applyHomeBrand(){
   var el = document.getElementById('home-brand-title');
+  var hdr = document.getElementById('home-header');
   if(!el) return;
   var ten = window.BCH_DON_VI_TEN || '';
-  if(ten && getDonViId()){
-    el.innerHTML = '<span style="color:#f9a825">'+escHtmlHub(ten)+'</span>';
+  var inUnit = !!(ten && getDonViId());
+  if(inUnit){
+    el.innerHTML = '<span style="color:#ffa726">'+escHtmlHub(ten)+'</span>';
+    el.classList.add('in-unit');
+    if(hdr) hdr.classList.add('in-unit');
     document.title = ten;
   }else{
     el.innerHTML = ORG_BRAND_HTML;
+    el.classList.remove('in-unit');
+    if(hdr) hdr.classList.remove('in-unit');
     document.title = 'KHỐI SAN LẤP - XÂY DỰNG HẠ TẦNG 3';
   }
   var lab = document.getElementById('home-don-vi-label');
@@ -5417,8 +5444,7 @@ function bchTinhLichThongBao(){
   var ns=minus30(parseHM(GIO_HAN.gio_han_ns_mmtb));
   var ldt=minus30(parseHM(GIO_HAN.gio_han_nghiem_thu));
   return [
-    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'},
-    {h:ldt.h,m:ldt.m,id:'ldt_reminder',     title:'📅 Sắp hết giờ báo lịch!', body:'Còn 30 phút nữa là hết giờ báo Lịch nghiệm thu ngày mai (deadline '+(GIO_HAN.gio_han_nghiem_thu||'16:00:00').slice(0,5)+')'}
+    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'}
   ];
 }
 
@@ -5857,25 +5883,20 @@ async function renderHomeThongBao(){
   if(elColNS) elColNS.style.display = coNS ? '' : 'none';
   if(elColMMTB) elColMMTB.style.display = coMMTB ? '' : 'none';
   if(elGroupNSMMTB) elGroupNSMMTB.style.display = (coNS || coMMTB) ? '' : 'none';
-  if(elGroupLDT) elGroupLDT.style.display = coLDT ? '' : 'none';
+  if(elGroupLDT) elGroupLDT.style.display = 'none';
   // Nếu 2 cột NS/MMTB chỉ còn 1 cột hiện, cho nó chiếm trọn hàng thay vì lệch
   var elRow = document.querySelector('.qs-donut-row');
   if(elRow && (coNS !== coMMTB)) elRow.style.gridTemplateColumns = '1fr';
   var elNone = document.getElementById('qs-group-none');
-  if(elNone) elNone.style.display = (!coNS && !coMMTB && !coLDT) ? '' : 'none';
+  if(elNone) elNone.style.display = (!coNS && !coMMTB) ? '' : 'none';
 
-  // Thêm dòng tên + nút xem thông tin tài khoản + đăng xuất (chỉ chèn thêm bằng JS)
-  var headerDiv = document.querySelector('.home-header > div');
-  if(headerDiv){
-    var who = document.createElement('div');
-    who.style.cssText = 'font-size:12px;margin-top:4px;order:2;';
-    who.innerHTML = '👤 <a href="#" id="bch-profile-link" style="color:#ffa726;font-weight:700;text-decoration:underline;">' + res.data.ten + '</a> &nbsp;·&nbsp; <a href="#" style="color:#2196f3;" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
-    headerDiv.appendChild(who);
-
-    var greetSub = document.createElement('div');
-    greetSub.className = 'greet-sub';
-    greetSub.textContent = 'Chúc bạn một ngày làm việc vui vẻ!';
-    headerDiv.appendChild(greetSub);
+  // Dòng tên + đăng xuất (slot cố định)
+  var userSlot = document.getElementById('home-user-slot');
+  if(userSlot){
+    userSlot.innerHTML = '<a href="#" id="bch-profile-link">' + res.data.ten + '</a> · <a href="#" class="logout" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
+  }
+  if(true){
+    var headerDiv = userSlot || document.querySelector('.hh-body');
 
     var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', danh_ba:'Danh bạ', ban_tin:'Bản tin' };
     var overlay = document.createElement('div');
