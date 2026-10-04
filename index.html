@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="BCH VB">
 <meta name="theme-color" content="#1565c0">
 <link rel="apple-touch-icon" href="icon.png">
-<title>BCH DA CAM LÂM - CAM RANH</title>
+<title>KHỐI SAN LẤP - XÂY DỰNG HẠ TẦNG 3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -44,6 +44,22 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 #screen-home{background:var(--bg-deep);margin:-8px;padding:0;}
 .home-wrap{position:relative;min-height:90vh;display:flex;flex-direction:column;align-items:center;padding:24px 12px;overflow:hidden;color:var(--txt-main);}
 .home-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:70vw;max-width:420px;opacity:0.12;z-index:0;pointer-events:none;filter:saturate(1.2);}
+
+/* Hub chọn đơn vị — mobile 2 cột */
+#home-hub{width:100%;max-width:420px;position:relative;z-index:1;display:none;}
+#home-hub.show{display:block;}
+#home-workspace{width:100%;max-width:420px;position:relative;z-index:1;}
+#home-workspace.hide{display:none;}
+.hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
+.hub-card{display:flex;align-items:center;gap:12px;padding:16px 14px;border-radius:14px;border:1.5px solid #2a3550;background:linear-gradient(145deg,#121a2b,#0e1524);color:#e8ecf5;cursor:pointer;text-align:left;font-family:inherit;min-height:88px;box-shadow:0 4px 14px rgba(0,0,0,.25);}
+.hub-card:active{border-color:#42a5f5;transform:scale(0.98);}
+.hub-card .hub-ico{font-size:28px;flex-shrink:0;opacity:.95;}
+.hub-card .hub-meta{flex:1;min-width:0;}
+.hub-card .hub-label{font-size:11px;color:#42a5f5;font-weight:700;margin-bottom:4px;}
+.hub-card .hub-name{font-size:14px;font-weight:800;line-height:1.3;color:#fff;}
+.hub-card .hub-arrow{color:#5d6b88;font-size:18px;font-weight:700;}
+@media(max-width:360px){.hub-grid{grid-template-columns:1fr;}}
+
 .home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:1;}
 .home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.25;}
 .brand-title{font-size:16px;font-weight:800;letter-spacing:0.2px;color:#fff;white-space:nowrap;}
@@ -370,7 +386,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <img src="icon.png" class="home-watermark" alt="">
     <div class="home-header">
       <div style="display:flex;flex-direction:column;">
-        <h1 class="brand-title" style="order:1;">BCH DA <span style="color:#42a5f5">CAM LÂM</span> - <span style="color:#ffa726">CAM RANH</span></h1>
+        <h1 class="brand-title" id="home-brand-title" style="order:1;"><span style="color:#42a5f5">KHỐI SAN LẤP</span> <span style="color:#fff">-</span> <span style="color:#ffa726">XÂY DỰNG HẠ TẦNG 3</span></h1>
         <div class="sub" style="order:4;">📅 <span id="home-date"></span></div>
       </div>
       <div style="text-align:right" class="export-popover-wrap">
@@ -395,9 +411,16 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       <div id="pwaIosSteps" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.25);font-size:11.5px;color:#fff;line-height:1.7;"></div>
     </div>
 
-    <!-- Chọn / đổi đơn vị (P2, mobile-first) -->
+    <!-- HUB chọn đơn vị (giống folder) -->
+    <div id="home-hub">
+      <div class="hub-grid" id="home-hub-grid"></div>
+    </div>
+
+    <!-- Workspace trong đơn vị -->
+    <div id="home-workspace" class="hide">
+    <!-- Đổi đơn vị -->
     <div style="width:100%;max-width:420px;margin-bottom:10px;position:relative;z-index:1;">
-      <button type="button" id="home-don-vi-btn" onclick="openDonViPicker({allowCancel:true,onPick:function(){ location.reload(); }})"
+      <button type="button" id="home-don-vi-btn" onclick="backToDonViHub()"
         style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border-soft);background:var(--bg-card);color:var(--txt);font-family:inherit;cursor:pointer;">
         <span style="text-align:left;">
           <span style="display:block;font-size:11px;color:var(--txt-dim);font-weight:600;">Đơn vị đang làm việc</span>
@@ -457,6 +480,8 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       </div>
     </div>
     </div>
+
+    </div><!-- /home-workspace -->
 
     <div class="weather-card" id="weatherCard">
       <div class="weather-top">
@@ -2040,6 +2065,80 @@ function clearDonVi(){
   localStorage.removeItem(DON_VI_TEN_LS);
 }
 
+var ORG_BRAND_HTML = '<span style="color:#42a5f5">KHỐI SAN LẤP</span> <span style="color:#fff">-</span> <span style="color:#ffa726">XÂY DỰNG HẠ TẦNG 3</span>';
+
+function applyHomeBrand(){
+  var el = document.getElementById('home-brand-title');
+  if(!el) return;
+  var ten = window.BCH_DON_VI_TEN || '';
+  if(ten && getDonViId()){
+    el.innerHTML = '<span style="color:#42a5f5">'+escHtmlHub(ten)+'</span>';
+    document.title = ten;
+  }else{
+    el.innerHTML = ORG_BRAND_HTML;
+    document.title = 'KHỐI SAN LẤP - XÂY DỰNG HẠ TẦNG 3';
+  }
+  var lab = document.getElementById('home-don-vi-label');
+  if(lab) lab.textContent = ten || '—';
+}
+function escHtmlHub(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showDonViHub(){
+  var hub = document.getElementById('home-hub');
+  var ws = document.getElementById('home-workspace');
+  if(hub) hub.classList.add('show');
+  if(ws) ws.classList.add('hide');
+  var w = document.getElementById('weatherCard');
+  if(w) w.style.display = 'none';
+  applyHomeBrand();
+  renderDonViHub();
+}
+function showDonViWorkspace(){
+  var hub = document.getElementById('home-hub');
+  var ws = document.getElementById('home-workspace');
+  if(hub) hub.classList.remove('show');
+  if(ws) ws.classList.remove('hide');
+  var w = document.getElementById('weatherCard');
+  if(w) w.style.display = '';
+  applyHomeBrand();
+}
+function backToDonViHub(){
+  clearDonVi();
+  showDonViHub();
+}
+
+async function renderDonViHub(){
+  var grid = document.getElementById('home-hub-grid');
+  if(!grid) return;
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b93a8;padding:20px;">Đang tải...</div>';
+  var rows = await fetchDonViList();
+  if(!rows.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#ef5350;padding:16px;font-size:13px;">Chưa có đơn vị. Chạy SQL P1.</div>';
+    return;
+  }
+  grid.innerHTML = rows.map(function(d){
+    return '<button type="button" class="hub-card" data-id="'+String(d.id).replace(/"/g,'')+'">'
+      +'<span class="hub-ico">📁</span>'
+      +'<span class="hub-meta"><span class="hub-label">Dự án</span><span class="hub-name">'+escHtmlHub(d.ten||d.id)+'</span></span>'
+      +'<span class="hub-arrow">›</span>'
+      +'</button>';
+  }).join('');
+  grid.querySelectorAll('.hub-card').forEach(function(btn){
+    btn.onclick = function(){
+      var id = btn.getAttribute('data-id');
+      var row = rows.find(function(x){ return x.id===id; });
+      setDonVi(id, row?row.ten:id);
+      showDonViWorkspace();
+      // reload để NS/MMTB/cấu hình theo đúng đơn vị
+      location.reload();
+    };
+  });
+}
+
+
+
 async function fetchDonViList(){
   try{
     var r = await sc.rpc('lay_danh_sach_don_vi');
@@ -2110,25 +2209,21 @@ async function openDonViPicker(opts){
 }
 
 async function ensureDonViSelected(){
-  if(getDonViId()) return true;
+  // Có đơn vị đã chọn → vào workspace
+  if(getDonViId()){
+    showDonViWorkspace();
+    return true;
+  }
   var rows = [];
   try{ rows = await fetchDonViList(); }catch(e){ rows = []; }
-  // Không có danh sách (chưa SQL) → mặc định Khánh Hòa để app không kẹt màn trắng
   if(!rows || !rows.length){
     setDonVi('khanh_hoa', 'Cụm dự án Khánh Hòa');
+    showDonViWorkspace();
     return true;
   }
-  // Chỉ 1 đơn vị → chọn luôn
-  if(rows.length === 1){
-    setDonVi(rows[0].id, rows[0].ten || rows[0].id);
-    return true;
-  }
-  return new Promise(function(resolve){
-    openDonViPicker({
-      allowCancel: false,
-      onPick: function(){ resolve(true); }
-    });
-  });
+  // Hiện hub 4 ô (không bottom-sheet)
+  showDonViHub();
+  return true;
 }
 
 
@@ -5493,7 +5588,7 @@ async function renderHomeThongBao(){
   // Hiện body TRƯỚC khi chờ chọn đơn vị — nếu không sẽ màn hình trắng (body đang display:none)
   document.body.style.display = '';
   await ensureDonViSelected();
-  (function(){ var el=document.getElementById('home-don-vi-label'); if(el) el.textContent=window.BCH_DON_VI_TEN||getDonViId()||''; })();
+  applyHomeBrand();
   document.dispatchEvent(new CustomEvent('bch-auth-ready', { detail: window.BCH_USER }));
   document.querySelectorAll('.mod-tile[data-quyen]').forEach(function(el){
     var key = el.getAttribute('data-quyen');
