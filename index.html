@@ -424,16 +424,13 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
     <!-- Workspace trong đơn vị -->
     <div id="home-workspace" class="hide">
-    <!-- Đổi đơn vị -->
+    <!-- Về trang Khối -->
     <div style="width:100%;max-width:420px;margin-bottom:10px;position:relative;z-index:1;">
       <button type="button" id="home-don-vi-btn" onclick="backToDonViHub()"
-        style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;border:1.5px solid rgba(249,168,37,.4);background:var(--bg-card);color:var(--txt);font-family:inherit;cursor:pointer;">
-        <span style="text-align:left;">
-          <span style="display:block;font-size:11px;color:var(--txt-dim);font-weight:600;">Đơn vị đang làm việc</span>
-          <span id="home-don-vi-label" style="display:block;font-size:14px;font-weight:800;margin-top:2px;">—</span>
-        </span>
-        <span style="font-size:12px;font-weight:700;color:#f9a825;white-space:nowrap;">Đổi ▾</span>
+        style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid rgba(249,168,37,.45);background:var(--bg-card);color:#f9a825;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;">
+        ← Về trang Khối
       </button>
+      <span id="home-don-vi-label" style="display:none;"></span>
     </div>
 
     <!-- Thanh cập nhật + làm mới (ngay dưới logo app) -->
@@ -780,19 +777,19 @@ function goModuleBanTin(){
   location.href = 'ban-tin.html';
 }
 function goModuleDinhBien(){
-  if(!donViChoPhepModule('dinh_bien')){
-    toast('🔒 Đơn vị này không mở mục Định biên.');
-    return;
-  }
-  if(window.BCH_QUYEN && !window.BCH_QUYEN.dinh_bien){
+  if(window.BCH_QUYEN && window.BCH_QUYEN.dinh_bien === false){
     toast('🔒 Bạn chưa được cấp quyền Định biên. Liên hệ Ban chỉ huy.');
     return;
   }
-  var el = document.querySelector('.mod-tile[data-quyen="dinh_bien"]');
-  if(el && el.classList.contains('locked')){
-    toast('🔒 Bạn chưa được cấp quyền vào mục này. Liên hệ Ban chỉ huy để được cấp quyền.');
-    return;
+  if(window.BCH_QUYEN && !window.BCH_QUYEN.dinh_bien){
+    // quyen object có nhưng không tick Định biên
+    var el = document.querySelector('.mod-tile[data-quyen="dinh_bien"]');
+    if(el && el.classList.contains('locked')){
+      toast('🔒 Bạn chưa được cấp quyền Định biên. Liên hệ Ban chỉ huy.');
+      return;
+    }
   }
+  try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN||{})); }catch(e){}
   location.href = 'dinh-bien.html';
 }
 
@@ -2218,10 +2215,11 @@ function getDonViModules(){
 /** Module được phép theo đơn vị (null = không giới hạn phía đơn vị) */
 function donViChoPhepModule(ma){
   var mods = getDonViModules();
-  if(!mods || typeof mods !== 'object') return true; // chưa có cấu hình → không chặn
-  // Nếu object rỗng → không chặn
+  if(!mods || typeof mods !== 'object') return true;
   var keys = Object.keys(mods);
   if(!keys.length) return true;
+  // Key không có trong modules → không chặn (tương thích dữ liệu cũ)
+  if(!Object.prototype.hasOwnProperty.call(mods, ma)) return true;
   return !!mods[ma];
 }
 function applyDonViModuleVisibility(){
@@ -5808,6 +5806,7 @@ async function renderHomeThongBao(){
   }
   // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
   window.BCH_QUYEN = res.data.quyen || {};
+  try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN)); }catch(e){}
   window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv, don_vi_id: res.data.don_vi_id || null, don_vi_ids: null };
   // Danh sách đơn vị được phép (có thể nhiều)
   try{

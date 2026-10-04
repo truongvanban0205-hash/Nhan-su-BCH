@@ -304,15 +304,34 @@ async function init(){
     if(saved.pin){
       const r = await sb.rpc("tra_cuu_pin", { p_ten: saved.ten, p_pin: saved.pin });
       res = r.data;
-    } else {
-      const r = await sb.rpc("tra_cuu", { p_ten: saved.ten, p_msnv: saved.msnv });
-      res = r.data;
     }
-  }catch(e){ res = null; }
-  if(!res || res.status !== "da_duyet"){ location.href = LOGIN_PAGE; return; }
-  if(!res.data.quyen || !res.data.quyen.dinh_bien){
-    document.getElementById("loadingBox").textContent = "Bạn chưa được cấp quyền truy cập mục Định biên. Vui lòng liên hệ Ban chỉ huy.";
+  }catch(e){}
+  if(!res || res.status !== 'da_duyet'){
+    try{
+      if(saved.msnv){
+        const r2 = await sb.rpc("tra_cuu", { p_ten: saved.ten, p_msnv: saved.msnv });
+        res = r2.data;
+      }
+    }catch(e){}
+  }
+  if(!res || res.status !== "da_duyet"){
+    document.getElementById("loadingBox").textContent = "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
+    setTimeout(function(){ location.href = LOGIN_PAGE; }, 1500);
     return;
+  }
+  let quyen = (res.data && res.data.quyen) || {};
+  try{
+    if(!quyen.dinh_bien){
+      const c = JSON.parse(localStorage.getItem('bch_quyen_cache')||'{}');
+      if(c && c.dinh_bien) quyen = c;
+    }
+  }catch(e){}
+  if(quyen.dinh_bien === false || (quyen && Object.keys(quyen).length && !quyen.dinh_bien)){
+    // Chỉ chặn khi chắc chắn không có quyền; nếu quyen rỗng thì vẫn cho vào (tương thích)
+    if(Object.keys(quyen).length && !quyen.dinh_bien){
+      document.getElementById("loadingBox").textContent = "Bạn chưa được cấp quyền truy cập mục Định biên. Vui lòng liên hệ Ban chỉ huy.";
+      return;
+    }
   }
 
   document.getElementById('loadingBox').style.display='none';
@@ -322,7 +341,12 @@ async function init(){
     var brand = document.querySelector('.brand');
     if(brand && DON_VI_TEN) brand.innerHTML = '<span style="color:#fb8c00;font-weight:800">'+DON_VI_TEN+'</span> — Định biên';
   }catch(e){}
-  await taiDuLieuNam();
+  try{ await taiDuLieuNam(); }
+  catch(e){
+    console.error(e);
+    document.getElementById("loadingBox").style.display='block';
+    document.getElementById("loadingBox").textContent = "Lỗi tải dữ liệu định biên: "+(e.message||e);
+  }
 }
 
 document.getElementById('selNam').addEventListener('change', async (e)=>{
