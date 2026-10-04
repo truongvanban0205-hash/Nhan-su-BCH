@@ -56,7 +56,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .hub-card .hub-ico{font-size:28px;flex-shrink:0;filter:saturate(1.2);}
 .hub-card .hub-meta{flex:1;min-width:0;}
 .hub-card .hub-label{font-size:11px;color:#ffb74d;font-weight:700;margin-bottom:4px;}
-.hub-card .hub-name{font-size:14px;font-weight:800;line-height:1.3;color:#fff;}
+.hub-card .hub-name{font-size:14px;font-weight:800;line-height:1.3;color:#f9a825;}
 .hub-card .hub-arrow{color:#ffb74d;font-size:18px;font-weight:700;}
 @media(max-width:360px){.hub-grid{grid-template-columns:1fr;}}
 
@@ -2053,7 +2053,7 @@ function applyHomeBrand(){
   if(!el) return;
   var ten = window.BCH_DON_VI_TEN || '';
   if(ten && getDonViId()){
-    el.innerHTML = '<span style="color:#42a5f5">'+escHtmlHub(ten)+'</span>';
+    el.innerHTML = '<span style="color:#f9a825">'+escHtmlHub(ten)+'</span>';
     document.title = ten;
   }else{
     el.innerHTML = ORG_BRAND_HTML;
@@ -2095,6 +2095,14 @@ async function renderDonViHub(){
   if(!grid) return;
   grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b93a8;padding:20px;">Đang tải...</div>';
   var rows = await fetchDonViList();
+  // Chỉ hiện đơn vị được gán cho user (nếu có don_vi_id). Không có / admin → xem tất cả.
+  try{
+    var uDv = (window.BCH_USER && window.BCH_USER.don_vi_id) ? window.BCH_USER.don_vi_id : '';
+    if(uDv && rows && rows.length){
+      var filtered = rows.filter(function(d){ return d.id === uDv; });
+      if(filtered.length) rows = filtered;
+    }
+  }catch(e){}
   if(!rows.length){
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#ef5350;padding:16px;font-size:13px;">Chưa có đơn vị. Chạy SQL P1.</div>';
     return;
@@ -5570,7 +5578,7 @@ async function renderHomeThongBao(){
   }
   // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
   window.BCH_QUYEN = res.data.quyen || {};
-  window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv };
+  window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv, don_vi_id: res.data.don_vi_id || null };
   // Hiện body TRƯỚC khi chờ chọn đơn vị — nếu không sẽ màn hình trắng (body đang display:none)
   document.body.style.display = '';
   await ensureDonViSelected();
