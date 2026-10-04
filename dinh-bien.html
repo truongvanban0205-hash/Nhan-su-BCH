@@ -99,8 +99,29 @@
 const SUPABASE_URL = "https://jqwjzvucwvlwbcgxhath.supabase.co";
 const SUPABASE_KEY = "sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const LS_KEY = "bch_nv_login";
+const LS_KEY = "bch_nv_login_v2"; // PHẢI trùng index.html + quan-ly-tai-khoan.html
 const LOGIN_PAGE = "quan-ly-tai-khoan.html";
+
+// ===== ĐƠN VỊ: Định biên tách riêng theo từng đơn vị (giống Nhân sự / MMTB) =====
+let DON_VI = localStorage.getItem('bch_don_vi_id') || '';
+const DON_VI_TEN = localStorage.getItem('bch_don_vi_ten') || '';
+let dvParamOk = true; // false nếu server chưa chạy SQL tách đơn vị
+function esc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Gọi RPC Định biên kèm mã đơn vị. Chưa có SQL: chỉ Khánh Hòa (dữ liệu cũ) được chạy tiếp, đơn vị khác bị chặn để KHÔNG ghi đè dữ liệu Khánh Hòa.
+async function rpcDv(name, params){
+  params = params || {};
+  if(dvParamOk){
+    const r = await sb.rpc(name, Object.assign({}, params, { p_don_vi_id: DON_VI }));
+    const msg = (r.error && (r.error.message||'')) || '';
+    const khongHoTro = r.error && (r.error.code==='PGRST202' || /Could not find the function|p_don_vi_id/i.test(msg));
+    if(!khongHoTro) return r;
+    dvParamOk = false;
+  }
+  if(DON_VI !== 'khanh_hoa'){
+    return { data:null, error:{ message:'Chưa chạy SQL tách Định biên theo đơn vị — chưa dùng được cho đơn vị này.' } };
+  }
+  return sb.rpc(name, params);
+}
 
 let saved = null;
 let unlocked = false;
@@ -122,7 +143,7 @@ function renderTable(){
   let html = '<thead><tr><th class="collabel">Chức danh</th>';
   cols.forEach(c=>{
     html += `<th><div style="display:flex;align-items:center;justify-content:center;">
-      <input type="text" data-colid="${c.id}" class="colname" value="${c.nhan}" ${unlocked?'':'disabled'}>
+      <input type="text" data-colid="${c.id}" class="colname" value="${esc(c.nhan)}" ${unlocked?'':'disabled'}>
       ${unlocked?`<span class="delcol" data-delcol="${c.id}">✕</span>`:''}
     </div></th>`;
   });
@@ -133,13 +154,13 @@ function renderTable(){
         <button type="button" class="icon-ord" data-up-cd="${r.id}" title="Đưa lên" ${ri===0?'disabled':''} style="border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:4px;padding:0 5px;font-size:11px;cursor:pointer;line-height:1.3;" ${ri===0?'disabled':''}>↑</button>
         <button type="button" class="icon-ord" data-down-cd="${r.id}" title="Đưa xuống" ${ri===rows.length-1?'disabled':''} style="border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:4px;padding:0 5px;font-size:11px;cursor:pointer;line-height:1.3;">↓</button>
       </span>`:''}
-      <input type="text" data-rowid="${r.id}" class="rowname" value="${r.ten}" ${unlocked?'':'disabled'}>
+      <input type="text" data-rowid="${r.id}" class="rowname" value="${esc(r.ten)}" ${unlocked?'':'disabled'}>
       ${unlocked?`<span class="hidrow" data-hidrow="${r.id}" title="${r.an?'Hiện lại':'Ẩn khỏi báo cáo Nhân sự'}">${r.an?'👁':'🚫'}</span>`:''}
       ${unlocked?`<span class="delrow" data-delrow="${r.id}">✕</span>`:''}
       </div>
       <div class="rowflex" style="margin-top:3px;">
         <span style="font-size:11px;color:var(--muted);white-space:nowrap;">Viết tắt:</span>
-        <input type="text" data-rowid-tat="${r.id}" class="rowtat" value="${r.ten_tat||''}" placeholder="VD: CV.NN" ${unlocked?'':'disabled'} style="font-size:11.5px;">
+        <input type="text" data-rowid-tat="${r.id}" class="rowtat" value="${esc(r.ten_tat||'')}" placeholder="VD: CV.NN" ${unlocked?'':'disabled'} style="font-size:11.5px;">
         ${r.an?'<span style="font-size:11px;color:var(--bad);font-weight:700;">— đang ẩn</span>':''}
       </div></td>`;
     cols.forEach(c=>{
@@ -160,7 +181,7 @@ function renderTable(){
   async function luuTenChucDanh(id){
     const nameInp = tbl.querySelector(`.rowname[data-rowid="${id}"]`);
     const tatInp = tbl.querySelector(`.rowtat[data-rowid-tat="${id}"]`);
-    const { error } = await sb.rpc('dinhbien_sua_chuc_danh', {
+    const { error } = await rpcDv('dinhbien_sua_chuc_danh', {
       p_pass: dinhBienPass, p_id: parseInt(id),
       p_ten_moi: nameInp.value, p_ten_tat_moi: tatInp ? tatInp.value : null
     });
@@ -177,7 +198,7 @@ function renderTable(){
   });
   tbl.querySelectorAll('.colname').forEach(inp=>{
     inp.addEventListener('change', async ()=>{
-      const { error } = await sb.rpc('dinhbien_sua_cot', { p_pass: dinhBienPass, p_id: parseInt(inp.dataset.colid), p_nhan_moi: inp.value });
+      const { error } = await rpcDv('dinhbien_sua_cot', { p_pass: dinhBienPass, p_id: parseInt(inp.dataset.colid), p_nhan_moi: inp.value });
       if(error){ showMsg('bad','Không đổi được tên cột: '+error.message); return; }
       var c = cols.find(x=>x.id==inp.dataset.colid); if(c) c.nhan = inp.value;
       showMsg('ok','✓ Đã đổi tên cột.');
@@ -189,7 +210,7 @@ function renderTable(){
       if(!r) return;
       const anMoi = !r.an;
       if(anMoi && !confirm(`Ẩn chức danh "${r.ten}" khỏi báo cáo Nhân sự? (số liệu Định biên đã nhập vẫn giữ nguyên, bấm hiện lại là có ngay)`)) return;
-      const { error } = await sb.rpc('dinhbien_an_chuc_danh', { p_pass: dinhBienPass, p_id: parseInt(btn.dataset.hidrow), p_an: anMoi });
+      const { error } = await rpcDv('dinhbien_an_chuc_danh', { p_pass: dinhBienPass, p_id: parseInt(btn.dataset.hidrow), p_an: anMoi });
       if(error){ showMsg('bad','Không thực hiện được: '+error.message); return; }
       r.an = anMoi;
       renderTable();
@@ -200,7 +221,7 @@ function renderTable(){
     btn.addEventListener('click', async ()=>{
       var r = rows.find(x=>x.id==btn.dataset.delrow);
       if(!confirm(`Xoá chức danh "${r?r.ten:''}"? Toàn bộ số liệu định biên của chức danh này (mọi năm) sẽ mất luôn, và báo cáo Nhân sự sẽ mất cột này ngay lập tức.`)) return;
-      const { error } = await sb.rpc('dinhbien_xoa_chuc_danh', { p_pass: dinhBienPass, p_id: parseInt(btn.dataset.delrow) });
+      const { error } = await rpcDv('dinhbien_xoa_chuc_danh', { p_pass: dinhBienPass, p_id: parseInt(btn.dataset.delrow) });
       if(error){ showMsg('bad','Không xoá được: '+error.message); return; }
       await taiDuLieuNam();
       showMsg('ok','✓ Đã xoá chức danh.');
@@ -210,7 +231,7 @@ function renderTable(){
     btn.addEventListener('click', async ()=>{
       var c = cols.find(x=>x.id==btn.dataset.delcol);
       if(!confirm(`Xoá cột "${c?c.nhan:''}"? Số liệu định biên trong cột này sẽ mất luôn.`)) return;
-      const { error } = await sb.rpc('dinhbien_xoa_cot', { p_pass: dinhBienPass, p_id: parseInt(btn.dataset.delcol) });
+      const { error } = await rpcDv('dinhbien_xoa_cot', { p_pass: dinhBienPass, p_id: parseInt(btn.dataset.delcol) });
       if(error){ showMsg('bad','Không xoá được: '+error.message); return; }
       await taiDuLieuNam();
       showMsg('ok','✓ Đã xoá cột.');
@@ -253,10 +274,11 @@ function handlePaste(e){
 
 async function taiDuLieuNam(){
   const [rowRes, colRes, valRes] = await Promise.all([
-    sb.rpc('dinhbien_lay_danh_sach_chuc_danh'),
-    sb.rpc('dinhbien_lay_danh_sach_cot', { p_nam: curNam }),
-    sb.rpc('dinhbien_lay_gia_tri_nam', { p_nam: curNam })
+    rpcDv('dinhbien_lay_danh_sach_chuc_danh'),
+    rpcDv('dinhbien_lay_danh_sach_cot', { p_nam: curNam }),
+    rpcDv('dinhbien_lay_gia_tri_nam', { p_nam: curNam })
   ]);
+  if(rowRes.error){ showMsg('bad','Không tải được Định biên: '+(rowRes.error.message||'')); }
   rows = rowRes.data || [];
   rows.sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); });
   cols = colRes.data || [];
@@ -274,7 +296,7 @@ async function doiViTriChucDanh(id, huong){
   if(doiIdx < 0 || doiIdx >= rows.length) return;
   const a = rows[idx];
   const b = rows[doiIdx];
-  const { error } = await sb.rpc('dinhbien_doi_thu_tu_chuc_danh', {
+  const { error } = await rpcDv('dinhbien_doi_thu_tu_chuc_danh', {
     p_pass: dinhBienPass, p_id1: a.id, p_id2: b.id
   });
   if(error){ showMsg('bad','Không đổi vị trí được: '+(error.message||'')); return; }
@@ -319,6 +341,31 @@ async function init(){
     setTimeout(function(){ location.href = LOGIN_PAGE; }, 1500);
     return;
   }
+  // PIN tạm 0000 / bắt đổi PIN → về trang đăng nhập (giống index.html)
+  if((res.data && res.data.phai_doi_pin) || (saved.pin && String(saved.pin).trim()==='0000')){
+    localStorage.removeItem(LS_KEY);
+    location.href = LOGIN_PAGE;
+    return;
+  }
+  // Đơn vị được phép của tài khoản (giống index.html)
+  let allowed = [];
+  try{
+    const rIds = await sb.rpc('nv_lay_don_vi_ids', { p_ten: res.data.ten, p_msnv: res.data.msnv || '' });
+    if(rIds.data){
+      allowed = typeof rIds.data === 'string' ? JSON.parse(rIds.data) : rIds.data;
+    }
+  }catch(e){}
+  if(!Array.isArray(allowed) || !allowed.length) allowed = [res.data.don_vi_id || 'khanh_hoa'];
+  allowed = allowed.map(String);
+  if(!DON_VI){
+    if(allowed.length === 1){ DON_VI = allowed[0]; }
+    else { location.href = 'index.html'; return; } // nhiều đơn vị mà chưa chọn → về chọn đơn vị
+  }
+  if(allowed.indexOf(String(DON_VI)) < 0){
+    document.getElementById("loadingBox").textContent = "Bạn không thuộc đơn vị này nên không vào được Định biên của đơn vị đó.";
+    return;
+  }
+
   let quyen = (res.data && res.data.quyen) || {};
   try{
     if(!quyen.dinh_bien){
@@ -339,7 +386,10 @@ async function init(){
   document.getElementById('appBox').style.display = 'block';
   try{
     var brand = document.querySelector('.brand');
-    if(brand && DON_VI_TEN) brand.innerHTML = '<span style="color:#fb8c00;font-weight:800">'+DON_VI_TEN+'</span> — Định biên';
+    if(brand && DON_VI_TEN){
+      brand.innerHTML = '<span style="color:#f9a825;font-weight:800">'+esc(DON_VI_TEN)+'</span> — Định biên';
+      document.title = 'Định biên — ' + DON_VI_TEN;
+    }
   }catch(e){}
   try{ await taiDuLieuNam(); }
   catch(e){
@@ -375,7 +425,7 @@ document.getElementById('btnThemHang').addEventListener('click', async ()=>{
   const ten = prompt('Tên đầy đủ chức danh mới:');
   if(!ten || !ten.trim()) return;
   const tenTat = prompt('Tên viết tắt (hiện trong báo cáo Nhân sự — để trống thì dùng luôn tên đầy đủ):', '');
-  const { error } = await sb.rpc('dinhbien_them_chuc_danh', { p_pass: dinhBienPass, p_ten: ten.trim(), p_ten_tat: (tenTat||'').trim() || null });
+  const { error } = await rpcDv('dinhbien_them_chuc_danh', { p_pass: dinhBienPass, p_ten: ten.trim(), p_ten_tat: (tenTat||'').trim() || null });
   if(error){ showMsg('bad','Không thêm được: '+error.message); return; }
   await taiDuLieuNam();
   showMsg('ok', `✓ Đã thêm chức danh "${ten.trim()}" — báo cáo Nhân sự sẽ có thêm cột này ngay.`);
@@ -385,7 +435,7 @@ document.getElementById('btnThemCot').addEventListener('click', async ()=>{
   const nhan = prompt('Ngày bắt đầu áp dụng (định dạng dd/mm, VD: 01/01):');
   if(!nhan || !nhan.trim()) return;
   if(!/^\d{1,2}\/\d{1,2}$/.test(nhan.trim())){ alert('Định dạng chưa đúng, cần kiểu dd/mm (VD: 01/01, 15/03).'); return; }
-  const { error } = await sb.rpc('dinhbien_them_cot', { p_pass: dinhBienPass, p_nhan: nhan.trim(), p_nam: curNam });
+  const { error } = await rpcDv('dinhbien_them_cot', { p_pass: dinhBienPass, p_nhan: nhan.trim(), p_nam: curNam });
   if(error){ showMsg('bad','Không thêm được (có thể trùng ngày): '+error.message); return; }
   await taiDuLieuNam();
   showMsg('ok', `✓ Đã thêm cột "${nhan.trim()}"`);
@@ -399,7 +449,7 @@ document.getElementById('btnLuu').addEventListener('click', async ()=>{
       if(v !== undefined && v !== '') payload.push({ chuc_danh_id: r.id, cot_id: c.id, so_luong: v });
     });
   });
-  const { data, error } = await sb.rpc('dinhbien_luu_gia_tri', { p_pass: dinhBienPass, p_rows: payload });
+  const { data, error } = await rpcDv('dinhbien_luu_gia_tri', { p_pass: dinhBienPass, p_rows: payload });
   if(error){ showMsg('bad', 'Có lỗi khi lưu: ' + error.message); return; }
   showMsg('ok', `✓ Đã lưu ${data.da_luu} ô dữ liệu cho năm ${curNam}.`);
 });

@@ -1390,7 +1390,7 @@ async function exportFullReport(){
   // Định biên áp dụng cho ĐÚNG NGÀY đang xuất báo cáo (tự tìm mốc ngày gần nhất <= ngày đó)
   var dinhBienThangNay={};
   try{
-    var dbR=await sc.rpc('dinhbien_lay_gia_tri_ngay',{p_ngay:tk});
+    var dbR=await rpcDinhBienDV('dinhbien_lay_gia_tri_ngay',{p_ngay:tk});
     var dbRaw=dbR.data||{};
     // dbRaw trả về key là ID số (dạng text, VD "17") — đổi sang đúng mã cột "cd_17" đang dùng trong báo cáo
     Object.keys(dbRaw).forEach(function(id){ dinhBienThangNay['cd_'+id]=dbRaw[id]; });
@@ -2529,9 +2529,18 @@ var COLS=DEF_COLS.map(function(c){return {k:c.k,n:c.n};});
 
 // Tải danh sách chức danh THẬT từ Định biên — mã cột dùng "cd_<id nội bộ>" để đổi tên
 // chức danh bên Định biên không làm lệch/mất dữ liệu đã nhập (dữ liệu gắn theo ID, không theo tên).
+// Gọi RPC Định biên kèm đơn vị đang chọn; server chưa chạy SQL tách đơn vị thì tự đọc kiểu cũ (báo cáo không bị lỗi).
+async function rpcDinhBienDV(tenHam, thamSo){
+  thamSo = thamSo || {};
+  try{
+    var r = await sc.rpc(tenHam, Object.assign({}, thamSo, { p_don_vi_id: getDonViId() || 'khanh_hoa' }));
+    if(!r.error) return r;
+  }catch(e){}
+  return await sc.rpc(tenHam, thamSo);
+}
 async function taiDinhBienChucDanh(){
   try{
-    var r = await sc.rpc('dinhbien_lay_danh_sach_chuc_danh');
+    var r = await rpcDinhBienDV('dinhbien_lay_danh_sach_chuc_danh');
     if(r.data && r.data.length){
       // Thứ tự cột báo cáo NS = thu_tu trên Định biên (đổi ↑↓ bên Định biên là nhảy theo)
       var list = r.data.slice().sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
