@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản lý tài khoản — BCH DA CAM LÂM - CAM RANH</title>
+<title>Quản lý tài khoản — KHỐI SAN LẤP - HẠ TẦNG 3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -200,12 +200,20 @@
   @media (min-width:900px){
     .modal-overlay{align-items:center; padding:24px;}
   }
+
+.admin-unit-card{text-align:left;padding:16px;border-radius:14px;border:1.5px solid rgba(249,168,37,.45);background:linear-gradient(145deg,#2a1f0e,#1a140a);color:#fff;cursor:pointer;font-family:inherit;}
+.admin-unit-card:active{transform:scale(0.98);}
+.admin-unit-card .lbl{font-size:11px;color:#ffb74d;font-weight:700;margin-bottom:6px;}
+.admin-unit-card .name{font-size:15px;font-weight:800;color:#f9a825;line-height:1.3;}
+.admin-unit-card .meta{font-size:12px;color:#9aa8c0;margin-top:8px;}
+.admin-unit-card.locked{opacity:0.45;filter:grayscale(0.5);pointer-events:none;cursor:not-allowed;border-color:#444;}
+.admin-unit-card.locked .name::after{content:' 🔒';font-size:12px;}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="brand">BCH DA <span style="color:#58a6ff">CAM LÂM</span> — <b style="color:var(--accent)">CAM RANH</b></div>
+  <div class="brand"><span style="color:#58a6ff">KHỐI SAN LẤP</span> — <b style="color:var(--accent)">XÂY DỰNG HẠ TẦNG 3</b></div>
   <button class="linkbtn" id="btnToggleAdmin">Quản lý chung</button>
 </div>
 
@@ -286,43 +294,52 @@
   <div class="admin-head">
     <div>
       <h1 style="margin-bottom:2px;">Quản lý chung</h1>
-      <p class="sub" style="margin:0;">Danh sách nhân viên &amp; phê duyệt tài khoản</p>
+      <p class="sub" style="margin:0;" id="adminSubTitle">Chọn đơn vị để quản lý nhân viên &amp; quyền</p>
     </div>
     <div class="admin-actions">
+      <button class="linkbtn" id="btnBackAdminUnits" style="display:none;">← Đơn vị</button>
       <button class="linkbtn" id="btnThongBao">🔔 Quản lý Thông báo</button>
       <button class="linkbtn" id="btnDonVi">🏢 Đơn vị</button>
-      <button class="linkbtn" id="btnCauHinhNS">Cấu hình Nhân sự</button>
-      <button class="linkbtn" id="btnAddModule">+ Thêm quyền</button>
-      <button class="linkbtn" id="btnAddEmp">+ Thêm nhân viên</button>
-      <button class="linkbtn" id="btnImport">📥 Nhập Excel</button>
-      <button class="linkbtn" id="btnImportDanhBa">📞 Nhập danh bạ</button>
-      <button class="linkbtn" id="btnExport">Xuất Excel</button>
+      <button class="linkbtn" id="btnCauHinhNS" style="display:none;">Cấu hình Nhân sự</button>
+      <button class="linkbtn" id="btnAddModule" style="display:none;">+ Thêm quyền</button>
+      <button class="linkbtn" id="btnAddEmp" style="display:none;">+ Thêm nhân viên</button>
+      <button class="linkbtn" id="btnImport" style="display:none;">📥 Nhập Excel</button>
+      <button class="linkbtn" id="btnImportDanhBa" style="display:none;">📞 Nhập danh bạ</button>
+      <button class="linkbtn" id="btnExport" style="display:none;">Xuất Excel</button>
       <button class="linkbtn" id="btnChangePass">Đổi mật khẩu</button>
-      <button class="linkbtn" id="btnKhoaBaoCao">⏱️ Giờ khoá &amp; MK báo cáo</button>
+      <button class="linkbtn" id="btnKhoaBaoCao" style="display:none;">⏱️ Giờ khoá &amp; MK báo cáo</button>
       <button class="linkbtn" id="btnCloseAdmin">Đóng</button>
     </div>
   </div>
-  <div class="admin-filters" id="adminFilters" style="display:none;">
-    <select id="adminDonViSelect" title="Lọc theo đơn vị" style="min-width:160px;">
-      <option value="">Tất cả đơn vị</option>
-    </select>
-    <input type="text" id="searchInput" placeholder="Tìm theo tên, MSNV hoặc chức vụ...">
-    <select id="statusFilter">
-      <option value="all">Tất cả trạng thái</option>
-      <option value="da_duyet">Đã duyệt</option>
-      <option value="cho_duyet">Chờ phê duyệt</option>
-      <option value="tu_choi">Từ chối</option>
-    </select>
-    <span class="count-pill" id="countPill"></span>
+
+  <!-- Bước 1: chọn đơn vị -->
+  <div id="adminUnitPick">
+    <p class="sub" style="margin:0 0 12px;">Chạm vào đơn vị để vào quản lý. Đơn vị chưa có người → danh sách trống.</p>
+    <div id="adminUnitGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
   </div>
-  <div class="loading" id="adminLoading">Đang tải danh sách...</div>
-  <div class="table-wrap" id="tableWrap" style="display:none;">
-    <table>
-      <thead>
-        <tr id="tableHeadRow"></tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+
+  <!-- Bước 2: trong 1 đơn vị -->
+  <div id="adminUnitWork" style="display:none;">
+    <div class="admin-filters" id="adminFilters" style="display:flex;">
+      <select id="adminDonViSelect" style="display:none;"><option value="">—</option></select>
+      <input type="text" id="searchInput" placeholder="Tìm theo tên, MSNV hoặc chức vụ...">
+      <select id="statusFilter">
+        <option value="all">Tất cả trạng thái</option>
+        <option value="da_duyet">Đã duyệt</option>
+        <option value="cho_duyet">Chờ phê duyệt</option>
+        <option value="tu_choi">Từ chối</option>
+      </select>
+      <span class="count-pill" id="countPill"></span>
+    </div>
+    <div class="loading" id="adminLoading" style="display:none;">Đang tải danh sách...</div>
+    <div class="table-wrap" id="tableWrap" style="display:none;">
+      <table>
+        <thead>
+          <tr id="tableHeadRow"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -481,7 +498,7 @@
   </div>
 </div>
 
-<footer>BCH DA CAM LÂM — CAM RANH · Hệ thống quản lý tài khoản nội bộ</footer>
+<footer>KHỐI SAN LẤP — XÂY DỰNG HẠ TẦNG 3 · Hệ thống quản lý tài khoản nội bộ</footer>
 
 <!-- ============ MODAL THÔNG BÁO CHUNG ============ -->
 <div class="modal-overlay" id="modalThongBao">
@@ -840,7 +857,7 @@ let statusFilterVal = "all";
 
 function getFilteredSorted(){
   const dvSel = document.getElementById('adminDonViSelect');
-  const dvFilter = dvSel ? dvSel.value : '';
+  const dvFilter = window.currentAdminDonVi || (dvSel ? dvSel.value : '');
 
   let list = employeesCache.filter(e=>{
     if(statusFilterVal !== "all" && e.trang_thai !== statusFilterVal) return false;
@@ -1441,31 +1458,25 @@ document.getElementById("btnSubmitPass").addEventListener("click", async ()=>{
   modalPass.classList.remove("show");
   document.getElementById("viewNhanVien").style.display = "none";
   document.getElementById("viewAdmin").style.display = "block";
-  document.getElementById("adminFilters").style.display = "flex";
   searchQuery = ""; statusFilterVal = "all";
-  document.getElementById("searchInput").value = "";
-  document.getElementById("statusFilter").value = "all";
-  // Bắt buộc chọn đơn vị trước khi quản lý nhân sự
-  window.currentAdminDonVi = localStorage.getItem('bch_admin_don_vi') || '';
-  await fillAdminDonViSelect();
-  const sel = document.getElementById('adminDonViSelect');
-  if(sel){
-    // Bỏ "Tất cả" — chỉ chọn từng đơn vị
-    if(donViCache && donViCache.length){
-      sel.innerHTML = '<option value="">— Chọn đơn vị để quản lý —</option>' +
-        donViCache.filter(d=>!d.an).map(d=>`<option value="${d.id}">${(d.ten||d.id).replace(/</g,'&lt;')}</option>`).join('');
-    }
-    if(window.currentAdminDonVi) sel.value = window.currentAdminDonVi;
-    if(!sel.value){
-      // chưa chọn → bảng trống + nhắc
-      window.currentAdminDonVi = '';
-    }else{
-      window.currentAdminDonVi = sel.value;
-    }
-  }
-  loadAdminData();
+  const si = document.getElementById("searchInput");
+  const sf = document.getElementById("statusFilter");
+  if(si) si.value = "";
+  if(sf) sf.value = "all";
+  // Tải sẵn danh sách NV (để đếm trên thẻ đơn vị), rồi hiện màn chọn đơn vị
+  document.getElementById("adminLoading").style.display = "none";
+  try{
+    await loadModules();
+    const { data } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass });
+    employeesCache = data || [];
+  }catch(e){ employeesCache = []; }
+  showAdminUnitPick();
 });
 
+const _btnBackUnits = document.getElementById("btnBackAdminUnits");
+if(_btnBackUnits){
+  _btnBackUnits.addEventListener("click", ()=>{ showAdminUnitPick(); });
+}
 document.getElementById("btnCloseAdmin").addEventListener("click", ()=>{
   currentAdminPass = null;
   document.getElementById("viewAdmin").style.display = "none";
@@ -1480,19 +1491,25 @@ async function loadModules(){
 }
 
 async function loadAdminData(){
-  document.getElementById("adminLoading").style.display = "block";
-  document.getElementById("tableWrap").style.display = "none";
+  if(!window.currentAdminDonVi){
+    showAdminUnitPick();
+    return;
+  }
+  const loading = document.getElementById("adminLoading");
+  const wrap = document.getElementById("tableWrap");
+  if(loading) loading.style.display = "block";
+  if(wrap) wrap.style.display = "none";
   await loadModules();
-  try{ await fillAdminDonViSelect(); }catch(e){}
   const { data, error } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass });
   if(error){
+    if(loading) loading.style.display = "none";
     showToast("Không tải được danh sách, vui lòng thử lại.");
     return;
   }
   employeesCache = data || [];
   renderAdminTable();
-  document.getElementById("adminLoading").style.display = "none";
-  document.getElementById("tableWrap").style.display = "block";
+  if(loading) loading.style.display = "none";
+  if(wrap) wrap.style.display = "block";
 }
 
 function renderAdminTable(){
@@ -2027,6 +2044,74 @@ document.getElementById('btnConfirmImportDanhBa').addEventListener('click', asyn
   box.style.background = '#e8f5e9'; box.style.color = '#2e7d32';
   box.textContent = `✓ Đã nhập danh bạ: thêm ${data.them||0}, cập nhật ${data.cap_nhat||0}, tổng ${data.tong||payload.length}.`;
 });
+
+
+
+/* ===== Admin: chọn đơn vị trước, rồi mới quản lý ===== */
+window.currentAdminDonVi = window.currentAdminDonVi || '';
+
+function showAdminUnitPick(){
+  window.currentAdminDonVi = '';
+  document.getElementById('adminUnitPick').style.display = 'block';
+  document.getElementById('adminUnitWork').style.display = 'none';
+  document.getElementById('btnBackAdminUnits').style.display = 'none';
+  ['btnCauHinhNS','btnAddModule','btnAddEmp','btnImport','btnImportDanhBa','btnExport','btnKhoaBaoCao'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  var sub=document.getElementById('adminSubTitle');
+  if(sub) sub.textContent = 'Chọn đơn vị để quản lý nhân viên & quyền';
+  renderAdminUnitGrid();
+}
+
+async function renderAdminUnitGrid(){
+  const grid = document.getElementById('adminUnitGrid');
+  if(!grid) return;
+  grid.innerHTML = '<div style="color:var(--muted);padding:12px;">Đang tải đơn vị...</div>';
+  try{ await loadDonVi(); }catch(e){}
+  // Đếm NV theo đơn vị
+  const counts = {};
+  (employeesCache||[]).forEach(function(e){
+    const k = e.don_vi_id || 'khanh_hoa';
+    counts[k] = (counts[k]||0)+1;
+  });
+  const list = (donViCache||[]).filter(function(d){ return !d.an; });
+  if(!list.length){
+    grid.innerHTML = '<div style="color:var(--muted);">Chưa có đơn vị. Mở «Đơn vị» để tạo.</div>';
+    return;
+  }
+  // Admin (mật khẩu quản lý) mở được tất cả đơn vị. Khóa chỉ dùng nếu sau này có phân quyền admin theo ĐV.
+  grid.innerHTML = list.map(function(d){
+    const n = counts[d.id]||0;
+    return '<button type="button" class="admin-unit-card" data-id="'+d.id+'">'
+      +'<div class="lbl">Đơn vị</div>'
+      +'<div class="name">'+(d.ten||d.id).replace(/</g,'&lt;')+'</div>'
+      +'<div class="meta">'+(n? (n+' nhân viên') : 'Chưa có danh sách — trống')+'</div>'
+      +'</button>';
+  }).join('');
+  grid.querySelectorAll('.admin-unit-card').forEach(function(btn){
+    btn.onclick = function(){ enterAdminUnit(btn.getAttribute('data-id')); };
+  });
+}
+
+async function enterAdminUnit(id){
+  const row = (donViCache||[]).find(function(d){ return d.id===id; });
+  window.currentAdminDonVi = id;
+  localStorage.setItem('bch_admin_don_vi', id);
+  const sel = document.getElementById('adminDonViSelect');
+  if(sel){
+    sel.innerHTML = '<option value="'+id+'">'+(row?(row.ten||id):id)+'</option>';
+    sel.value = id;
+  }
+  document.getElementById('adminUnitPick').style.display = 'none';
+  document.getElementById('adminUnitWork').style.display = 'block';
+  document.getElementById('btnBackAdminUnits').style.display = 'inline-flex';
+  ['btnCauHinhNS','btnAddModule','btnAddEmp','btnImport','btnImportDanhBa','btnExport','btnKhoaBaoCao'].forEach(function(idb){
+    var el=document.getElementById(idb); if(el) el.style.display='';
+  });
+  var sub=document.getElementById('adminSubTitle');
+  if(sub) sub.textContent = (row?(row.ten||id):id) + ' — nhân viên & quyền';
+  await loadAdminData();
+}
 
 
 /* ================= ADMIN LỌC ĐƠN VỊ ================= */
