@@ -358,10 +358,9 @@
     <input type="text" id="empChucVu">
     <label>SĐT</label>
     <input type="text" id="empSdt">
-    <label style="margin-top:10px;display:block;font-size:12px;">Đơn vị</label>
-    <select id="empDonVi" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;">
-      <option value="khanh_hoa">Cụm dự án Khánh Hòa</option>
-    </select>
+    <label style="margin-top:10px;display:block;font-size:12px;">Đơn vị được vào (có thể chọn nhiều)</label>
+    <div id="empDonViBoxes" style="display:flex;flex-direction:column;gap:8px;margin-top:6px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--panel);"></div>
+    <select id="empDonVi" style="display:none;"><option value="khanh_hoa">khanh_hoa</option></select>
     <div class="modal-actions">
       <button class="btn secondary" id="btnCancelEmp">Huỷ</button>
       <button class="btn" id="btnSaveEmp">Lưu</button>
@@ -860,8 +859,10 @@ function getFilteredSorted(){
   if(!dvFilter) return [];
 
   let list = (employeesCache || []).filter(function(e){
-    const edv = e.don_vi_id || 'khanh_hoa';
-    if(edv !== dvFilter) return false;
+    let ids = e.don_vi_ids;
+    if(typeof ids === 'string'){ try{ ids = JSON.parse(ids); }catch(err){ ids = null; } }
+    if(!Array.isArray(ids) || !ids.length) ids = [e.don_vi_id || 'khanh_hoa'];
+    if(ids.map(String).indexOf(String(dvFilter)) < 0) return false;
     if(statusFilterVal !== 'all' && e.trang_thai !== statusFilterVal) return false;
     if(searchQuery){
       const q = searchQuery.toLowerCase();
@@ -1639,18 +1640,30 @@ async function openEmpModal(emp){
   document.getElementById("empMsnv").value = emp ? emp.msnv : "";
   document.getElementById("empChucVu").value = emp ? (emp.chuc_vu||"") : "";
   document.getElementById("empSdt").value = emp ? (emp.sdt||"") : "";
-  try{ await fillEmpDonViOptions(emp ? (emp.don_vi_id||'khanh_hoa') : (window.currentAdminDonVi || (document.getElementById('adminDonViSelect')||{}).value || 'khanh_hoa')); }catch(e){}
+  try{ await fillEmpDonViOptions(emp ? (emp.don_vi_ids || emp.don_vi_id || 'khanh_hoa') : (window.currentAdminDonVi || 'khanh_hoa')); }catch(e){}
   modalEmp.classList.add("show");
 }
 async function fillEmpDonViOptions(selected){
-  const sel = document.getElementById('empDonVi');
-  if(!sel) return;
+  const box = document.getElementById('empDonViBoxes');
+  if(!box) return;
   try{ await loadDonVi(); }catch(e){}
+  let selectedIds = [];
+  if(Array.isArray(selected)) selectedIds = selected.map(String);
+  else if(selected && typeof selected === 'object' && selected.don_vi_ids) selectedIds = (selected.don_vi_ids||[]).map(String);
+  else if(typeof selected === 'string' && selected) selectedIds = [selected];
+  else if(window.currentAdminDonVi) selectedIds = [window.currentAdminDonVi];
+  else selectedIds = ['khanh_hoa'];
   const list = (donViCache||[]).filter(d=>!d.an);
-  if(list.length){
-    sel.innerHTML = list.map(d=>`<option value="${d.id}">${(d.ten||d.id).replace(/</g,'&lt;')}</option>`).join('');
-  }
-  sel.value = selected || 'khanh_hoa';
+  box.innerHTML = list.map(d=>{
+    const ck = selectedIds.indexOf(String(d.id))>=0 ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+      <input type="checkbox" class="emp-dv-check" value="${d.id}" ${ck}>
+      <span>${(d.ten||d.id).replace(/</g,'&lt;')}</span>
+    </label>`;
+  }).join('') || '<span style="color:var(--muted);font-size:12px;">Chưa có đơn vị</span>';
+}
+function getEmpDonViIdsFromForm(){
+  return Array.from(document.querySelectorAll('.emp-dv-check:checked')).map(el=>el.value);
 }
 document.getElementById("btnAddEmp").addEventListener("click", ()=> { openEmpModal(null); });
 document.getElementById("btnCancelEmp").addEventListener("click", ()=> modalEmp.classList.remove("show"));
@@ -1691,12 +1704,13 @@ document.getElementById("btnSaveEmp").addEventListener("click", async ()=>{
       await sb.rpc("admin_dat_pin_theo_msnv", { p_pass: currentAdminPass, p_msnv: msnv, p_pin: pin });
     }catch(e){}
   }
-  // Gán đơn vị
-  const dv = (document.getElementById('empDonVi')||{}).value || 'khanh_hoa';
+  // Gán nhiều đơn vị
+  let ids = typeof getEmpDonViIdsFromForm === 'function' ? getEmpDonViIdsFromForm() : [];
+  if(!ids.length) ids = [window.currentAdminDonVi || 'khanh_hoa'];
   if(empId){
-    let e3 = (await sb.rpc('admin_gan_don_vi_nv', { p_pass: currentAdminPass, p_id: empId, p_don_vi_id: dv })).error;
+    let e3 = (await sb.rpc('admin_gan_don_vi_ids', { p_pass: currentAdminPass, p_id: empId, p_ids: ids })).error;
     if(e3){
-      try{ await sb.from('employees').update({ don_vi_id: dv }).eq('id', empId); }catch(e){}
+      try{ await sb.from('employees').update({ don_vi_ids: ids, don_vi_id: ids[0] }).eq('id', empId); }catch(e){}
     }
   }
   modalEmp.classList.remove("show");

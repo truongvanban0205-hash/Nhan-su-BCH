@@ -779,7 +779,15 @@ function goModuleBanTin(){
   location.href = 'ban-tin.html';
 }
 function goModuleDinhBien(){
-  var el = document.querySelector('.mod-tile.c-db');
+  if(!donViChoPhepModule('dinh_bien')){
+    toast('🔒 Đơn vị này không mở mục Định biên.');
+    return;
+  }
+  if(window.BCH_QUYEN && !window.BCH_QUYEN.dinh_bien){
+    toast('🔒 Bạn chưa được cấp quyền Định biên. Liên hệ Ban chỉ huy.');
+    return;
+  }
+  var el = document.querySelector('.mod-tile[data-quyen="dinh_bien"]');
   if(el && el.classList.contains('locked')){
     toast('🔒 Bạn chưa được cấp quyền vào mục này. Liên hệ Ban chỉ huy để được cấp quyền.');
     return;
@@ -2268,12 +2276,9 @@ function showDonViWorkspace(){
   applyHomeBrand();
 }
 function backToDonViHub(){
-  var locked = window.BCH_USER && window.BCH_USER.don_vi_id;
-  if(locked){
-    toast('Bạn chỉ được làm việc tại đơn vị đã được gán.');
-    return;
-  }
+  // Về trang Khối — chọn lại đơn vị (trong danh sách được phép)
   clearDonVi();
+  try{ sessionStorage.removeItem('bch_in_unit'); }catch(e){}
   showDonViHub();
 }
 
@@ -2282,12 +2287,10 @@ async function renderDonViHub(){
   if(!grid) return;
   grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b93a8;padding:20px;">Đang tải...</div>';
   var rows = await fetchDonViList();
-  // Chỉ hiện đơn vị được gán cho user (nếu có don_vi_id). Không có / admin → xem tất cả.
   try{
-    var uDv = (window.BCH_USER && window.BCH_USER.don_vi_id) ? window.BCH_USER.don_vi_id : '';
-    if(uDv && rows && rows.length){
-      var filtered = rows.filter(function(d){ return d.id === uDv; });
-      if(filtered.length) rows = filtered;
+    var allowed = window.BCH_ALLOWED_DON_VI || (window.BCH_USER && window.BCH_USER.don_vi_ids) || [];
+    if(allowed && allowed.length && rows && rows.length){
+      rows = rows.filter(function(d){ return allowed.indexOf(String(d.id)) >= 0; });
     }
   }catch(e){}
   if(!rows.length){
@@ -2306,6 +2309,7 @@ async function renderDonViHub(){
       var id = btn.getAttribute('data-id');
       var row = rows.find(function(x){ return x.id===id; });
       setDonVi(id, row?row.ten:id, row?row.modules:null);
+      try{ sessionStorage.setItem('bch_in_unit','1'); }catch(e){}
       showDonViWorkspace();
       location.reload();
     };
@@ -2387,59 +2391,47 @@ async function ensureDonViSelected(){
   var rows = [];
   try{ rows = await fetchDonViList(); }catch(e){ rows = []; }
 
-  // BẮT BUỘC: user đã gán don_vi_id → chỉ được đúng đơn vị đó
-  var uDv = (window.BCH_USER && window.BCH_USER.don_vi_id) ? String(window.BCH_USER.don_vi_id) : '';
-  if(uDv && rows && rows.length){
-    var filtered = rows.filter(function(d){ return String(d.id) === uDv; });
-    if(filtered.length){
-      rows = filtered;
-    }else{
-      // Gán đơn vị không còn trong danh sách / đang ẩn
-      alert('Tài khoản của bạn được gán đơn vị không còn hiệu lực. Liên hệ Ban chỉ huy.');
-      localStorage.removeItem('bch_nv_login_v2');
-      location.href = 'quan-ly-tai-khoan.html';
-      return false;
-    }
+  // Đơn vị được phép: mảng don_vi_ids
+  var allowed = [];
+  try{
+    allowed = (window.BCH_USER && window.BCH_USER.don_vi_ids) ? window.BCH_USER.don_vi_ids.slice() : [];
+  }catch(e){ allowed = []; }
+  if(!allowed || !allowed.length) allowed = ['khanh_hoa'];
+  allowed = allowed.map(function(x){ return String(x); });
+
+  if(rows && rows.length){
+    rows = rows.filter(function(d){ return allowed.indexOf(String(d.id)) >= 0; });
+  }
+  if(!rows || !rows.length){
+    alert('Tài khoản chưa được gán đơn vị nào còn hiệu lực. Liên hệ Ban chỉ huy.');
+    localStorage.removeItem('bch_nv_login_v2');
+    location.href = 'quan-ly-tai-khoan.html';
+    return false;
   }
 
-  // Đã chọn trước đó — phải nằm trong danh sách được phép
-  if(getDonViId()){
-    var cur = (rows||[]).find(function(x){ return String(x.id) === String(getDonViId()); });
+  var inUnit = false;
+  try{ inUnit = sessionStorage.getItem('bch_in_unit') === '1' && !!getDonViId(); }catch(e){}
+
+  // Đang trong phiên làm việc 1 đơn vị → giữ workspace
+  if(inUnit && getDonViId()){
+    var cur = rows.find(function(x){ return String(x.id) === String(getDonViId()); });
     if(cur){
       setDonVi(cur.id, cur.ten||cur.id, cur.modules||null);
       showDonViWorkspace();
       applyDonViModuleVisibility();
-      // Ẩn nút Đổi nếu bị khóa 1 đơn vị
       var btn = document.getElementById('home-don-vi-btn');
-      if(btn && uDv){ btn.style.display = 'none'; }
+      if(btn) btn.style.display = ''; // luôn cho Đổi về hub
       return true;
     }
     clearDonVi();
   }
 
-  if(!rows || !rows.length){
-    if(uDv){
-      alert('Không tải được đơn vị được gán. Thử lại hoặc liên hệ Ban chỉ huy.');
-      return false;
-    }
-    setDonVi('khanh_hoa', 'Cụm dự án Khánh Hòa', null);
-    showDonViWorkspace();
-    applyDonViModuleVisibility();
-    return true;
-  }
-
-  // 1 đơn vị (user thường / chỉ còn 1) → vào thẳng
-  if(rows.length === 1){
-    setDonVi(rows[0].id, rows[0].ten||rows[0].id, rows[0].modules||null);
-    showDonViWorkspace();
-    applyDonViModuleVisibility();
-    var btn2 = document.getElementById('home-don-vi-btn');
-    if(btn2 && uDv){ btn2.style.display = 'none'; }
-    return true;
-  }
-
-  // Nhiều đơn vị (chưa gán / admin xem) → hub
+  // Trang đầu: luôn hub Khối → chọn dự án/đơn vị
+  clearDonVi();
   showDonViHub();
+  // renderDonViHub đã lọc? cần truyền allowed — filter trong render
+  window.BCH_ALLOWED_DON_VI = allowed;
+  await renderDonViHub();
   return true;
 }
 
@@ -5803,24 +5795,21 @@ async function renderHomeThongBao(){
   }
   // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
   window.BCH_QUYEN = res.data.quyen || {};
-  window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv, don_vi_id: res.data.don_vi_id || null };
-  // Bổ sung don_vi_id từ RPC / bảng nếu login chưa trả
+  window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv, don_vi_id: res.data.don_vi_id || null, don_vi_ids: null };
+  // Danh sách đơn vị được phép (có thể nhiều)
   try{
-    if(!window.BCH_USER.don_vi_id){
-      var rDv = await sc.rpc('nv_lay_don_vi', { p_ten: res.data.ten, p_msnv: res.data.msnv || '' });
-      if(rDv.data) window.BCH_USER.don_vi_id = (typeof rDv.data === 'string') ? rDv.data : (rDv.data.don_vi_id || rDv.data);
-    }
+    var rIds = await sc.rpc('nv_lay_don_vi_ids', { p_ten: res.data.ten, p_msnv: res.data.msnv || '' });
+    if(rIds.data && Array.isArray(rIds.data)) window.BCH_USER.don_vi_ids = rIds.data;
+    else if(rIds.data && typeof rIds.data === 'object') window.BCH_USER.don_vi_ids = rIds.data; // jsonb array
   }catch(e){}
-  try{
-    if(!window.BCH_USER.don_vi_id && res.data.msnv){
-      var rEmp = await sc.from('employees').select('don_vi_id').eq('msnv', res.data.msnv).maybeSingle();
-      if(rEmp.data && rEmp.data.don_vi_id) window.BCH_USER.don_vi_id = rEmp.data.don_vi_id;
-    }
-  }catch(e){}
-  // Không gán / null → mặc định Khánh Hòa (không cho xem cả 4 đơn vị)
-  if(!window.BCH_USER.don_vi_id){
-    window.BCH_USER.don_vi_id = 'khanh_hoa';
+  if(!window.BCH_USER.don_vi_ids || !window.BCH_USER.don_vi_ids.length){
+    window.BCH_USER.don_vi_ids = [window.BCH_USER.don_vi_id || 'khanh_hoa'];
   }
+  // chuẩn hoá thành mảng string
+  try{
+    if(typeof window.BCH_USER.don_vi_ids === 'string') window.BCH_USER.don_vi_ids = JSON.parse(window.BCH_USER.don_vi_ids);
+  }catch(e){}
+  window.BCH_USER.don_vi_id = window.BCH_USER.don_vi_ids[0] || 'khanh_hoa';
   document.body.style.display = '';
   await ensureDonViSelected();
   applyHomeBrand();

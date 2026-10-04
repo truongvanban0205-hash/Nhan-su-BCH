@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Định biên Nhân sự — BCH DA CAM LÂM - CAM RANH</title>
+<title>Định biên Nhân sự — KHỐI SAN LẤP - HẠ TẦNG 3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -62,7 +62,7 @@
 <body>
 
 <div class="topbar">
-  <div class="brand">BCH DA <span style="color:#1565c0">CAM LÂM</span> — <span style="color:#fb8c00">CAM RANH</span></div>
+  <div class="brand"><span style="color:#1565c0">KHỐI SAN LẤP</span> — <span style="color:#fb8c00">XÂY DỰNG HẠ TẦNG 3</span></div>
   <a class="back" href="index.html">‹ Về trang báo cáo</a>
 </div>
 
@@ -299,7 +299,16 @@ async function init(){
   if(!raw){ location.href = LOGIN_PAGE; return; }
   try{ saved = JSON.parse(raw); } catch(e){ location.href = LOGIN_PAGE; return; }
 
-  const { data: res } = await sb.rpc("tra_cuu", { p_ten: saved.ten, p_msnv: saved.msnv });
+  let res = null;
+  try{
+    if(saved.pin){
+      const r = await sb.rpc("tra_cuu_pin", { p_ten: saved.ten, p_pin: saved.pin });
+      res = r.data;
+    } else {
+      const r = await sb.rpc("tra_cuu", { p_ten: saved.ten, p_msnv: saved.msnv });
+      res = r.data;
+    }
+  }catch(e){ res = null; }
   if(!res || res.status !== "da_duyet"){ location.href = LOGIN_PAGE; return; }
   if(!res.data.quyen || !res.data.quyen.dinh_bien){
     document.getElementById("loadingBox").textContent = "Bạn chưa được cấp quyền truy cập mục Định biên. Vui lòng liên hệ Ban chỉ huy.";
