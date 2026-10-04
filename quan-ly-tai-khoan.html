@@ -844,7 +844,8 @@ function getFilteredSorted(){
 
   let list = employeesCache.filter(e=>{
     if(statusFilterVal !== "all" && e.trang_thai !== statusFilterVal) return false;
-  if(dvFilter){ list = list.filter(e => (e.don_vi_id||'khanh_hoa') === dvFilter); }
+  if(!dvFilter){ list = []; } // bắt buộc chọn đơn vị — không xem chung tất cả
+  else { list = list.filter(e => (e.don_vi_id||'khanh_hoa') === dvFilter); }
     if(searchQuery){
       const q = searchQuery.toLowerCase();
       return (e.ten||"").toLowerCase().includes(q) || (e.msnv||"").includes(q) || (e.chuc_vu||"").toLowerCase().includes(q);
@@ -1444,6 +1445,24 @@ document.getElementById("btnSubmitPass").addEventListener("click", async ()=>{
   searchQuery = ""; statusFilterVal = "all";
   document.getElementById("searchInput").value = "";
   document.getElementById("statusFilter").value = "all";
+  // Bắt buộc chọn đơn vị trước khi quản lý nhân sự
+  window.currentAdminDonVi = localStorage.getItem('bch_admin_don_vi') || '';
+  await fillAdminDonViSelect();
+  const sel = document.getElementById('adminDonViSelect');
+  if(sel){
+    // Bỏ "Tất cả" — chỉ chọn từng đơn vị
+    if(donViCache && donViCache.length){
+      sel.innerHTML = '<option value="">— Chọn đơn vị để quản lý —</option>' +
+        donViCache.filter(d=>!d.an).map(d=>`<option value="${d.id}">${(d.ten||d.id).replace(/</g,'&lt;')}</option>`).join('');
+    }
+    if(window.currentAdminDonVi) sel.value = window.currentAdminDonVi;
+    if(!sel.value){
+      // chưa chọn → bảng trống + nhắc
+      window.currentAdminDonVi = '';
+    }else{
+      window.currentAdminDonVi = sel.value;
+    }
+  }
   loadAdminData();
 });
 
@@ -1591,7 +1610,7 @@ async function openEmpModal(emp){
   document.getElementById("empMsnv").value = emp ? emp.msnv : "";
   document.getElementById("empChucVu").value = emp ? (emp.chuc_vu||"") : "";
   document.getElementById("empSdt").value = emp ? (emp.sdt||"") : "";
-  try{ await fillEmpDonViOptions(emp ? (emp.don_vi_id||'khanh_hoa') : (document.getElementById('adminDonViSelect')||{}).value || 'khanh_hoa'); }catch(e){}
+  try{ await fillEmpDonViOptions(emp ? (emp.don_vi_id||'khanh_hoa') : (window.currentAdminDonVi || (document.getElementById('adminDonViSelect')||{}).value || 'khanh_hoa')); }catch(e){}
   modalEmp.classList.add("show");
 }
 async function fillEmpDonViOptions(selected){
@@ -2023,7 +2042,12 @@ async function fillAdminDonViSelect(){
   if(cur) sel.value = cur;
 }
 if(document.getElementById('adminDonViSelect')){
-  document.getElementById('adminDonViSelect').addEventListener('change', ()=> renderAdminTable());
+  document.getElementById('adminDonViSelect').addEventListener('change', function(){
+    window.currentAdminDonVi = this.value || '';
+    if(this.value) localStorage.setItem('bch_admin_don_vi', this.value);
+    else localStorage.removeItem('bch_admin_don_vi');
+    renderAdminTable();
+  });
 }
 
 /* ================= ĐƠN VỊ (P1) ================= */

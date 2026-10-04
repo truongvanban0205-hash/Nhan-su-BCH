@@ -2268,6 +2268,11 @@ function showDonViWorkspace(){
   applyHomeBrand();
 }
 function backToDonViHub(){
+  var locked = window.BCH_USER && window.BCH_USER.don_vi_id;
+  if(locked){
+    toast('Bạn chỉ được làm việc tại đơn vị đã được gán.');
+    return;
+  }
   clearDonVi();
   showDonViHub();
 }
@@ -2382,44 +2387,58 @@ async function ensureDonViSelected(){
   var rows = [];
   try{ rows = await fetchDonViList(); }catch(e){ rows = []; }
 
-  // Lọc theo đơn vị được gán cho user (nếu có)
-  try{
-    var uDv = (window.BCH_USER && window.BCH_USER.don_vi_id) ? window.BCH_USER.don_vi_id : '';
-    if(uDv && rows && rows.length){
-      var filtered = rows.filter(function(d){ return d.id === uDv; });
-      if(filtered.length) rows = filtered;
+  // BẮT BUỘC: user đã gán don_vi_id → chỉ được đúng đơn vị đó
+  var uDv = (window.BCH_USER && window.BCH_USER.don_vi_id) ? String(window.BCH_USER.don_vi_id) : '';
+  if(uDv && rows && rows.length){
+    var filtered = rows.filter(function(d){ return String(d.id) === uDv; });
+    if(filtered.length){
+      rows = filtered;
+    }else{
+      // Gán đơn vị không còn trong danh sách / đang ẩn
+      alert('Tài khoản của bạn được gán đơn vị không còn hiệu lực. Liên hệ Ban chỉ huy.');
+      localStorage.removeItem('bch_nv_login_v2');
+      location.href = 'quan-ly-tai-khoan.html';
+      return false;
     }
-  }catch(e){}
+  }
 
-  // Đã chọn đơn vị trước đó và vẫn còn trong danh sách được phép
+  // Đã chọn trước đó — phải nằm trong danh sách được phép
   if(getDonViId()){
-    var cur = (rows||[]).find(function(x){ return x.id === getDonViId(); });
+    var cur = (rows||[]).find(function(x){ return String(x.id) === String(getDonViId()); });
     if(cur){
       setDonVi(cur.id, cur.ten||cur.id, cur.modules||null);
       showDonViWorkspace();
       applyDonViModuleVisibility();
+      // Ẩn nút Đổi nếu bị khóa 1 đơn vị
+      var btn = document.getElementById('home-don-vi-btn');
+      if(btn && uDv){ btn.style.display = 'none'; }
       return true;
     }
-    // Đơn vị cũ không còn / không được phép → chọn lại
     clearDonVi();
   }
 
   if(!rows || !rows.length){
+    if(uDv){
+      alert('Không tải được đơn vị được gán. Thử lại hoặc liên hệ Ban chỉ huy.');
+      return false;
+    }
     setDonVi('khanh_hoa', 'Cụm dự án Khánh Hòa', null);
     showDonViWorkspace();
     applyDonViModuleVisibility();
     return true;
   }
 
-  // Chỉ 1 đơn vị → vào thẳng, không dừng ở hub
+  // 1 đơn vị (user thường / chỉ còn 1) → vào thẳng
   if(rows.length === 1){
     setDonVi(rows[0].id, rows[0].ten||rows[0].id, rows[0].modules||null);
     showDonViWorkspace();
     applyDonViModuleVisibility();
+    var btn2 = document.getElementById('home-don-vi-btn');
+    if(btn2 && uDv){ btn2.style.display = 'none'; }
     return true;
   }
 
-  // Nhiều đơn vị → hub 4 ô
+  // Nhiều đơn vị (chưa gán / admin xem) → hub
   showDonViHub();
   return true;
 }
@@ -5785,7 +5804,23 @@ async function renderHomeThongBao(){
   // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
   window.BCH_QUYEN = res.data.quyen || {};
   window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv, don_vi_id: res.data.don_vi_id || null };
-  // Hiện body TRƯỚC khi chờ chọn đơn vị — nếu không sẽ màn hình trắng (body đang display:none)
+  // Bổ sung don_vi_id từ RPC / bảng nếu login chưa trả
+  try{
+    if(!window.BCH_USER.don_vi_id){
+      var rDv = await sc.rpc('nv_lay_don_vi', { p_ten: res.data.ten, p_msnv: res.data.msnv || '' });
+      if(rDv.data) window.BCH_USER.don_vi_id = (typeof rDv.data === 'string') ? rDv.data : (rDv.data.don_vi_id || rDv.data);
+    }
+  }catch(e){}
+  try{
+    if(!window.BCH_USER.don_vi_id && res.data.msnv){
+      var rEmp = await sc.from('employees').select('don_vi_id').eq('msnv', res.data.msnv).maybeSingle();
+      if(rEmp.data && rEmp.data.don_vi_id) window.BCH_USER.don_vi_id = rEmp.data.don_vi_id;
+    }
+  }catch(e){}
+  // Không gán / null → mặc định Khánh Hòa (không cho xem cả 4 đơn vị)
+  if(!window.BCH_USER.don_vi_id){
+    window.BCH_USER.don_vi_id = 'khanh_hoa';
+  }
   document.body.style.display = '';
   await ensureDonViSelected();
   applyHomeBrand();
