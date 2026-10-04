@@ -464,7 +464,11 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">🚜</div>
         <div class="mod-title">Báo cáo MMTB</div>
       </div>
-      <!-- Lịch nghiệm thu đã gỡ khỏi app -->
+      <div class="mod-tile c-ldt" data-quyen="bao_lich_nghiem_thu" onclick="goModule('ldt')">
+        <span class="mod-badge" id="badge-ldt"></span>
+        <div class="mod-icon">📅</div>
+        <div class="mod-title">Lịch nghiệm thu</div>
+      </div>
       <div class="mod-tile c-db" data-quyen="dinh_bien" onclick="goModuleDinhBien()">
         <div class="mod-icon">📊</div>
         <div class="mod-title">Định biên</div>
@@ -653,8 +657,8 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     </div>
   </div>
 </div>
-<!-- ============ MODULE LỊCH NGHIỆM THU — ĐÃ GỠ KHỎI APP ============ -->
-<div id="screen-ldt" class="app-screen" style="display:none !important;">
+<!-- ============ MODULE LỊCH NGHIỆM THU ============ -->
+<div id="screen-ldt" class="app-screen">
   <div class="back-bar">
     <button class="back-btn" onclick="showScreen('home')">← Quay lại</button>
   </div>
@@ -814,7 +818,36 @@ function qsToggleStats(){
 }
 
 // ============ THỜI TIẾT (Open-Meteo — miễn phí, không cần API key) ============
-var WEATHER_LAT=11.9214, WEATHER_LON=109.1591; // Cam Ranh, Khánh Hoà
+// Mỗi đơn vị lấy thời tiết theo địa điểm riêng (không còn cố định Cam Ranh)
+var WEATHER_BY_DON_VI = {
+  // id đơn vị → {lat, lon, label}
+  khanh_hoa: { lat: 11.9214, lon: 109.1591, label: 'Cam Ranh, Khánh Hoà' },
+  // Làng Vân (Đà Nẵng)
+  lang_van:  { lat: 16.1200, lon: 108.1300, label: 'Làng Vân, Đà Nẵng' },
+  // ST99 — tạm lấy Hà Nội
+  st99:      { lat: 21.0285, lon: 105.8542, label: 'Hà Nội (tạm ST99)' },
+  // Hà Tĩnh (nếu có)
+  ha_tinh:   { lat: 18.3420, lon: 105.9060, label: 'Hà Tĩnh' }
+};
+function getWeatherLoc(){
+  var id = (typeof getDonViId === 'function' ? getDonViId() : '') || localStorage.getItem('bch_don_vi_id') || 'khanh_hoa';
+  var ten = (typeof getDonViTenBaoCao === 'function' ? getDonViTenBaoCao() : '') || localStorage.getItem('bch_don_vi_ten') || '';
+  id = String(id).toLowerCase().trim();
+  ten = String(ten).toLowerCase();
+  // Ưu tiên map theo id
+  if(WEATHER_BY_DON_VI[id]) return WEATHER_BY_DON_VI[id];
+  // Fallback theo tên đơn vị (khi id khác với key)
+  if(/lang\s*van|làng\s*vân|da\s*nang|đà\s*nẵng/.test(id+' '+ten))
+    return WEATHER_BY_DON_VI.lang_van;
+  if(/st\s*99|st99/.test(id+' '+ten))
+    return WEATHER_BY_DON_VI.st99;
+  if(/ha\s*tinh|hà\s*tĩnh/.test(id+' '+ten))
+    return WEATHER_BY_DON_VI.ha_tinh;
+  if(/khanh\s*hoa|khánh\s*hoà|cam\s*ranh/.test(id+' '+ten))
+    return WEATHER_BY_DON_VI.khanh_hoa;
+  // Mặc định: Cam Ranh
+  return WEATHER_BY_DON_VI.khanh_hoa;
+}
 var WEATHER_ICONS_DAY={0:'☀️',1:'🌤️',2:'⛅',3:'☁️'};
 var WEATHER_ICONS_NIGHT={0:'🌙',1:'🌙',2:'☁️',3:'☁️'};
 var WEATHER_ICONS={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌦️',
@@ -841,7 +874,11 @@ function weatherDesc(c,isDay){
 
 async function loadWeather(){
   try{
-    var url='https://api.open-meteo.com/v1/forecast?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON
+    var loc = getWeatherLoc();
+    // Cập nhật nhãn địa điểm trên thẻ thời tiết
+    var locEl = document.querySelector('.weather-loc');
+    if(locEl) locEl.textContent = '📍 ' + loc.label;
+    var url='https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon
       +'&current=temperature_2m,weather_code,is_day'
       +'&daily=weather_code,temperature_2m_max,temperature_2m_min'
       +'&timezone=Asia%2FHo_Chi_Minh&forecast_days=5';
@@ -1365,13 +1402,14 @@ async function exportFullReport(){
   // đây là ảnh TĨNH nên chỉ lấy đúng số liệu tại thời điểm bấm xuất, không tự cập nhật sau đó.
   var repWeather=null;
   try{
-    var wUrl='https://api.open-meteo.com/v1/forecast?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON
+    var wLoc=getWeatherLoc();
+    var wUrl='https://api.open-meteo.com/v1/forecast?latitude='+wLoc.lat+'&longitude='+wLoc.lon
       +'&current=temperature_2m,weather_code,is_day&timezone=Asia%2FHo_Chi_Minh';
     var wRes=await fetch(wUrl);
     var wD=await wRes.json();
     if(wD&&wD.current){
       var wTime=wD.current.time?wD.current.time.split('T')[1].slice(0,5):'';
-      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code,wD.current.is_day),icon:weatherIcon(wD.current.weather_code,wD.current.is_day),time:wTime};
+      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code,wD.current.is_day),icon:weatherIcon(wD.current.weather_code,wD.current.is_day),time:wTime,label:wLoc.label};
     }
   }catch(e){}
 
@@ -1732,7 +1770,7 @@ async function exportFullReport(){
 
   var repWeatherHtml = repWeather ?
     ('<div style="text-align:right;color:#0F2A5C;">'
-      +'<div style="font-size:10px;color:#5a6b8c;">📍 '+(repWeather.time?'Lúc '+repWeather.time+' · ':'')+'Cam Ranh, Khánh Hoà</div>'
+      +'<div style="font-size:10px;color:#5a6b8c;">📍 '+(repWeather.time?'Lúc '+repWeather.time+' · ':'')+(repWeather.label||'—')+'</div>'
       +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">'
         +'<span style="font-size:22px;font-weight:800;color:#0F2A5C;">'+repWeather.temp+'°</span>'
         +'<span style="font-size:22px;">'+repWeather.icon+'</span>'
@@ -2203,6 +2241,8 @@ function setDonVi(id, ten, modules){
       var n = document.getElementById(id); if(n) n.textContent = tn;
     });
   }catch(e){}
+  // Đổi đơn vị → tải lại thời tiết đúng địa điểm
+  try{ if(typeof loadWeather === 'function') loadWeather(); }catch(e){}
 }
 function getDonViModules(){
   if(window.BCH_DON_VI_MODULES) return window.BCH_DON_VI_MODULES;
@@ -5404,8 +5444,8 @@ function bchTinhLichThongBao(){
   var ns=minus30(parseHM(GIO_HAN.gio_han_ns_mmtb));
   var ldt=minus30(parseHM(GIO_HAN.gio_han_nghiem_thu));
   return [
-    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'}
-    // Lịch nghiệm thu đã gỡ khỏi app — không còn nhắc
+    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'},
+    {h:ldt.h,m:ldt.m,id:'ldt_reminder',     title:'📅 Sắp hết giờ báo lịch!', body:'Còn 30 phút nữa là hết giờ báo Lịch nghiệm thu ngày mai (deadline '+(GIO_HAN.gio_han_nghiem_thu||'16:00:00').slice(0,5)+')'}
   ];
 }
 
@@ -5836,7 +5876,7 @@ async function renderHomeThongBao(){
   // Thống kê nhanh: chỉ hiện khối nào tương ứng với quyền đang có
   var coNS = !!window.BCH_QUYEN.bao_cao_nhan_su;
   var coMMTB = !!window.BCH_QUYEN.bao_cao_mmtb;
-  // Lịch nghiệm thu đã gỡ khỏi app
+  var coLDT = !!window.BCH_QUYEN.bao_lich_nghiem_thu;
   var elColNS = document.getElementById('qs-col-ns');
   var elColMMTB = document.getElementById('qs-col-mmtb');
   var elGroupNSMMTB = document.getElementById('qs-group-ns-mmtb');
@@ -5844,12 +5884,12 @@ async function renderHomeThongBao(){
   if(elColNS) elColNS.style.display = coNS ? '' : 'none';
   if(elColMMTB) elColMMTB.style.display = coMMTB ? '' : 'none';
   if(elGroupNSMMTB) elGroupNSMMTB.style.display = (coNS || coMMTB) ? '' : 'none';
-  if(elGroupLDT) elGroupLDT.style.display = 'none';
+  if(elGroupLDT) elGroupLDT.style.display = coLDT ? '' : 'none';
   // Nếu 2 cột NS/MMTB chỉ còn 1 cột hiện, cho nó chiếm trọn hàng thay vì lệch
   var elRow = document.querySelector('.qs-donut-row');
   if(elRow && (coNS !== coMMTB)) elRow.style.gridTemplateColumns = '1fr';
   var elNone = document.getElementById('qs-group-none');
-  if(elNone) elNone.style.display = (!coNS && !coMMTB) ? '' : 'none';
+  if(elNone) elNone.style.display = (!coNS && !coMMTB && !coLDT) ? '' : 'none';
 
   // Thêm dòng tên + nút xem thông tin tài khoản + đăng xuất (chỉ chèn thêm bằng JS)
   var headerDiv = document.querySelector('.home-header > div');
