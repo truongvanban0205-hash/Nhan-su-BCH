@@ -2111,6 +2111,18 @@ async function openDonViPicker(opts){
 
 async function ensureDonViSelected(){
   if(getDonViId()) return true;
+  var rows = [];
+  try{ rows = await fetchDonViList(); }catch(e){ rows = []; }
+  // Không có danh sách (chưa SQL) → mặc định Khánh Hòa để app không kẹt màn trắng
+  if(!rows || !rows.length){
+    setDonVi('khanh_hoa', 'Cụm dự án Khánh Hòa');
+    return true;
+  }
+  // Chỉ 1 đơn vị → chọn luôn
+  if(rows.length === 1){
+    setDonVi(rows[0].id, rows[0].ten || rows[0].id);
+    return true;
+  }
   return new Promise(function(resolve){
     openDonViPicker({
       allowCancel: false,
@@ -5478,9 +5490,10 @@ async function renderHomeThongBao(){
   // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
   window.BCH_QUYEN = res.data.quyen || {};
   window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv };
+  // Hiện body TRƯỚC khi chờ chọn đơn vị — nếu không sẽ màn hình trắng (body đang display:none)
+  document.body.style.display = '';
   await ensureDonViSelected();
-  // hiển thị đơn vị trên trang chủ
-  (function(){ var el=document.getElementById('home-don-vi-label'); if(el) el.textContent=window.BCH_DON_VI_TEN||getDonViId()||''; })(); // để chat-widget.js (file riêng) lấy tên đã đăng nhập, không hỏi lại
+  (function(){ var el=document.getElementById('home-don-vi-label'); if(el) el.textContent=window.BCH_DON_VI_TEN||getDonViId()||''; })();
   document.dispatchEvent(new CustomEvent('bch-auth-ready', { detail: window.BCH_USER }));
   document.querySelectorAll('.mod-tile[data-quyen]').forEach(function(el){
     var key = el.getAttribute('data-quyen');
