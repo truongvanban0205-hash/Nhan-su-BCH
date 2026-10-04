@@ -395,6 +395,18 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       <div id="pwaIosSteps" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.25);font-size:11.5px;color:#fff;line-height:1.7;"></div>
     </div>
 
+    <!-- Chọn / đổi đơn vị (P2, mobile-first) -->
+    <div style="width:100%;max-width:420px;margin-bottom:10px;position:relative;z-index:1;">
+      <button type="button" id="home-don-vi-btn" onclick="openDonViPicker({allowCancel:true,onPick:function(){ location.reload(); }})"
+        style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border-soft);background:var(--bg-card);color:var(--txt);font-family:inherit;cursor:pointer;">
+        <span style="text-align:left;">
+          <span style="display:block;font-size:11px;color:var(--txt-dim);font-weight:600;">Đơn vị đang làm việc</span>
+          <span id="home-don-vi-label" style="display:block;font-size:14px;font-weight:800;margin-top:2px;">—</span>
+        </span>
+        <span style="font-size:12px;font-weight:700;color:var(--accent-blue);white-space:nowrap;">Đổi ▾</span>
+      </button>
+    </div>
+
     <!-- Thanh cập nhật + làm mới (ngay dưới logo app) -->
     <div style="width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;position:relative;z-index:1;">
       <span style="font-size:11px;color:var(--txt-dim);">🕐 Cập nhật: <span id="qs-update-time">--:--</span> • <span id="qs-update-date">--/--/----</span></span>
@@ -1211,8 +1223,8 @@ async function exportFullReport(){
   var tk=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());
 
   var nsToday=null, mmtbToday=null;
-  try{var r1=await sc.from('nhansu').select('data').eq('ngay',tk).single();nsToday=r1.data?r1.data.data:null;}catch(e){}
-  try{var r2=await sc.from('mmtb').select('data').eq('ngay',tk).single();mmtbToday=r2.data?r2.data.data:null;}catch(e){}
+  try{var r1=await sc.from('nhansu').select('data').eq('ngay',tk).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();nsToday=r1.data?r1.data.data:null;}catch(e){}
+  try{var r2=await sc.from('mmtb').select('data').eq('ngay',tk).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();mmtbToday=r2.data?r2.data.data:null;}catch(e){}
 
   // Định biên áp dụng cho ĐÚNG NGÀY đang xuất báo cáo (tự tìm mốc ngày gần nhất <= ngày đó)
   var dinhBienThangNay={};
@@ -2003,6 +2015,111 @@ var VA_LOGO='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfQAAAH0CAYAAADL1t+KA
 var SURL='https://jqwjzvucwvlwbcgxhath.supabase.co';
 var SKEY='sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv';
 var sc=supabase.createClient(SURL,SKEY);
+
+// ===== ĐƠN VỊ (P2) — mobile-first =====
+var DON_VI_LS = 'bch_don_vi_id';
+var DON_VI_TEN_LS = 'bch_don_vi_ten';
+window.BCH_DON_VI = localStorage.getItem(DON_VI_LS) || '';
+window.BCH_DON_VI_TEN = localStorage.getItem(DON_VI_TEN_LS) || '';
+
+function getDonViId(){
+  return window.BCH_DON_VI || localStorage.getItem(DON_VI_LS) || '';
+}
+function setDonVi(id, ten){
+  window.BCH_DON_VI = id || '';
+  window.BCH_DON_VI_TEN = ten || id || '';
+  localStorage.setItem(DON_VI_LS, window.BCH_DON_VI);
+  localStorage.setItem(DON_VI_TEN_LS, window.BCH_DON_VI_TEN);
+  var el = document.getElementById('home-don-vi-label');
+  if(el) el.textContent = window.BCH_DON_VI_TEN || 'Chọn đơn vị';
+}
+function clearDonVi(){
+  window.BCH_DON_VI = '';
+  window.BCH_DON_VI_TEN = '';
+  localStorage.removeItem(DON_VI_LS);
+  localStorage.removeItem(DON_VI_TEN_LS);
+}
+
+async function fetchDonViList(){
+  try{
+    var r = await sc.rpc('lay_danh_sach_don_vi');
+    return r.data || [];
+  }catch(e){ return []; }
+}
+
+function ensureDonViPickerDom(){
+  if(document.getElementById('donvi-picker')) return;
+  var ov = document.createElement('div');
+  ov.id = 'donvi-picker';
+  ov.innerHTML = ''
+    +'<div class="dv-sheet">'
+    +  '<div class="dv-title">Chọn đơn vị</div>'
+    +  '<div class="dv-sub">Chạm vào đơn vị bạn làm việc hôm nay</div>'
+    +  '<div id="donvi-picker-list"></div>'
+    +  '<button type="button" class="dv-cancel" id="donvi-picker-cancel" style="display:none;">Đóng</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+  if(!document.getElementById('donvi-picker-css')){
+    var st = document.createElement('style');
+    st.id = 'donvi-picker-css';
+    st.textContent = ''
+      +'#donvi-picker{display:none;position:fixed;inset:0;z-index:10060;background:rgba(5,10,18,.82);align-items:stretch;justify-content:center;padding:0;}'
+      +'#donvi-picker.show{display:flex;}'
+      +'#donvi-picker .dv-sheet{margin-top:auto;width:100%;max-width:480px;max-height:92vh;overflow:auto;background:#131826;border-radius:18px 18px 0 0;padding:20px 16px 28px;border:1px solid #252b3d;border-bottom:none;}'
+      +'#donvi-picker .dv-title{font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;}'
+      +'#donvi-picker .dv-sub{font-size:13px;color:#8b93a8;margin-bottom:14px;}'
+      +'#donvi-picker .dv-card{display:block;width:100%;text-align:left;padding:16px;margin-bottom:10px;border-radius:14px;border:1.5px solid #252b3d;background:#0b0f14;color:#e8ecf5;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;}'
+      +'#donvi-picker .dv-card:active{border-color:#f9a825;}'
+      +'#donvi-picker .dv-card small{display:block;font-size:12px;font-weight:500;color:#8b93a8;margin-top:4px;}'
+      +'#donvi-picker .dv-cancel{width:100%;margin-top:8px;padding:12px;border:none;border-radius:12px;background:#252b3d;color:#c5cad6;font-weight:700;font-family:inherit;cursor:pointer;}';
+    document.head.appendChild(st);
+  }
+}
+
+async function openDonViPicker(opts){
+  opts = opts || {};
+  ensureDonViPickerDom();
+  var ov = document.getElementById('donvi-picker');
+  var list = document.getElementById('donvi-picker-list');
+  var cancel = document.getElementById('donvi-picker-cancel');
+  list.innerHTML = '<div style="color:#8b93a8;padding:12px;text-align:center;">Đang tải...</div>';
+  cancel.style.display = opts.allowCancel ? 'block' : 'none';
+  cancel.onclick = function(){ ov.classList.remove('show'); if(opts.onCancel) opts.onCancel(); };
+  ov.classList.add('show');
+
+  var rows = await fetchDonViList();
+  // Lọc theo quyền user nếu có don_vi trong quyen (tuỳ chọn tương lai). P2: hiện tất cả ĐV đang mở.
+  if(!rows.length){
+    list.innerHTML = '<div style="color:#ef5350;padding:12px;text-align:center;">Chưa có danh sách đơn vị. Chạy SQL P1.</div>';
+    return;
+  }
+  list.innerHTML = rows.map(function(d){
+    return '<button type="button" class="dv-card" data-id="'+String(d.id).replace(/"/g,'')+'">'
+      + (d.ten || d.id)
+      + '<small>'+ (d.id || '') +'</small></button>';
+  }).join('');
+  list.querySelectorAll('.dv-card').forEach(function(btn){
+    btn.onclick = function(){
+      var id = btn.getAttribute('data-id');
+      var row = rows.find(function(x){ return x.id === id; });
+      setDonVi(id, row ? row.ten : id);
+      ov.classList.remove('show');
+      if(opts.onPick) opts.onPick(id, row);
+    };
+  });
+}
+
+async function ensureDonViSelected(){
+  if(getDonViId()) return true;
+  return new Promise(function(resolve){
+    openDonViPicker({
+      allowCancel: false,
+      onPick: function(){ resolve(true); }
+    });
+  });
+}
+
+
 var timeLocked=false;
 var unlockedThisSession=false;
 var prevDayData=null;
@@ -2367,7 +2484,9 @@ function copyFromYest(src,projs){
 
 async function sLoad(d){
   try{
-    var r=await sc.from('nhansu').select('*').eq('ngay',d).single();
+    var q=sc.from('nhansu').select('*').eq('ngay',d);
+    var dv=getDonViId(); if(dv) q=q.eq('don_vi_id',dv);
+    var r=await q.maybeSingle();
     return r.data?r.data.data:null;
   }catch(e){return null;}
 }
@@ -2375,11 +2494,13 @@ async function sLoad(d){
 async function sSave(pay){
   setSS('⏳ Đang lưu...');
   try{
-    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).single();
+    var dv=getDonViId()||'khanh_hoa';
+    var q=sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',dv);
+    var ex=await q.maybeSingle();
     if(ex.data){
-      await sc.from('nhansu').update({data:pay}).eq('ngay',tkey());
+      await sc.from('nhansu').update({data:pay}).eq('ngay',tkey()).eq('don_vi_id',dv);
     }else{
-      await sc.from('nhansu').insert({ngay:tkey(),data:pay});
+      await sc.from('nhansu').insert({ngay:tkey(),data:pay,don_vi_id:dv});
     }
     setSS('✅ Đã cập nhật');
   }catch(e){setSS('⚠️ Lỗi: '+e.message);}
@@ -2387,7 +2508,9 @@ async function sSave(pay){
 
 async function sHist(){
   try{
-    var r=await sc.from('nhansu').select('ngay,data').order('ngay',{ascending:false}).limit(60);
+    var q=sc.from('nhansu').select('ngay,data').order('ngay',{ascending:false}).limit(60);
+    var dv=getDonViId(); if(dv) q=q.eq('don_vi_id',dv);
+    var r=await q;
     return r.data||[];
   }catch(e){return [];}
 }
@@ -2548,11 +2671,11 @@ async function saveStructure(){
   setSS('⏳ Đang lưu...');
   try{
     var payload={projects:projects,cols:COLS,data:data,log:logItems};
-    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).single();
+    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){
-      await sc.from('nhansu').update({data:payload}).eq('ngay',tkey());
+      await sc.from('nhansu').update({data:payload}).eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('nhansu').insert({ngay:tkey(),data:payload});
+      await sc.from('nhansu').insert({ngay:tkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
     setSS('✅ Đã cập nhật');
     renderTable();renderLog();
@@ -2568,7 +2691,7 @@ async function mergeSave(askReason){
   setSS('⏳ Đang lưu...');
   try{
     // Lấy bản mới nhất từ server
-    var ex=await sc.from('nhansu').select('id,data').eq('ngay',targetKey).single();
+    var ex=await sc.from('nhansu').select('id,data').eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
     var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems, mergedBienDong=bienDong;
     if(vDate){
@@ -2624,9 +2747,9 @@ async function mergeSave(askReason){
     }
     var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:ghiChuTuyChinh};
     if(ex.data){
-      await sc.from('nhansu').update({data:payload}).eq('ngay',targetKey);
+      await sc.from('nhansu').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('nhansu').insert({ngay:targetKey,data:payload});
+      await sc.from('nhansu').insert({ngay:targetKey,data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
     // Cập nhật lại biến cục bộ theo bản đã merge (để không bị lệch UI)
     projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;bienDong=mergedBienDong;/* ghiChuTuyChinh giữ nguyên */
@@ -3570,7 +3693,7 @@ async function checkAutoSaveAt8(){
   if(autoSavedToday||vDate)return;
   if(!isAfterCutoff())return;
   try{
-    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).single();
+    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){autoSavedToday=true;return;} // đã có data hôm nay rồi, không cần làm gì
     // Chưa có data hôm nay và đã qua giờ khoá -> tự lưu bản hiện tại (copy từ hôm qua) lên server
     await sSave({projects:projects,cols:COLS,data:data,log:logItems});
@@ -3786,7 +3909,7 @@ function mmtbCopyNotesFromYest(srcNotes){
 
 async function mmtbSLoad(d){
   try{
-    var r=await sc.from('mmtb').select('*').eq('ngay',d).single();
+    var r=await sc.from('mmtb').select('*').eq('ngay',d).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     return r.data?r.data.data:null;
   }catch(e){return null;}
 }
@@ -3794,11 +3917,11 @@ async function mmtbSLoad(d){
 async function mmtbSSave(pay){
   mmtbSetSS('⏳ Đang lưu...');
   try{
-    var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).single();
+    var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){
-      await sc.from('mmtb').update({data:pay}).eq('ngay',mmtbTkey());
+      await sc.from('mmtb').update({data:pay}).eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:pay});
+      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:pay,don_vi_id:getDonViId()||'khanh_hoa'});
     }
     mmtbSetSS('✅ Đã cập nhật');
   }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);}
@@ -3806,7 +3929,7 @@ async function mmtbSSave(pay){
 
 async function mmtbSHist(){
   try{
-    var r=await sc.from('mmtb').select('ngay,data').order('ngay',{ascending:false}).limit(60);
+    var r=await sc.from('mmtb').select('ngay,data').eq('don_vi_id',getDonViId()||'khanh_hoa').order('ngay',{ascending:false}).limit(60);
     return r.data||[];
   }catch(e){return [];}
 }
@@ -3964,7 +4087,7 @@ async function mmtbSaveStructure(){
   mmtbSetSS('⏳ Đang lưu...');
   try{
     var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog};
-    var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).single();
+    var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){
       await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey());
     }else{
@@ -4044,9 +4167,9 @@ async function mmtbMergeSave(askReason){
     }
     var payload={machines:mergedMachines,projects:mergedProjects,data:mergedData,notes:mergedNotes,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:mmtbGhiChuTuyChinh};
     if(ex.data){
-      await sc.from('mmtb').update({data:payload}).eq('ngay',targetKey);
+      await sc.from('mmtb').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('mmtb').insert({ngay:targetKey,data:payload});
+      await sc.from('mmtb').insert({ngay:targetKey,data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
     mmtbMachines=mergedMachines;mmtbProjects=mergedProjects;mmtbData=mergedData;mmtbNotes=mergedNotes;mmtbLog=mergedLog;mmtbBienDong=mergedBienDong;
     mmtbPendingChanges={};
@@ -4444,7 +4567,7 @@ async function mmtbCheckAutoSaveAt8(){
   if(mmtbAutoSavedToday||mmtbVDate)return;
   if(!isAfterCutoff())return;
   try{
-    var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).single();
+    var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){mmtbAutoSavedToday=true;return;}
     await mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog});
     mmtbAutoSavedToday=true;
@@ -5354,7 +5477,10 @@ async function renderHomeThongBao(){
   }
   // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
   window.BCH_QUYEN = res.data.quyen || {};
-  window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv }; // để chat-widget.js (file riêng) lấy tên đã đăng nhập, không hỏi lại
+  window.BCH_USER = { ten: res.data.ten, msnv: res.data.msnv };
+  await ensureDonViSelected();
+  // hiển thị đơn vị trên trang chủ
+  (function(){ var el=document.getElementById('home-don-vi-label'); if(el) el.textContent=window.BCH_DON_VI_TEN||getDonViId()||''; })(); // để chat-widget.js (file riêng) lấy tên đã đăng nhập, không hỏi lại
   document.dispatchEvent(new CustomEvent('bch-auth-ready', { detail: window.BCH_USER }));
   document.querySelectorAll('.mod-tile[data-quyen]').forEach(function(el){
     var key = el.getAttribute('data-quyen');
