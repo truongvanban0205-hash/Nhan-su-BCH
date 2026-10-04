@@ -856,22 +856,24 @@ let searchQuery = "";
 let statusFilterVal = "all";
 
 function getFilteredSorted(){
-  const dvSel = document.getElementById('adminDonViSelect');
-  const dvFilter = window.currentAdminDonVi || (dvSel ? dvSel.value : '');
+  const dvFilter = window.currentAdminDonVi || '';
+  if(!dvFilter) return [];
 
-  let list = employeesCache.filter(e=>{
-    if(statusFilterVal !== "all" && e.trang_thai !== statusFilterVal) return false;
-  if(!dvFilter){ list = []; } // bắt buộc chọn đơn vị — không xem chung tất cả
-  else { list = list.filter(e => (e.don_vi_id||'khanh_hoa') === dvFilter); }
+  let list = (employeesCache || []).filter(function(e){
+    const edv = e.don_vi_id || 'khanh_hoa';
+    if(edv !== dvFilter) return false;
+    if(statusFilterVal !== 'all' && e.trang_thai !== statusFilterVal) return false;
     if(searchQuery){
       const q = searchQuery.toLowerCase();
-      return (e.ten||"").toLowerCase().includes(q) || (e.msnv||"").includes(q) || (e.chuc_vu||"").toLowerCase().includes(q);
+      return (e.ten||'').toLowerCase().includes(q)
+        || (e.msnv||'').includes(q)
+        || (e.chuc_vu||'').toLowerCase().includes(q);
     }
     return true;
   });
   const statusOrder = { da_duyet: 0, cho_duyet: 1, tu_choi: 2 };
-  list.sort((a,b)=>{
-    const so = statusOrder[a.trang_thai] - statusOrder[b.trang_thai];
+  list.sort(function(a,b){
+    const so = (statusOrder[a.trang_thai]||9) - (statusOrder[b.trang_thai]||9);
     if(so !== 0) return so;
     const aStt = a.stt == null ? Infinity : a.stt;
     const bStt = b.stt == null ? Infinity : b.stt;
@@ -1497,19 +1499,25 @@ async function loadAdminData(){
   }
   const loading = document.getElementById("adminLoading");
   const wrap = document.getElementById("tableWrap");
-  if(loading) loading.style.display = "block";
-  if(wrap) wrap.style.display = "none";
-  await loadModules();
-  const { data, error } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass });
-  if(error){
+  try{
+    if(loading) loading.style.display = "block";
+    if(wrap) wrap.style.display = "none";
+    await loadModules();
+    const { data, error } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass });
+    if(error){
+      showToast("Không tải được danh sách: " + (error.message||"thử lại"));
+      employeesCache = employeesCache || [];
+    } else {
+      employeesCache = data || [];
+    }
+    renderAdminTable();
+  }catch(e){
+    console.error(e);
+    showToast("Lỗi tải danh sách: " + (e.message||e));
+  }finally{
     if(loading) loading.style.display = "none";
-    showToast("Không tải được danh sách, vui lòng thử lại.");
-    return;
+    if(wrap) wrap.style.display = "block";
   }
-  employeesCache = data || [];
-  renderAdminTable();
-  if(loading) loading.style.display = "none";
-  if(wrap) wrap.style.display = "block";
 }
 
 function renderAdminTable(){
@@ -1520,10 +1528,14 @@ function renderAdminTable(){
     `<th>Trạng thái</th><th>Thao tác</th>`;
 
   const list = getFilteredSorted();
-  document.getElementById("countPill").textContent = `${list.length} / ${employeesCache.length} người`;
+  const countEl = document.getElementById("countPill");
+  if(countEl) countEl.textContent = list.length + " / " + (employeesCache||[]).length + " người (đơn vị này: " + list.length + ")";
 
   const body = document.getElementById("tableBody");
   body.innerHTML = "";
+  if(!list.length){
+    body.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:28px;color:var(--muted);">Đơn vị này chưa có nhân viên — bấm «+ Thêm nhân viên» hoặc chuyển NV từ đơn vị khác.</td></tr>';
+  }
   list.forEach((emp, idx)=>{
     const tr = document.createElement("tr");
     if(emp.trang_thai === "cho_duyet") tr.className = "pending";
