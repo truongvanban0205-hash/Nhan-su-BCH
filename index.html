@@ -51,13 +51,13 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 #home-workspace{width:100%;max-width:420px;position:relative;z-index:1;}
 #home-workspace.hide{display:none;}
 .hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
-.hub-card{display:flex;align-items:center;gap:12px;padding:16px 14px;border-radius:14px;border:1.5px solid #2a3550;background:linear-gradient(145deg,#121a2b,#0e1524);color:#e8ecf5;cursor:pointer;text-align:left;font-family:inherit;min-height:88px;box-shadow:0 4px 14px rgba(0,0,0,.25);}
-.hub-card:active{border-color:#42a5f5;transform:scale(0.98);}
-.hub-card .hub-ico{font-size:28px;flex-shrink:0;opacity:.95;}
+.hub-card{display:flex;align-items:center;gap:12px;padding:16px 14px;border-radius:14px;border:1.5px solid rgba(249,168,37,.45);background:linear-gradient(145deg,#2a1f0e,#1a140a);color:#fff8e7;cursor:pointer;text-align:left;font-family:inherit;min-height:88px;box-shadow:0 4px 16px rgba(249,168,37,.12);}
+.hub-card:active{border-color:#ffb300;transform:scale(0.98);background:linear-gradient(145deg,#3d2c12,#241a0c);}
+.hub-card .hub-ico{font-size:28px;flex-shrink:0;filter:saturate(1.2);}
 .hub-card .hub-meta{flex:1;min-width:0;}
-.hub-card .hub-label{font-size:11px;color:#42a5f5;font-weight:700;margin-bottom:4px;}
+.hub-card .hub-label{font-size:11px;color:#ffb74d;font-weight:700;margin-bottom:4px;}
 .hub-card .hub-name{font-size:14px;font-weight:800;line-height:1.3;color:#fff;}
-.hub-card .hub-arrow{color:#5d6b88;font-size:18px;font-weight:700;}
+.hub-card .hub-arrow{color:#ffb74d;font-size:18px;font-weight:700;}
 @media(max-width:360px){.hub-grid{grid-template-columns:1fr;}}
 
 .home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:1;}
@@ -421,12 +421,12 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <!-- Đổi đơn vị -->
     <div style="width:100%;max-width:420px;margin-bottom:10px;position:relative;z-index:1;">
       <button type="button" id="home-don-vi-btn" onclick="backToDonViHub()"
-        style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border-soft);background:var(--bg-card);color:var(--txt);font-family:inherit;cursor:pointer;">
+        style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;border:1.5px solid rgba(249,168,37,.4);background:var(--bg-card);color:var(--txt);font-family:inherit;cursor:pointer;">
         <span style="text-align:left;">
           <span style="display:block;font-size:11px;color:var(--txt-dim);font-weight:600;">Đơn vị đang làm việc</span>
           <span id="home-don-vi-label" style="display:block;font-size:14px;font-weight:800;margin-top:2px;">—</span>
         </span>
-        <span style="font-size:12px;font-weight:700;color:var(--accent-blue);white-space:nowrap;">Đổi ▾</span>
+        <span style="font-size:12px;font-weight:700;color:#f9a825;white-space:nowrap;">Đổi ▾</span>
       </button>
     </div>
 

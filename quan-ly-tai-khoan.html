@@ -341,6 +341,10 @@
     <input type="text" id="empChucVu">
     <label>SĐT</label>
     <input type="text" id="empSdt">
+    <label style="margin-top:10px;display:block;font-size:12px;">Đơn vị</label>
+    <select id="empDonVi" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;">
+      <option value="khanh_hoa">Cụm dự án Khánh Hòa</option>
+    </select>
     <div class="modal-actions">
       <button class="btn secondary" id="btnCancelEmp">Huỷ</button>
       <button class="btn" id="btnSaveEmp">Lưu</button>
@@ -1475,7 +1479,7 @@ async function loadAdminData(){
 function renderAdminTable(){
   const head = document.getElementById("tableHeadRow");
   head.innerHTML =
-    `<th class="col-freeze1">STT</th><th class="col-freeze2">MSNV</th><th class="col-freeze3">Tên nhân viên</th><th>Chức vụ</th><th>SĐT</th>` +
+    `<th class="col-freeze1">STT</th><th class="col-freeze2">MSNV</th><th class="col-freeze3">Tên nhân viên</th><th>Chức vụ</th><th>Đơn vị</th><th>SĐT</th>` +
     modulesCache.map(m=>`<th>${m.nhan} <span class="icon-btn reject" style="padding:1px 6px; margin-left:4px;" data-remove-module="${m.id}" title="Xoá quyền này">✕</span></th>`).join("") +
     `<th>Trạng thái</th><th>Thao tác</th>`;
 
@@ -1507,6 +1511,7 @@ function renderAdminTable(){
       <td class="col-freeze2">${emp.msnv}</td>
       <td class="col-freeze3">${emp.ten}</td>
       <td>${emp.chuc_vu || "—"}</td>
+      <td style="font-size:11px;color:var(--muted);">${emp.don_vi_id || "khanh_hoa"}</td>
       <td>${emp.sdt || "—"}</td>
       ${moduleCells}
       <td><span class="status-pill ${emp.trang_thai}">${statusLabel(emp.trang_thai)}</span></td>
@@ -1579,16 +1584,27 @@ async function handleAction(action, id){
 
 /* ================= MODAL SỬA / THÊM NHÂN VIÊN ================= */
 const modalEmp = document.getElementById("modalEmp");
-function openEmpModal(emp){
+async function openEmpModal(emp){
   document.getElementById("modalEmpTitle").textContent = emp ? "Sửa thông tin nhân viên" : "Thêm nhân viên mới";
   document.getElementById("empId").value = emp ? emp.id : "";
   document.getElementById("empTen").value = emp ? emp.ten : "";
   document.getElementById("empMsnv").value = emp ? emp.msnv : "";
   document.getElementById("empChucVu").value = emp ? (emp.chuc_vu||"") : "";
   document.getElementById("empSdt").value = emp ? (emp.sdt||"") : "";
+  try{ await fillEmpDonViOptions(emp ? (emp.don_vi_id||'khanh_hoa') : (document.getElementById('adminDonViSelect')||{}).value || 'khanh_hoa'); }catch(e){}
   modalEmp.classList.add("show");
 }
-document.getElementById("btnAddEmp").addEventListener("click", ()=> openEmpModal(null));
+async function fillEmpDonViOptions(selected){
+  const sel = document.getElementById('empDonVi');
+  if(!sel) return;
+  try{ await loadDonVi(); }catch(e){}
+  const list = (donViCache||[]).filter(d=>!d.an);
+  if(list.length){
+    sel.innerHTML = list.map(d=>`<option value="${d.id}">${(d.ten||d.id).replace(/</g,'&lt;')}</option>`).join('');
+  }
+  sel.value = selected || 'khanh_hoa';
+}
+document.getElementById("btnAddEmp").addEventListener("click", ()=> { openEmpModal(null); });
 document.getElementById("btnCancelEmp").addEventListener("click", ()=> modalEmp.classList.remove("show"));
 document.getElementById("btnSaveEmp").addEventListener("click", async ()=>{
   const id = document.getElementById("empId").value;
@@ -1626,6 +1642,14 @@ document.getElementById("btnSaveEmp").addEventListener("click", async ()=>{
     try{
       await sb.rpc("admin_dat_pin_theo_msnv", { p_pass: currentAdminPass, p_msnv: msnv, p_pin: pin });
     }catch(e){}
+  }
+  // Gán đơn vị
+  const dv = (document.getElementById('empDonVi')||{}).value || 'khanh_hoa';
+  if(empId){
+    let e3 = (await sb.rpc('admin_gan_don_vi_nv', { p_pass: currentAdminPass, p_id: empId, p_don_vi_id: dv })).error;
+    if(e3){
+      try{ await sb.from('employees').update({ don_vi_id: dv }).eq('id', empId); }catch(e){}
+    }
   }
   modalEmp.classList.remove("show");
   loadAdminData();
