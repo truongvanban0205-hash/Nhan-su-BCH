@@ -914,7 +914,7 @@ async function loadCauHinhNS(){
   // Mỗi RPC độc lập — một cái lỗi không làm sập cả cấu hình
   async function safeRpc(name){
     try{
-      const r = await sb.rpc(name);
+      const r = await sb.rpc(name, { p_don_vi_id: window.currentAdminDonVi || 'khanh_hoa' });
       if(r && r.error){ console.warn("[loadCauHinhNS]", name, r.error); return null; }
       return r ? r.data : null;
     }catch(e){
@@ -1191,7 +1191,7 @@ function renderTenCaRieng(){
   body.querySelectorAll(".ten-rieng-input").forEach(inp=>{
     inp.addEventListener("change", async ()=>{
       const { error } = await sb.rpc("admin_luu_ten_ca_rieng", {
-        p_pass: currentAdminPass, p_du_an: inp.dataset.duan, p_ma_ca: inp.dataset.ma, p_ten_rieng: inp.value.trim()
+        p_pass: currentAdminPass, p_du_an: inp.dataset.duan, p_ma_ca: inp.dataset.ma, p_ten_rieng: inp.value.trim(), p_don_vi_id: window.currentAdminDonVi || 'khanh_hoa'
       });
       if(error) showToast("Không lưu được tên ca này.");
       else showToast("✓ Đã lưu");
@@ -1290,7 +1290,7 @@ function renderListLoaiMay(){
 async function themLoaiMay(nhom, inputId){
   const ten = document.getElementById(inputId).value.trim();
   if(!ten){ alert("Vui lòng nhập tên loại máy."); return; }
-  const { error } = await sb.rpc("admin_them_loai_may", { p_pass: currentAdminPass, p_ten: ten, p_nhom: nhom });
+  const { error } = await sb.rpc("admin_them_loai_may", { p_pass: currentAdminPass, p_ten: ten, p_nhom: nhom, p_don_vi_id: window.currentAdminDonVi || 'khanh_hoa' });
   if(error){ alert("Không thêm được: " + (error.message||"")); return; }
   document.getElementById(inputId).value = "";
   await loadCauHinhNS(); renderCauHinhAll();
@@ -1306,7 +1306,7 @@ async function themLoaiMay(nhom, inputId){
 async function luuTenNhomMay(ma, inputId){
   const ten = document.getElementById(inputId).value.trim();
   if(!ten){ alert("Tên nhóm không được trống."); return; }
-  const { error } = await sb.rpc("admin_luu_ten_nhom_may", { p_pass: currentAdminPass, p_ma: ma, p_ten: ten });
+  const { error } = await sb.rpc("admin_luu_ten_nhom_may", { p_pass: currentAdminPass, p_ma: ma, p_ten: ten, p_don_vi_id: window.currentAdminDonVi || 'khanh_hoa' });
   if(error){ alert("Không lưu tên nhóm được."); return; }
   tenNhomMayCache[ma] = ten;
   showToast("✓ Đã lưu tên nhóm");
@@ -1335,7 +1335,7 @@ document.getElementById("btnCloseCauHinh").addEventListener("click", ()=>{
 document.getElementById("btnThemDuAn").addEventListener("click", async ()=>{
   const ten = document.getElementById("inputDuAnMoi").value.trim();
   if(!ten){ alert("Vui lòng nhập tên dự án."); return; }
-  const { error } = await sb.rpc("admin_them_du_an", { p_pass: currentAdminPass, p_ten: ten });
+  const { error } = await sb.rpc("admin_them_du_an", { p_pass: currentAdminPass, p_ten: ten, p_don_vi_id: window.currentAdminDonVi || 'khanh_hoa' });
   if(error){ alert("Không thêm được (có thể trùng tên)."); return; }
   document.getElementById("inputDuAnMoi").value = "";
   await loadCauHinhNS(); renderCauHinhAll();
@@ -1345,7 +1345,7 @@ document.getElementById("btnThemCa").addEventListener("click", async ()=>{
   const ten = document.getElementById("inputCaMoi").value.trim();
   if(!ten){ alert("Vui lòng nhập tên ca."); return; }
   const ma = "ca_" + Date.now();
-  const { error } = await sb.rpc("admin_them_loai_ca", { p_pass: currentAdminPass, p_ma: ma, p_ten_mac_dinh: ten });
+  const { error } = await sb.rpc("admin_them_loai_ca", { p_pass: currentAdminPass, p_ma: ma, p_ten_mac_dinh: ten, p_don_vi_id: window.currentAdminDonVi || 'khanh_hoa' });
   if(error){ alert("Không thêm được."); return; }
   document.getElementById("inputCaMoi").value = "";
   await loadCauHinhNS(); renderCauHinhAll();

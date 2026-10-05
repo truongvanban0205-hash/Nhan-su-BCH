@@ -825,6 +825,7 @@ var WEATHER_BY_DON_VI = {
   khanh_hoa: { lat: 11.9214, lon: 109.1591, label: 'Cam Ranh, Khánh Hoà' },
   lang_van:  { lat: 16.1200, lon: 108.1300, label: 'Làng Vân, Đà Nẵng' },
   st99:      { lat: 21.0285, lon: 105.8542, label: 'Hà Nội (tạm ST99)' },
+  sts99:     { lat: 21.0285, lon: 105.8542, label: 'Hà Nội (tạm 99STS)' },
   ha_tinh:   { lat: 18.3420, lon: 105.9060, label: 'Hà Tĩnh' }
 };
 function getWeatherLoc(){
@@ -2628,7 +2629,7 @@ function isNghiType(t){ return TYPES.length>0 && t===nghiKey(); }
 
 async function taiCauHinhCaLamViec(){
   try{
-    var r1 = await rpcCoThuLai('cauhinh_lay_loai_ca');
+    var r1 = await rpcCoThuLai('cauhinh_lay_loai_ca',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var caList = r1.data;
     if(caList && caList.length > 0){
       // Lọc bỏ ca đang ẨN — giống hệt cách taiCauHinhDuAn() đang lọc dự án ẩn.
@@ -2649,7 +2650,7 @@ async function taiCauHinhCaLamViec(){
         NGHI_MA = flagged ? flagged.ma : (TYPES.length ? TYPES[TYPES.length-1] : null);
       }
     }
-    var r2 = await sc.rpc('cauhinh_lay_ten_ca_rieng');
+    var r2 = await sc.rpc('cauhinh_lay_ten_ca_rieng',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var rieng = r2.data || [];
     TEN_RIENG_MAP = {};
     rieng.forEach(function(t){
@@ -2696,7 +2697,7 @@ async function rpcCoThuLai(tenHam, thamSo){
 
 async function taiCauHinhDuAn(){
   try{
-    var r = await rpcCoThuLai('cauhinh_lay_du_an');
+    var r = await rpcCoThuLai('cauhinh_lay_du_an',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var list = r.data;
     if(list && list.length){
       CFG_DUAN_OK=true;
@@ -2723,7 +2724,7 @@ async function taiCauHinhDuAn(){
 // Riêng ẨN/HIỆN thì tách biệt (an_mmtb) — 1 dự án có thể ẩn ở Nhân sự nhưng vẫn hiện ở MMTB.
 async function taiCauHinhDuAnMMTB(){
   try{
-    var r = await rpcCoThuLai('cauhinh_lay_du_an');
+    var r = await rpcCoThuLai('cauhinh_lay_du_an',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var list = r.data;
     if(list && list.length){
       list.forEach(function(d){ PROJ_NAME['duan_'+d.id]=d.ten; });
@@ -2744,7 +2745,7 @@ async function taiCauHinhDuAnMMTB(){
 // (MayXucBanhXich, MayUi...) nên dữ liệu máy móc đã nhập từ trước không cần chuyển đổi gì cả.
 async function taiCauHinhLoaiMayMMTB(){
   try{
-    var r = await rpcCoThuLai('cauhinh_lay_loai_may');
+    var r = await rpcCoThuLai('cauhinh_lay_loai_may',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var list = r.data;
     if(list && list.length){
       var active = list.filter(function(m){ return !m.an; });
@@ -2761,7 +2762,7 @@ async function taiCauHinhLoaiMayMMTB(){
       }
     }
     try{
-      var rn = await rpcCoThuLai('cauhinh_lay_ten_nhom_may');
+      var rn = await rpcCoThuLai('cauhinh_lay_ten_nhom_may',{p_don_vi_id:getDonViId()||'khanh_hoa'});
       if(rn && rn.data && rn.data.length){
         rn.data.forEach(function(row){ if(row.ma && row.ten) MMTB_TEN_NHOM[row.ma]=row.ten; });
       }
