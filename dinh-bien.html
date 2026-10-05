@@ -135,6 +135,23 @@ function showMsg(type, text){
   const el = document.getElementById('msgDb');
   el.className = 'msg show ' + type;
   el.textContent = text;
+  showToast(type, text);
+}
+// Thông báo nổi ở đầu màn hình (khung msgDb nằm dưới bảng dài nên bấm Lưu ở trên không thấy)
+function showToast(type, text){
+  let t = document.getElementById('toastDb');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'toastDb';
+    t.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;max-width:92vw;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:700;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.45);transition:opacity .25s;';
+    document.body.appendChild(t);
+  }
+  t.style.background = (type==='ok') ? '#1b8a3a' : '#c62828';
+  t.textContent = text;
+  t.style.display = 'block';
+  t.style.opacity = '1';
+  clearTimeout(t._h);
+  t._h = setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ t.style.display='none'; },300); }, 4000);
 }
 function vKey(rowId, colId){ return rowId + '_' + colId; }
 
@@ -449,9 +466,20 @@ document.getElementById('btnLuu').addEventListener('click', async ()=>{
       if(v !== undefined && v !== '') payload.push({ chuc_danh_id: r.id, cot_id: c.id, so_luong: v });
     });
   });
-  const { data, error } = await rpcDv('dinhbien_luu_gia_tri', { p_pass: dinhBienPass, p_rows: payload });
-  if(error){ showMsg('bad', 'Có lỗi khi lưu: ' + error.message); return; }
-  showMsg('ok', `✓ Đã lưu ${data.da_luu} ô dữ liệu cho năm ${curNam}.`);
+  const btn = document.getElementById('btnLuu');
+  const nhanCu = btn.textContent;
+  if(!payload.length){ showMsg('bad', 'Chưa có ô số liệu nào để lưu.'); return; }
+  btn.disabled = true; btn.textContent = '⏳ Đang lưu...';
+  try{
+    const { data, error } = await rpcDv('dinhbien_luu_gia_tri', { p_pass: dinhBienPass, p_rows: payload });
+    if(error){ showMsg('bad', 'Có lỗi khi lưu: ' + (error.message||'')); return; }
+    const n = (data && data.da_luu != null) ? data.da_luu : payload.length;
+    showMsg('ok', `✓ Đã lưu ${n} ô dữ liệu cho năm ${curNam}.`);
+  }catch(e){
+    showMsg('bad', 'Có lỗi khi lưu: ' + (e && e.message ? e.message : e));
+  }finally{
+    btn.disabled = false; btn.textContent = nhanCu;
+  }
 });
 
 init();

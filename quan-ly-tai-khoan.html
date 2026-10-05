@@ -465,8 +465,9 @@
   <div class="modal" style="max-width:440px;">
     <h3>⏱️ Giờ khoá &amp; Mật khẩu báo cáo</h3>
     <p class="sub" style="margin-top:-8px;">
-      Mật khẩu xuất báo cáo, mở khoá mục «🔒 Quản lý», xoá lịch sử và lưu giờ khoá trong trang Báo cáo
-      (Nhân sự / MMTB / Lịch nghiệm thu) <b>dùng chung mật khẩu Quản lý chung</b>. Đổi bằng nút «Đổi mật khẩu» ở trên.
+      <b>2 cấp mật khẩu:</b> (1) <b>Quản lý chung</b> — mật khẩu của trang này (nút «Đổi mật khẩu» ở trên);
+      (2) <b>Mật khẩu vận hành</b> — một mật khẩu đơn giản dùng chung cho vào <b>Định biên</b>, mở khoá «🔒 Quản lý» trong Nhân sự / MMTB / Lịch nghiệm thu và <b>xuất báo cáo</b>.
+      Mật khẩu Quản lý chung cũng dùng được ở các chỗ của cấp (2).
     </p>
 
     <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
@@ -475,12 +476,19 @@
       <input type="time" id="inputGioHanNSMoi">
       <label>Giờ khoá Lịch nghiệm thu</label>
       <input type="time" id="inputGioHanLDTMoi">
-      <label>Mật khẩu quản lý chung (để xác nhận lưu)</label>
+      <label>Mật khẩu vận hành hoặc Quản lý chung (để xác nhận lưu)</label>
       <input type="password" id="inputMatKhauBaoCaoXacNhan" placeholder="Nhập mật khẩu hiện tại">
       <button class="btn small" id="btnLuuGioKhoa" style="width:100%;">Lưu giờ khoá</button>
     </div>
 
-    <div style="font-size:12px; color:var(--muted,#8b93a8); padding:4px 2px;">Mật khẩu báo cáo = mật khẩu Quản lý chung (đổi ở nút «Đổi mật khẩu»).</div>
+    <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px;">
+      <div style="font-weight:800; font-size:13px; margin-bottom:10px;">Đặt mật khẩu vận hành</div>
+      <label>Mật khẩu Quản lý chung (để xác nhận)</label>
+      <input type="password" id="inputMkQuanLyChung" placeholder="Mật khẩu Quản lý chung">
+      <label>Mật khẩu vận hành mới</label>
+      <input type="password" id="inputMkVanHanhMoi" placeholder="Mật khẩu đơn giản, tối thiểu 4 ký tự">
+      <button class="btn small secondary" id="btnDatMkVanHanh" style="width:100%;">Đặt mật khẩu vận hành</button>
+    </div>
 
     <div class="msg bad" id="khoaBaoCaoErr" style="margin-top:12px;"></div>
 
@@ -1780,15 +1788,29 @@ document.getElementById("btnLuuGioKhoa").addEventListener("click", async ()=>{
   const gioLDT = document.getElementById("inputGioHanLDTMoi").value;
   const pass = document.getElementById("inputMatKhauBaoCaoXacNhan").value;
   if(!gioNS || !gioLDT){ showMsg(errEl,"bad","Vui lòng chọn đầy đủ 2 mốc giờ khoá."); return; }
-  if(!pass){ showMsg(errEl,"bad","Vui lòng nhập mật khẩu quản lý chung để xác nhận."); return; }
+  if(!pass){ showMsg(errEl,"bad","Vui lòng nhập mật khẩu để xác nhận."); return; }
   const { data, error } = await sb.rpc("baocao_luu_gio_han", {
     p_pass: pass, p_gio_han_ns_mmtb: gioNS + ":00", p_gio_han_nghiem_thu: gioLDT + ":00"
   });
-  if(error || !data){ showMsg(errEl,"bad","Sai mật khẩu quản lý chung hoặc có lỗi, vui lòng thử lại."); return; }
+  if(error || !data){ showMsg(errEl,"bad","Sai mật khẩu hoặc có lỗi, vui lòng thử lại."); return; }
   document.getElementById("inputMatKhauBaoCaoXacNhan").value = "";
   showToast("✓ Đã lưu giờ khoá mới — trang Báo cáo sẽ áp dụng ngay lần tải tiếp theo.");
 });
 
+
+document.getElementById("btnDatMkVanHanh").addEventListener("click", async ()=>{
+  const errEl = document.getElementById("khoaBaoCaoErr");
+  hideMsg(errEl);
+  const adminP = document.getElementById("inputMkQuanLyChung").value;
+  const newP = document.getElementById("inputMkVanHanhMoi").value;
+  if(!adminP){ showMsg(errEl,"bad","Vui lòng nhập mật khẩu Quản lý chung để xác nhận."); return; }
+  if(!newP || newP.length < 4){ showMsg(errEl,"bad","Mật khẩu vận hành mới quá ngắn (tối thiểu 4 ký tự)."); return; }
+  const { data, error } = await sb.rpc("admin_dat_mat_khau_van_hanh", { p_pass_admin: adminP, p_pass_moi: newP });
+  if(error || !data){ showMsg(errEl,"bad","Sai mật khẩu Quản lý chung hoặc có lỗi, vui lòng thử lại."); return; }
+  document.getElementById("inputMkQuanLyChung").value = "";
+  document.getElementById("inputMkVanHanhMoi").value = "";
+  showToast("✓ Đã đặt mật khẩu vận hành mới.");
+});
 
 /* ================= XUẤT EXCEL ================= */
 document.getElementById("btnExport").addEventListener("click", ()=>{
