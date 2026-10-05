@@ -2514,6 +2514,16 @@ function checkTimeLock(){
     timeLocked=true;
     if(isEdit){isEdit=false;renderTable();}
     document.getElementById('lock-banner').style.display='flex';
+  } else if(!isAfterCutoff()&&timeLocked&&!vDate){
+    // Giờ khoá vừa được dời muộn hơn (ví dụ 08:00 -> 10:30) và CHƯA tới giờ mới -> tự mở khoá lại.
+    // Trước đây cờ timeLocked chỉ bật chứ không bao giờ tắt, nên đã khoá theo giờ cũ là khoá luôn.
+    timeLocked=false;
+    document.getElementById('lock-banner').style.display='none';
+    if(curUser){
+      isEdit=true;
+      document.getElementById('ust').textContent='✅ '+curUser;
+    }
+    renderTable();
   }
 }
 
@@ -4411,6 +4421,15 @@ function mmtbCheckTimeLock(){
     mmtbTimeLocked=true;
     if(mmtbEdit){mmtbEdit=false;mmtbRenderTable();}
     document.getElementById('mmtb-lock-banner').style.display='flex';
+  } else if(!isAfterCutoff()&&mmtbTimeLocked&&!mmtbVDate){
+    // Giờ khoá được dời muộn hơn và chưa tới giờ mới -> tự mở khoá lại (giống Nhân sự).
+    mmtbTimeLocked=false;
+    document.getElementById('mmtb-lock-banner').style.display='none';
+    if(mmtbUser){
+      mmtbEdit=true;
+      document.getElementById('mmtb-ust').textContent='✅ '+mmtbUser;
+    }
+    mmtbRenderTable();
   }
 }
 async function mmtbUnlockEdit(){
@@ -6007,6 +6026,8 @@ async function renderHomeThongBao(){
         await taiCauHinhLoaiMayMMTB();
       }
       LIVE_TYPES=TYPES.slice(); LIVE_TLABELS=TLABELS.slice(); // cập nhật lại bản sao lưu để xem lịch sử/quay về hôm nay vẫn đúng
+      // Giờ khoá có thể vừa đổi trong Quản lý chung -> kiểm tra lại khoá/mở ngay, không chờ F5
+      try{ if(nsInited && !vDate) checkTimeLock(); if(mmtbInited && !mmtbVDate) mmtbCheckTimeLock(); }catch(e){}
       var dangGoDo = document.activeElement && (document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA');
       var coDoiNS = truocTYPES!==TYPES.join(',') || truocProjects!==projects.join(',') || truocCOLS!==COLS.map(function(c){return c.k;}).join(',');
       var coDoiMmtb = truocMmtbMachines!==mmtbMachines.map(function(m){return m.k;}).join(',') || truocMmtbProjects!==mmtbProjects.join(',');
