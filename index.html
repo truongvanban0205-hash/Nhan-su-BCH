@@ -2934,8 +2934,8 @@ async function sHist(){
   }catch(e){return [];}
 }
 
-async function sDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'nhansu',p_ngay:d});}
-async function sDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'nhansu'});}
+async function sDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'nhansu',p_ngay:d,p_don_vi_id:getDonViId()||'khanh_hoa'});}
+async function sDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'nhansu',p_don_vi_id:getDonViId()||'khanh_hoa'});}
 
 async function loadData(){
   setSS('🔄 Đang tải...');
@@ -4382,8 +4382,8 @@ async function mmtbSHist(){
     return r.data||[];
   }catch(e){return [];}
 }
-async function mmtbSDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'mmtb',p_ngay:d});}
-async function mmtbSDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'mmtb'});}
+async function mmtbSDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'mmtb',p_ngay:d,p_don_vi_id:getDonViId()||'khanh_hoa'});}
+async function mmtbSDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'mmtb',p_don_vi_id:getDonViId()||'khanh_hoa'});}
 
 async function mmtbLoadData(){
   mmtbSetSS('🔄 Đang tải...');
@@ -5149,8 +5149,8 @@ async function ldtSHist(){
     return r.data||[];
   }catch(e){return [];}
 }
-async function ldtSDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'ldt',p_ngay:d});}
-async function ldtSDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'ldt'});}
+async function ldtSDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'ldt',p_ngay:d,p_don_vi_id:getDonViId()||'khanh_hoa'});}
+async function ldtSDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'ldt',p_don_vi_id:getDonViId()||'khanh_hoa'});}
 
 async function ldtLoadData(){
   ldtSetSS('🔄 Đang tải...');
