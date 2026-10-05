@@ -574,6 +574,7 @@
   <div class="modal" style="max-width:760px;">
     <h3>⚙️ Cấu hình chung</h3>
     <p class="sub" style="margin-top:-6px;margin-bottom:12px;">Dự án · Ca · Loại máy — thay đổi áp dụng ngay cho báo cáo.</p>
+    <div id="cfgDonViBanner" style="margin:-4px 0 12px;font-size:13px;"></div>
 
     <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:20px;">
       <div style="flex:1; min-width:260px;">
@@ -897,7 +898,7 @@ document.getElementById("statusFilter").addEventListener("change", (e)=>{
 const MODULE_CATALOG = [
   { nhan: "Báo cáo Nhân sự", ma: "bao_cao_nhan_su" },
   { nhan: "Báo cáo MMTB", ma: "bao_cao_mmtb" },
-  // Lịch nghiệm thu đã gỡ khỏi app
+  { nhan: "Báo Lịch nghiệm thu", ma: "bao_lich_nghiem_thu" },
   { nhan: "Định biên", ma: "dinh_bien" },
   { nhan: "Danh bạ", ma: "danh_ba" },
   { nhan: "Bản tin", ma: "ban_tin" },
@@ -910,11 +911,85 @@ let tenCaRiengCache = [];
 let loaiMayCache = [];
 let tenNhomMayCache = { thi_cong: 'Máy thi công', phu_tro: 'Máy phụ trợ' };
 
+/* ===== CẤU HÌNH THEO TỪNG ĐƠN VỊ: mọi đọc/ghi đều kèm mã đơn vị đang chọn ===== */
+function cfgDv(){ return window.currentAdminDonVi || ''; }
+let cfgSqlOk = true; // false nếu chưa chạy cauhinh_tach_don_vi.sql
+function cfgNotFound(err){ return !!err && (err.code === 'PGRST202' || /Could not find the function/i.test(err.message || '')); }
+async function cfgRpc(name, params, opts){
+  opts = opts || {};
+  const dv = cfgDv();
+  if(!dv) return { data:null, error:{ message:'Chưa chọn đơn vị.' } };
+  const p1 = opts.noDv ? params : Object.assign({}, params, { p_don_vi_id: dv });
+  let r = await sb.rpc(name, p1);
+  if(r && r.error && cfgNotFound(r.error)){
+    cfgSqlOk = false;
+    if(dv === 'khanh_hoa'){
+      r = await sb.rpc(opts.legacy || name, params); // chưa chạy SQL: Khánh Hòa vẫn dùng cách cũ
+    } else {
+      r = { data:null, error:{ message:'Chưa chạy SQL tách cấu hình theo đơn vị (cauhinh_tach_don_vi.sql).' } };
+    }
+  }
+  return r;
+}
+function cfgTenDonVi(){
+  const id = cfgDv();
+  const row = (typeof donViCache !== 'undefined' ? (donViCache||[]) : []).find(function(d){ return d.id === id; });
+  return row ? (row.ten || id) : id;
+}
+function cfgEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function renderCfgBanner(){
+  const el = document.getElementById('cfgDonViBanner');
+  if(!el) return;
+  const dv = cfgDv();
+  const trong = !duAnCache.length && !loaiCaCache.length && !loaiMayCache.length;
+  let html = '<div style="font-weight:800;color:#f9a825;">Đơn vị: ' + cfgEsc(cfgTenDonVi()) +
+             ' <span style="font-weight:600;color:var(--muted);">— chỉnh ở đây chỉ áp dụng cho đơn vị này, không ảnh hưởng đơn vị khác.</span></div>';
+  if(trong && dv && dv !== 'khanh_hoa'){
+    html += '<div style="margin-top:8px;padding:10px;border:1px dashed #f9a825;border-radius:10px;">' +
+            'Đơn vị này chưa có cấu hình. ' +
+            '<button class="btn small" id="btnSaoChepKH" style="margin-left:6px;">Sao chép từ Khánh Hòa (1 lần)</button></div>';
+  }
+  el.innerHTML = html;
+  const b = document.getElementById('btnSaoChepKH');
+  if(b) b.onclick = saoChepTuKhanhHoa;
+}
+async function saoChepTuKhanhHoa(){
+  const dv = cfgDv();
+  if(!dv || dv === 'khanh_hoa') return;
+  if(!confirm('Sao chép cấu hình (Dự án, Loại ca, Tên ca riêng, Loại máy, Nhóm máy) và Định biên của Khánh Hòa sang "' + cfgTenDonVi() + '"?\n\nChỉ làm được 1 lần khi đơn vị còn trống. Sau đó chỉnh riêng từng đơn vị.')) return;
+  async function chay(kemDinhBien){
+    return await sb.rpc('cauhinh_sao_chep_don_vi', { p_pass: currentAdminPass, p_tu: 'khanh_hoa', p_den: dv, p_kem_dinh_bien: kemDinhBien });
+  }
+  let r = await chay(true);
+  if(r.error){
+    const m = r.error.message || '';
+    if(cfgNotFound(r.error)){ alert('Chưa chạy SQL cauhinh_tach_don_vi.sql nên chưa sao chép được.'); return; }
+    if(/DON_VI_DICH_DA_CO_DINH_BIEN|CHUA_CHAY_SQL_DINH_BIEN/.test(m)){
+      const lyDo = /CHUA_CHAY_SQL_DINH_BIEN/.test(m) ? 'Chưa chạy SQL tách Định biên theo đơn vị.' : 'Đơn vị này đã có Định biên riêng.';
+      if(!confirm(lyDo + '\nSao chép phần cấu hình thôi (không chép Định biên)?')) return;
+      r = await chay(false);
+    }
+  }
+  if(r.error){
+    const m = r.error.message || '';
+    let t = 'Không sao chép được: ' + m;
+    if(/SAI_MAT_KHAU/.test(m)) t = 'Sai mật khẩu quản lý.';
+    else if(/DON_VI_DICH_DA_CO_CAU_HINH/.test(m)) t = 'Đơn vị này đã có cấu hình — không sao chép đè.';
+    else if(/NGUON_TRONG/.test(m)) t = 'Khánh Hòa chưa có cấu hình để sao chép.';
+    alert(t);
+    return;
+  }
+  showToast('✓ Đã sao chép từ Khánh Hòa');
+  await loadCauHinhNS(); renderCauHinhAll();
+}
+
 async function loadCauHinhNS(){
+  cfgSqlOk = true;
+  if(!cfgDv()){ throw new Error('Hãy chọn đơn vị trước khi mở Cấu hình.'); }
   // Mỗi RPC độc lập — một cái lỗi không làm sập cả cấu hình
   async function safeRpc(name){
     try{
-      const r = await sb.rpc(name);
+      const r = await cfgRpc(name, {});
       if(r && r.error){ console.warn("[loadCauHinhNS]", name, r.error); return null; }
       return r ? r.data : null;
     }catch(e){
@@ -1136,7 +1211,7 @@ function renderListLoaiCa(){
   el.querySelectorAll("[data-set-nghi]").forEach(radio=>{
     radio.addEventListener("change", async ()=>{
       const id = parseInt(radio.dataset.setNghi);
-      const { error } = await sb.rpc("admin_dat_loai_nghi", { p_pass: currentAdminPass, p_id: id });
+      const { error } = await cfgRpc("admin_dat_loai_nghi_dv", { p_pass: currentAdminPass, p_id: id }, { noDv:true, legacy:"admin_dat_loai_nghi" });
       if(error){ showToast("Không đặt được, thử lại."); return; }
       showToast("✓ Đã đặt \"" + loaiCaCache.find(x=>x.id===id).ten_mac_dinh + "\" là loại Nghỉ");
       await loadCauHinhNS(); renderCauHinhAll();
@@ -1190,7 +1265,7 @@ function renderTenCaRieng(){
 
   body.querySelectorAll(".ten-rieng-input").forEach(inp=>{
     inp.addEventListener("change", async ()=>{
-      const { error } = await sb.rpc("admin_luu_ten_ca_rieng", {
+      const { error } = await cfgRpc("admin_luu_ten_ca_rieng", {
         p_pass: currentAdminPass, p_du_an: inp.dataset.duan, p_ma_ca: inp.dataset.ma, p_ten_rieng: inp.value.trim()
       });
       if(error) showToast("Không lưu được tên ca này.");
@@ -1200,6 +1275,7 @@ function renderTenCaRieng(){
 }
 
 function renderCauHinhAll(){
+  renderCfgBanner();
   renderListDuAn();
   renderListLoaiCa();
   renderListLoaiMay();
@@ -1290,7 +1366,7 @@ function renderListLoaiMay(){
 async function themLoaiMay(nhom, inputId){
   const ten = document.getElementById(inputId).value.trim();
   if(!ten){ alert("Vui lòng nhập tên loại máy."); return; }
-  const { error } = await sb.rpc("admin_them_loai_may", { p_pass: currentAdminPass, p_ten: ten, p_nhom: nhom });
+  const { error } = await cfgRpc("admin_them_loai_may", { p_pass: currentAdminPass, p_ten: ten, p_nhom: nhom });
   if(error){ alert("Không thêm được: " + (error.message||"")); return; }
   document.getElementById(inputId).value = "";
   await loadCauHinhNS(); renderCauHinhAll();
@@ -1306,7 +1382,7 @@ async function themLoaiMay(nhom, inputId){
 async function luuTenNhomMay(ma, inputId){
   const ten = document.getElementById(inputId).value.trim();
   if(!ten){ alert("Tên nhóm không được trống."); return; }
-  const { error } = await sb.rpc("admin_luu_ten_nhom_may", { p_pass: currentAdminPass, p_ma: ma, p_ten: ten });
+  const { error } = await cfgRpc("admin_luu_ten_nhom_may", { p_pass: currentAdminPass, p_ma: ma, p_ten: ten });
   if(error){ alert("Không lưu tên nhóm được."); return; }
   tenNhomMayCache[ma] = ten;
   showToast("✓ Đã lưu tên nhóm");
@@ -1318,11 +1394,15 @@ async function luuTenNhomMay(ma, inputId){
 })();
 
 document.getElementById("btnCauHinhNS").addEventListener("click", async ()=>{
+  if(!cfgDv()){ alert("Hãy chọn đơn vị trước khi mở Cấu hình."); return; }
   // Luôn mở modal; lỗi tải cấu hình không chặn vào màn hình
   document.getElementById("modalCauHinh").classList.add("show");
   try{
     await loadCauHinhNS();
     renderCauHinhAll();
+    if(!cfgSqlOk && cfgDv() !== 'khanh_hoa'){
+      alert("Chưa chạy SQL cauhinh_tach_don_vi.sql nên chưa dùng được Cấu hình riêng cho đơn vị này.");
+    }
   }catch(e){
     console.error("[CauHinhNS]", e);
     alert("Không tải đủ cấu hình (kiểm tra SQL/RPC). Vẫn có thể xem giao diện.\n" + (e && e.message ? e.message : e));
@@ -1335,7 +1415,7 @@ document.getElementById("btnCloseCauHinh").addEventListener("click", ()=>{
 document.getElementById("btnThemDuAn").addEventListener("click", async ()=>{
   const ten = document.getElementById("inputDuAnMoi").value.trim();
   if(!ten){ alert("Vui lòng nhập tên dự án."); return; }
-  const { error } = await sb.rpc("admin_them_du_an", { p_pass: currentAdminPass, p_ten: ten });
+  const { error } = await cfgRpc("admin_them_du_an", { p_pass: currentAdminPass, p_ten: ten });
   if(error){ alert("Không thêm được (có thể trùng tên)."); return; }
   document.getElementById("inputDuAnMoi").value = "";
   await loadCauHinhNS(); renderCauHinhAll();
@@ -1345,7 +1425,7 @@ document.getElementById("btnThemCa").addEventListener("click", async ()=>{
   const ten = document.getElementById("inputCaMoi").value.trim();
   if(!ten){ alert("Vui lòng nhập tên ca."); return; }
   const ma = "ca_" + Date.now();
-  const { error } = await sb.rpc("admin_them_loai_ca", { p_pass: currentAdminPass, p_ma: ma, p_ten_mac_dinh: ten });
+  const { error } = await cfgRpc("admin_them_loai_ca", { p_pass: currentAdminPass, p_ma: ma, p_ten_mac_dinh: ten });
   if(error){ alert("Không thêm được."); return; }
   document.getElementById("inputCaMoi").value = "";
   await loadCauHinhNS(); renderCauHinhAll();
