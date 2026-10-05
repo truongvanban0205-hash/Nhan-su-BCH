@@ -2856,9 +2856,9 @@ function copyFromYest(src,projs){
 
 async function sLoad(d){
   try{
-    var q=sc.from('nhansu').select('*').eq('ngay',d);
-    var dv=getDonViId(); if(dv) q=q.eq('don_vi_id',dv);
-    var r=await q.maybeSingle();
+    // Giống MMTB: LUÔN lọc đúng đơn vị (mặc định khanh_hoa) — khớp với nơi ghi dữ liệu bên dưới.
+    var r=await sc.from('nhansu').select('*').eq('ngay',d).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    if(r.error) console.error('[sLoad] Lỗi đọc Nhân sự:',r.error);
     return r.data?r.data.data:null;
   }catch(e){return null;}
 }
@@ -2869,20 +2869,22 @@ async function sSave(pay){
     var dv=getDonViId()||'khanh_hoa';
     var q=sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',dv);
     var ex=await q.maybeSingle();
+    if(ex.error) throw ex.error;
+    var wr;
     if(ex.data){
-      await sc.from('nhansu').update({data:pay}).eq('ngay',tkey()).eq('don_vi_id',dv);
+      wr=await sc.from('nhansu').update({data:pay}).eq('ngay',tkey()).eq('don_vi_id',dv);
     }else{
-      await sc.from('nhansu').insert({ngay:tkey(),data:pay,don_vi_id:dv});
+      wr=await sc.from('nhansu').insert({ngay:tkey(),data:pay,don_vi_id:dv});
     }
+    if(wr.error) throw wr.error;
     setSS('✅ Đã cập nhật');
   }catch(e){setSS('⚠️ Lỗi: '+e.message);}
 }
 
 async function sHist(){
   try{
-    var q=sc.from('nhansu').select('ngay,data').order('ngay',{ascending:false}).limit(60);
-    var dv=getDonViId(); if(dv) q=q.eq('don_vi_id',dv);
-    var r=await q;
+    var r=await sc.from('nhansu').select('ngay,data').eq('don_vi_id',getDonViId()||'khanh_hoa').order('ngay',{ascending:false}).limit(60);
+    if(r.error) console.error('[sHist] Lỗi đọc lịch sử Nhân sự:',r.error);
     return r.data||[];
   }catch(e){return [];}
 }
@@ -3044,11 +3046,14 @@ async function saveStructure(){
   try{
     var payload={projects:projects,cols:COLS,data:data,log:logItems};
     var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    if(ex.error) throw ex.error;
+    var wr;
     if(ex.data){
-      await sc.from('nhansu').update({data:payload}).eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
+      wr=await sc.from('nhansu').update({data:payload}).eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('nhansu').insert({ngay:tkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
+      wr=await sc.from('nhansu').insert({ngay:tkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
+    if(wr.error) throw wr.error;
     setSS('✅ Đã cập nhật');
     renderTable();renderLog();
   }catch(e){setSS('⚠️ Lỗi: '+e.message);alert('Lỗi lưu: '+e.message);}
@@ -3064,6 +3069,7 @@ async function mergeSave(askReason){
   try{
     // Lấy bản mới nhất từ server
     var ex=await sc.from('nhansu').select('id,data').eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    if(ex.error) throw ex.error; // đọc lỗi (mạng/trùng dòng) -> DỪNG, giữ pendingChanges, không insert thêm dòng mới
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
     var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems, mergedBienDong=bienDong;
     if(vDate){
@@ -3118,11 +3124,13 @@ async function mergeSave(askReason){
       mergedLog=mergedLog.slice(0,50);
     }
     var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:ghiChuTuyChinh};
+    var wr;
     if(ex.data){
-      await sc.from('nhansu').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
+      wr=await sc.from('nhansu').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('nhansu').insert({ngay:targetKey,data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
+      wr=await sc.from('nhansu').insert({ngay:targetKey,data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
+    if(wr.error) throw wr.error; // ghi lỗi -> báo ⚠️, KHÔNG xoá pendingChanges, 15s sau tự lưu lại
     // Cập nhật lại biến cục bộ theo bản đã merge (để không bị lệch UI)
     projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;bienDong=mergedBienDong;/* ghiChuTuyChinh giữ nguyên */
     pendingChanges={};
