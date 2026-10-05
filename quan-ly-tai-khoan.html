@@ -465,8 +465,8 @@
   <div class="modal" style="max-width:440px;">
     <h3>⏱️ Giờ khoá &amp; Mật khẩu báo cáo</h3>
     <p class="sub" style="margin-top:-8px;">
-      Mật khẩu này dùng riêng để mở khoá mục "🔒 Quản lý" trong trang Báo cáo
-      (Nhân sự / MMTB / Lịch nghiệm thu) — <b>tách biệt hoàn toàn</b> với mật khẩu Quản lý chung ở trên.
+      Mật khẩu xuất báo cáo, mở khoá mục «🔒 Quản lý», xoá lịch sử và lưu giờ khoá trong trang Báo cáo
+      (Nhân sự / MMTB / Lịch nghiệm thu) <b>dùng chung mật khẩu Quản lý chung</b>. Đổi bằng nút «Đổi mật khẩu» ở trên.
     </p>
 
     <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
@@ -475,19 +475,12 @@
       <input type="time" id="inputGioHanNSMoi">
       <label>Giờ khoá Lịch nghiệm thu</label>
       <input type="time" id="inputGioHanLDTMoi">
-      <label>Mật khẩu báo cáo (để xác nhận lưu)</label>
+      <label>Mật khẩu quản lý chung (để xác nhận lưu)</label>
       <input type="password" id="inputMatKhauBaoCaoXacNhan" placeholder="Nhập mật khẩu hiện tại">
       <button class="btn small" id="btnLuuGioKhoa" style="width:100%;">Lưu giờ khoá</button>
     </div>
 
-    <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px;">
-      <div style="font-weight:800; font-size:13px; margin-bottom:10px;">Đổi mật khẩu báo cáo</div>
-      <label>Mật khẩu cũ</label>
-      <input type="password" id="inputMatKhauBaoCaoCu" placeholder="Mật khẩu hiện tại">
-      <label>Mật khẩu mới</label>
-      <input type="password" id="inputMatKhauBaoCaoMoi" placeholder="Mật khẩu mới">
-      <button class="btn small secondary" id="btnDoiMatKhauBaoCao" style="width:100%;">Đổi mật khẩu</button>
-    </div>
+    <div style="font-size:12px; color:var(--muted,#8b93a8); padding:4px 2px;">Mật khẩu báo cáo = mật khẩu Quản lý chung (đổi ở nút «Đổi mật khẩu»).</div>
 
     <div class="msg bad" id="khoaBaoCaoErr" style="margin-top:12px;"></div>
 
@@ -1769,8 +1762,6 @@ document.getElementById("btnKhoaBaoCao").addEventListener("click", async ()=>{
   const errEl = document.getElementById("khoaBaoCaoErr");
   hideMsg(errEl);
   document.getElementById("inputMatKhauBaoCaoXacNhan").value = "";
-  document.getElementById("inputMatKhauBaoCaoCu").value = "";
-  document.getElementById("inputMatKhauBaoCaoMoi").value = "";
   try{
     const { data } = await sb.rpc("cauhinh_lay_gio_han");
     if(data){
@@ -1789,27 +1780,15 @@ document.getElementById("btnLuuGioKhoa").addEventListener("click", async ()=>{
   const gioLDT = document.getElementById("inputGioHanLDTMoi").value;
   const pass = document.getElementById("inputMatKhauBaoCaoXacNhan").value;
   if(!gioNS || !gioLDT){ showMsg(errEl,"bad","Vui lòng chọn đầy đủ 2 mốc giờ khoá."); return; }
-  if(!pass){ showMsg(errEl,"bad","Vui lòng nhập mật khẩu báo cáo để xác nhận."); return; }
+  if(!pass){ showMsg(errEl,"bad","Vui lòng nhập mật khẩu quản lý chung để xác nhận."); return; }
   const { data, error } = await sb.rpc("baocao_luu_gio_han", {
     p_pass: pass, p_gio_han_ns_mmtb: gioNS + ":00", p_gio_han_nghiem_thu: gioLDT + ":00"
   });
-  if(error || !data){ showMsg(errEl,"bad","Sai mật khẩu báo cáo hoặc có lỗi, vui lòng thử lại."); return; }
+  if(error || !data){ showMsg(errEl,"bad","Sai mật khẩu quản lý chung hoặc có lỗi, vui lòng thử lại."); return; }
   document.getElementById("inputMatKhauBaoCaoXacNhan").value = "";
   showToast("✓ Đã lưu giờ khoá mới — trang Báo cáo sẽ áp dụng ngay lần tải tiếp theo.");
 });
 
-document.getElementById("btnDoiMatKhauBaoCao").addEventListener("click", async ()=>{
-  const errEl = document.getElementById("khoaBaoCaoErr");
-  hideMsg(errEl);
-  const oldP = document.getElementById("inputMatKhauBaoCaoCu").value;
-  const newP = document.getElementById("inputMatKhauBaoCaoMoi").value;
-  if(!newP || newP.length < 4){ showMsg(errEl,"bad","Mật khẩu mới quá ngắn (tối thiểu 4 ký tự)."); return; }
-  const { data, error } = await sb.rpc("baocao_doi_mat_khau", { p_pass_cu: oldP, p_pass_moi: newP });
-  if(error || !data){ showMsg(errEl,"bad","Mật khẩu báo cáo cũ không đúng."); return; }
-  document.getElementById("inputMatKhauBaoCaoCu").value = "";
-  document.getElementById("inputMatKhauBaoCaoMoi").value = "";
-  showToast("✓ Đã đổi mật khẩu báo cáo thành công.");
-});
 
 /* ================= XUẤT EXCEL ================= */
 document.getElementById("btnExport").addEventListener("click", ()=>{
