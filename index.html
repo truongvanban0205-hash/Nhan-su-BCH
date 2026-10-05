@@ -2357,7 +2357,9 @@ async function renderDonViHub(){
       var row = rows.find(function(x){ return x.id===id; });
       setDonVi(id, row?row.ten:id, row?row.modules:null);
       try{ sessionStorage.setItem('bch_in_unit','1'); }catch(e){}
-      showDonViWorkspace();
+      // Không hiện workspace trước khi tải lại: tile bấm được nhưng ~1 giây sau trang reload làm mất lần bấm
+      grid.style.pointerEvents='none';
+      grid.innerHTML='<div style="grid-column:1/-1;text-align:center;color:#8b93a8;padding:20px;">⏳ Đang vào '+escHtmlHub(row?(row.ten||id):id)+'...</div>';
       location.reload();
     };
   });
