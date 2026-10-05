@@ -2946,7 +2946,7 @@ async function loadData(){
     // 2) Đọc dữ liệu hôm nay + lịch sử có thử lại; lỗi thật thì DỪNG, không dựng bảng 0 rồi để tự lưu đè
     var _td, _hist;
     try{
-      try{ await sc.rpc('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
+      try{ await rpcDinhBienDV('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
       _td=await nsThuLai(function(){return sLoadStrict(tkey());});
       _hist=await nsThuLai(sHistStrict);
     }catch(e){
@@ -2959,7 +2959,7 @@ async function loadData(){
     if(curUser && !vDate && !timeLocked) isEdit=true;
     // Đảm bảo dữ liệu hôm nay đã tồn tại đúng chuẩn ở SERVER trước khi đọc — server tự copy từ
     // ngày gần nhất nếu chưa có, dùng đúng giờ Việt Nam, an toàn dù nhiều máy cùng mở lúc đầu ngày.
-    try{ await sc.rpc('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
+    try{ await rpcDinhBienDV('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
     var td=_td;
     if(td){
       // projects LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (đã tải sẵn ở taiCauHinhDuAn()) —
@@ -4386,7 +4386,7 @@ async function mmtbLoadData(){
   mmtbSetSS('🔄 Đang tải...');
   try{
     // Đảm bảo dữ liệu hôm nay đã tồn tại đúng chuẩn ở SERVER trước khi đọc (giống hệt Nhân sự).
-    try{ await sc.rpc('dam_bao_du_lieu_hom_nay_mmtb'); }catch(e){}
+    try{ await rpcDinhBienDV('dam_bao_du_lieu_hom_nay_mmtb'); }catch(e){}
     var td=await mmtbSLoad(mmtbTkey());
     if(td){
       mmtbMachines=mmtbMergeMachines(td.machines);
