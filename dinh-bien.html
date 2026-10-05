@@ -108,8 +108,14 @@ const DON_VI_TEN = localStorage.getItem('bch_don_vi_ten') || '';
 let dvParamOk = true; // false nếu server chưa chạy SQL tách đơn vị
 function esc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 // Gọi RPC Định biên kèm mã đơn vị. Chưa có SQL: chỉ Khánh Hòa (dữ liệu cũ) được chạy tiếp, đơn vị khác bị chặn để KHÔNG ghi đè dữ liệu Khánh Hòa.
+// Hàm có tham số đơn vị (p_don_vi_id). Các hàm còn lại (ẩn / sửa / xoá / đổi vị trí) làm theo mã dòng nên KHÔNG nhận tham số này.
+const DV_HAM_CO_DON_VI = new Set([
+  'dinhbien_lay_danh_sach_chuc_danh','dinhbien_lay_danh_sach_cot','dinhbien_lay_gia_tri_nam','dinhbien_lay_gia_tri_ngay',
+  'dinhbien_luu_gia_tri','dinhbien_them_chuc_danh','dinhbien_them_cot'
+]);
 async function rpcDv(name, params){
   params = params || {};
+  if(!DV_HAM_CO_DON_VI.has(name)) return sb.rpc(name, params);
   if(dvParamOk){
     const r = await sb.rpc(name, Object.assign({}, params, { p_don_vi_id: DON_VI }));
     const msg = (r.error && (r.error.message||'')) || '';
