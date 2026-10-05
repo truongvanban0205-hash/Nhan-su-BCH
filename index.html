@@ -2584,10 +2584,12 @@ async function rpcDinhBienDV(tenHam, thamSo){
   }catch(e){}
   return await sc.rpc(tenHam, thamSo);
 }
+var CFG_DUAN_OK=false, CFG_CD_OK=false; // đã tải được cấu hình THẬT từ server chưa (khác dùng mặc định)
 async function taiDinhBienChucDanh(){
   try{
     var r = await rpcDinhBienDV('dinhbien_lay_danh_sach_chuc_danh');
     if(r.data && r.data.length){
+      CFG_CD_OK=true;
       // Thứ tự cột báo cáo NS = thu_tu trên Định biên (đổi ↑↓ bên Định biên là nhảy theo)
       var list = r.data.slice().sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
       COLS = list.filter(function(c){ return !c.an; }).map(function(c){ return {k:'cd_'+c.id, n:(c.ten_tat && c.ten_tat.trim()) ? c.ten_tat : c.ten}; });
@@ -2695,6 +2697,7 @@ async function taiCauHinhDuAn(){
     var r = await rpcCoThuLai('cauhinh_lay_du_an');
     var list = r.data;
     if(list && list.length){
+      CFG_DUAN_OK=true;
       // Tên hiển thị lấy từ TOÀN BỘ danh sách (kể cả đang ẩn) — để dữ liệu lịch sử cũ nhắc tới
       // 1 dự án đã bị ẩn sau này vẫn hiện đúng tên, không hiện mã thô "duan_12".
       var nm={}; var ht={}; list.forEach(function(d){ nm['duan_'+d.id]=d.ten; ht['duan_'+d.id]=!!d.ho_tro; });
@@ -2873,7 +2876,36 @@ async function sLoad(d){
   }catch(e){return null;}
 }
 
+var nsLoadFailed=false; // true = lần tải gần nhất LỖI -> CHẶN mọi thao tác lưu để không ghi đè dữ liệu thật bằng số 0
+async function nsThuLai(fn){
+  var doTre=[600,1500,3000], lastErr;
+  for(var i=0;i<=doTre.length;i++){
+    try{ return await fn(); }catch(e){ lastErr=e; if(i<doTre.length) await new Promise(function(res){setTimeout(res,doTre[i]);}); }
+  }
+  throw lastErr;
+}
+// Bản "nghiêm ngặt": lỗi thì NÉM LỖI (không trả null như sLoad) để phân biệt "chưa có dữ liệu" với "đọc lỗi"
+async function sLoadStrict(d){
+  var r=await sc.from('nhansu').select('*').eq('ngay',d).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+  if(r.error) throw r.error;
+  return r.data?r.data.data:null;
+}
+async function sHistStrict(){
+  var r=await sc.from('nhansu').select('ngay,data').eq('don_vi_id',getDonViId()||'khanh_hoa').order('ngay',{ascending:false}).limit(60);
+  if(r.error) throw r.error;
+  return r.data||[];
+}
+async function damBaoCauHinhNS(){
+  for(var i=0;i<3&&(!CFG_DUAN_OK||!CFG_CD_OK);i++){
+    if(!CFG_DUAN_OK) await taiCauHinhDuAn();
+    if(!CFG_CD_OK) await taiDinhBienChucDanh();
+    if(!CFG_DUAN_OK||!CFG_CD_OK) await new Promise(function(res){setTimeout(res,1200);});
+  }
+  return CFG_DUAN_OK && CFG_CD_OK;
+}
+
 async function sSave(pay){
+  if(nsLoadFailed) return;
   setSS('⏳ Đang lưu...');
   try{
     var dv=getDonViId()||'khanh_hoa';
@@ -2905,10 +2937,30 @@ async function sDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_ban
 async function loadData(){
   setSS('🔄 Đang tải...');
   try{
+    // 1) Phải có cấu hình dự án/chức danh THẬT trước, nếu không khoá dữ liệu (duan_1, duan_2...) sẽ lệch -> bảng hiện 0
+    if(!(await damBaoCauHinhNS())){
+      nsLoadFailed=true; isEdit=false;
+      setSS('⚠️ Chưa tải được cấu hình — <a href="#" onclick="loadData();return false;">bấm để tải lại</a>');
+      return;
+    }
+    // 2) Đọc dữ liệu hôm nay + lịch sử có thử lại; lỗi thật thì DỪNG, không dựng bảng 0 rồi để tự lưu đè
+    var _td, _hist;
+    try{
+      try{ await sc.rpc('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
+      _td=await nsThuLai(function(){return sLoadStrict(tkey());});
+      _hist=await nsThuLai(sHistStrict);
+    }catch(e){
+      console.error('[loadData] Đọc Nhân sự lỗi:',e);
+      nsLoadFailed=true; isEdit=false;
+      setSS('⚠️ Không tải được dữ liệu — <a href="#" onclick="loadData();return false;">bấm để tải lại</a> (đang chặn lưu để không mất số liệu)');
+      return;
+    }
+    nsLoadFailed=false;
+    if(curUser && !vDate && !timeLocked) isEdit=true;
     // Đảm bảo dữ liệu hôm nay đã tồn tại đúng chuẩn ở SERVER trước khi đọc — server tự copy từ
     // ngày gần nhất nếu chưa có, dùng đúng giờ Việt Nam, an toàn dù nhiều máy cùng mở lúc đầu ngày.
     try{ await sc.rpc('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
-    var td=await sLoad(tkey());
+    var td=_td;
     if(td){
       // projects LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (đã tải sẵn ở taiCauHinhDuAn()) —
       // không dùng projects cũ đã lưu trên server, để sửa/ẩn-hiện dự án ở Quản lý chung là nhảy theo ngay.
@@ -2920,7 +2972,7 @@ async function loadData(){
       pendingBienDong={};
       projects.forEach(function(p){ensureProj(p);});
       // Load ngày trước để so sánh mũi tên
-      var hist2=await sHist();
+      var hist2=_hist;
       for(var i=0;i<hist2.length;i++){
         if(hist2[i].ngay<tkey()){
           var pd=hist2[i].data||{};
@@ -2932,7 +2984,7 @@ async function loadData(){
       renderTable();renderLog();return;
     }
     // Lấy ngày gần nhất có lịch sử
-    var hist=await sHist();
+    var hist=_hist;
     var prev=null;
     for(var i=0;i<hist.length;i++){
       if(hist[i].ngay<tkey()){prev=hist[i];break;}
@@ -3072,6 +3124,7 @@ async function saveStructure(){
 var mergeSaveBusy=false;
 async function mergeSave(askReason){
   if(dangBiKhoaCapNhat){ setSS('🔄 Thiết bị đang chạy bản cũ — vui lòng tải lại trang trước khi lưu.'); return; }
+  if(nsLoadFailed&&!vDate){ setSS('⚠️ Chưa tải được dữ liệu — không lưu để tránh ghi đè. Bấm tải lại.'); return; }
   if(mergeSaveBusy)return; // đang có 1 lượt lưu khác chạy (có thể đang chờ nhập lý do) — bỏ qua, lượt sau tự thử lại
   mergeSaveBusy=true;
   var targetKey = vDate || tkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
@@ -4083,7 +4136,9 @@ async function checkAutoSaveAt8(){
   if(autoSavedToday||vDate)return;
   if(!isAfterCutoff())return;
   try{
+    if(nsLoadFailed)return;
     var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    if(ex.error)return; // đọc lỗi KHÔNG đồng nghĩa chưa có dữ liệu -> tuyệt đối không tự ghi
     if(ex.data){autoSavedToday=true;return;} // đã có data hôm nay rồi, không cần làm gì
     // Chưa có data hôm nay và đã qua giờ khoá -> tự lưu bản hiện tại (copy từ hôm qua) lên server
     await sSave({projects:projects,cols:COLS,data:data,log:logItems});
@@ -6010,6 +6065,7 @@ async function renderHomeThongBao(){
   // biết, phải tự bấm F5 mới thấy đúng. Đây chính là gốc rễ của mọi kiểu "lúc có lúc không" đã gặp.
   // Giờ tự tải lại toàn bộ cấu hình mỗi 45 giây, âm thầm cập nhật — không cần F5 tay nữa. Chỉ vẽ
   // lại bảng khi KHÔNG có ô nào đang được gõ dở (tránh giật/mất focus khi người dùng đang nhập số).
+  var nsCanTaiLaiDuLieu=false;
   async function dongBoCauHinhDinhKy(){
     try{
       await kiemTraPhienBan(); // kiểm tra phiên bản TRƯỚC — nếu đã bị khoá thì không cần đồng bộ gì thêm
@@ -6031,9 +6087,12 @@ async function renderHomeThongBao(){
       var dangGoDo = document.activeElement && (document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA');
       var coDoiNS = truocTYPES!==TYPES.join(',') || truocProjects!==projects.join(',') || truocCOLS!==COLS.map(function(c){return c.k;}).join(',');
       var coDoiMmtb = truocMmtbMachines!==mmtbMachines.map(function(m){return m.k;}).join(',') || truocMmtbProjects!==mmtbProjects.join(',');
+      if(coDoiNS) nsCanTaiLaiDuLieu=true; // nhớ lại, nếu lúc này đang gõ dở thì chu kỳ sau làm
+      var nsDangMo = !vDate && document.getElementById('screen-ns') && document.getElementById('screen-ns').classList.contains('active');
       if(!dangGoDo){
-        if(coDoiNS && !vDate && document.getElementById('screen-ns') && document.getElementById('screen-ns').classList.contains('active')){
-          renderTable(); renderCharts();
+        if(nsDangMo && (nsCanTaiLaiDuLieu||nsLoadFailed) && Object.keys(pendingChanges).length===0){
+          // Cấu hình (dự án/chức danh) đổi hoặc lần tải trước lỗi: dữ liệu đang giữ theo khoá cũ -> phải tải lại từ server
+          nsCanTaiLaiDuLieu=false; await loadData(); renderCharts();
         }
         if(coDoiMmtb && !mmtbVDate && document.getElementById('screen-mmtb') && document.getElementById('screen-mmtb').classList.contains('active')){
           mmtbRenderTable(); mmtbRenderCharts();
