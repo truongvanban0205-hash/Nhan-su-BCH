@@ -2699,7 +2699,7 @@ async function taiCauHinhDuAn(){
   try{
     var r = await rpcCoThuLai('cauhinh_lay_du_an',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var list = r.data;
-    if(list && list.length){
+    if(!r.error && Array.isArray(list)){
       CFG_DUAN_OK=true;
       // Tên hiển thị lấy từ TOÀN BỘ danh sách (kể cả đang ẩn) — để dữ liệu lịch sử cũ nhắc tới
       // 1 dự án đã bị ẩn sau này vẫn hiện đúng tên, không hiện mã thô "duan_12".
@@ -2709,9 +2709,8 @@ async function taiCauHinhDuAn(){
       // Nhân sự lọc theo an_nhansu — ẩn/hiện riêng cho từng module, độc lập với MMTB.
       var active = list.filter(function(d){ return !d.an_nhansu; });
       active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
-      if(active.length){
-        projects = active.map(function(d){ return 'duan_'+d.id; });
-      }
+      // Đơn vị chưa có dự án nào (hoặc ẩn hết) thì để TRỐNG, không rơi về dự án mặc định cũ
+      projects = active.map(function(d){ return 'duan_'+d.id; });
     }
   }catch(e){
     console.error('[taiCauHinhDuAn] Lỗi tải danh sách dự án (Nhân sự), đang dùng mặc định:', e);
@@ -2726,13 +2725,11 @@ async function taiCauHinhDuAnMMTB(){
   try{
     var r = await rpcCoThuLai('cauhinh_lay_du_an',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var list = r.data;
-    if(list && list.length){
+    if(!r.error && Array.isArray(list)){
       list.forEach(function(d){ PROJ_NAME['duan_'+d.id]=d.ten; });
       var active = list.filter(function(d){ return !d.an_mmtb; });
       active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
-      if(active.length){
-        mmtbProjects = active.map(function(d){ return 'duan_'+d.id; });
-      }
+      mmtbProjects = active.map(function(d){ return 'duan_'+d.id; });
     }
   }catch(e){
     console.error('[taiCauHinhDuAnMMTB] Lỗi tải danh sách dự án (MMTB), đang dùng mặc định:', e);
@@ -3253,6 +3250,9 @@ function renderTable(){
   h+='<th style="background:#F7C31E;color:#0F2A5C;min-width:42px">Tổng</th>';
   h+='<th style="min-width:280px;background:#e3e9f5;">Báo cáo tổng hợp '+getDonViTenBaoCao()+'</th>';
   h+='</tr></thead><tbody>';
+  if(!projects.length){
+    h+='<tr><td colspan="'+(COLS.length+4)+'" style="padding:18px;text-align:center;color:#888;font-size:13px;">Đơn vị chưa có dự án. Thêm tại Quản lý chung &gt; Cấu hình chung.</td></tr>';
+  }
 
   var chartRowspanTotal = (projects.length+1)*(TYPES.length+1);
   var chartCellPlaced = false;
