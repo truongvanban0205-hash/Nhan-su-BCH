@@ -952,8 +952,8 @@ async function loadQuickStats(){
   try{
     var n=new Date();
     var tk=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());
-    var nsR=await sc.from('nhansu').select('data').eq('ngay',tk).single();
-    var nsY=await sc.from('nhansu').select('data').eq('ngay',ykeyOf(n)).single();
+    var nsR=await sc.from('nhansu').select('data').eq('ngay',tk).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    var nsY=await sc.from('nhansu').select('data').eq('ngay',ykeyOf(n)).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     var prevTotal=null;
     if(nsY.data){
       var ydt=nsY.data.data.data||{},yprojs=nsY.data.data.projects||[];
@@ -1014,8 +1014,8 @@ async function loadQuickStats(){
   try{
     var n2=new Date();
     var tk2=n2.getFullYear()+'-'+p2(n2.getMonth()+1)+'-'+p2(n2.getDate());
-    var mR=await sc.from('mmtb').select('data').eq('ngay',tk2).single();
-    var mY=await sc.from('mmtb').select('data').eq('ngay',ykeyOf(n2)).single();
+    var mR=await sc.from('mmtb').select('data').eq('ngay',tk2).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    var mY=await sc.from('mmtb').select('data').eq('ngay',ykeyOf(n2)).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     var prevM=null;
     if(mY.data){
       var ymd=mY.data.data.data||{},yprojs=mY.data.data.projects||['CL-CR'];
@@ -1066,7 +1066,7 @@ async function loadQuickStats(){
   try{
     var n3=new Date();
     var tk3=n3.getFullYear()+'-'+p2(n3.getMonth()+1)+'-'+p2(n3.getDate());
-    var lR=await sc.from('ldt').select('data').eq('ngay',tk3).single();
+    var lR=await sc.from('ldt').select('data').eq('ngay',tk3).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(lR.data){
       var schs=(lR.data.data&&lR.data.data.schedules)||[];
       qsDetailData.ldt={schedules:schs};
@@ -4544,9 +4544,9 @@ async function mmtbSaveStructure(){
     var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog};
     var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){
-      await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey());
+      await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:payload});
+      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
     mmtbSetSS('✅ Đã cập nhật');
     mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();
@@ -4561,7 +4561,7 @@ async function mmtbMergeSave(askReason){
   var targetKey = mmtbVDate || mmtbTkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
   mmtbSetSS('⏳ Đang lưu...');
   try{
-    var ex=await sc.from('mmtb').select('id,data').eq('ngay',targetKey).single();
+    var ex=await sc.from('mmtb').select('id,data').eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
     var mergedMachines=mmtbMachines, mergedProjects=mmtbProjects, mergedData=mmtbData, mergedNotes=mmtbNotes, mergedLog=mmtbLog, mergedBienDong=mmtbBienDong;
     if(mmtbVDate){
@@ -5127,22 +5127,22 @@ function ldtSetSS(m){document.getElementById('ldt-ss').innerHTML=m;}
 
 async function ldtSLoad(d){
   try{
-    var r=await sc.from('ldt').select('*').eq('ngay',d).single();
+    var r=await sc.from('ldt').select('*').eq('ngay',d).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     return r.data?r.data.data:null;
   }catch(e){return null;}
 }
 async function ldtSSave(pay){
   ldtSetSS('⏳ Đang lưu...');
   try{
-    var ex=await sc.from('ldt').select('id').eq('ngay',ldtTkey()).single();
-    if(ex.data){await sc.from('ldt').update({data:pay}).eq('ngay',ldtTkey());}
-    else{await sc.from('ldt').insert({ngay:ldtTkey(),data:pay});}
+    var ex=await sc.from('ldt').select('id').eq('ngay',ldtTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    if(ex.data){await sc.from('ldt').update({data:pay}).eq('ngay',ldtTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');}
+    else{await sc.from('ldt').insert({ngay:ldtTkey(),data:pay,don_vi_id:getDonViId()||'khanh_hoa'});}
     ldtSetSS('✅ Đã cập nhật');
   }catch(e){ldtSetSS('⚠️ Lỗi: '+e.message);}
 }
 async function ldtSHist(){
   try{
-    var r=await sc.from('ldt').select('ngay,data').order('ngay',{ascending:false}).limit(60);
+    var r=await sc.from('ldt').select('ngay,data').eq('don_vi_id',getDonViId()||'khanh_hoa').order('ngay',{ascending:false}).limit(60);
     return r.data||[];
   }catch(e){return [];}
 }
@@ -5169,7 +5169,7 @@ async function ldtLoadData(){
 async function ldtSchSave(){
   ldtSetSS('⏳ Đang lưu...');
   try{
-    var ex=await sc.from('ldt').select('id,data').eq('ngay',ldtTkey()).single();
+    var ex=await sc.from('ldt').select('id,data').eq('ngay',ldtTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
     var mergedSchedules=ldtSchedules, mergedLog=ldtLog;
     if(serverData){
@@ -5188,8 +5188,8 @@ async function ldtSchSave(){
       mergedLog=newLogs.concat(serverLog).slice(0,100);
     }
     var payload={schedules:mergedSchedules,log:mergedLog};
-    if(ex.data){await sc.from('ldt').update({data:payload}).eq('ngay',ldtTkey());}
-    else{await sc.from('ldt').insert({ngay:ldtTkey(),data:payload});}
+    if(ex.data){await sc.from('ldt').update({data:payload}).eq('ngay',ldtTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');}
+    else{await sc.from('ldt').insert({ngay:ldtTkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});}
     ldtSchedules=mergedSchedules;ldtLog=mergedLog;
     ldtSetSS('✅ Đã cập nhật');
     ldtRenderTable();ldtRenderLog();
