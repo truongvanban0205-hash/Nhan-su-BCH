@@ -65,42 +65,66 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4ff;color:#1a1a1a;pa
 .hub-card.locked .hub-lock{font-size:18px;margin-left:4px;}
 @media(max-width:360px){.hub-grid{grid-template-columns:1fr;}}
 
-.home-header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;position:relative;z-index:50;}
-.home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.25;}
-.brand-title{font-size:16px;font-weight:800;letter-spacing:0.2px;color:#fff;white-space:nowrap;}
-.greet-sub{font-size:12px;color:var(--txt-dim);margin-top:2px;order:3;}
-.home-header .sub{font-size:12px;color:var(--accent-blue);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:5px;}
-.home-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(124,77,255,0.5);overflow:hidden;background:#0a0e1a;border:2px solid rgba(124,77,255,0.3);cursor:pointer;transition:transform .15s;}
+/* ===== Header gọn + tile glass ===== */
+.home-header{width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;position:relative;z-index:50;}
+.hh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;}
+.hh-body{display:flex;flex-direction:column;gap:4px;}
+.home-header h1{font-size:19px;font-weight:800;color:#fff;letter-spacing:0.3px;line-height:1.2;margin:0;}
+.brand-title{font-size:16px;font-weight:800;letter-spacing:0.2px;color:#fff;white-space:normal;}
+.brand-title.in-unit{font-size:22px;font-weight:900;letter-spacing:-0.2px;line-height:1.15;}
+.greet-sub{display:none!important;}
+.home-header .sub{font-size:12px;color:#90caf9;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:5px;}
+.home-header.in-unit .sub{display:none;}
+.ws-back-btn{display:none;align-items:center;gap:4px;padding:7px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);color:#e8ecf5;font-weight:700;font-size:12px;font-family:inherit;cursor:pointer;}
+.home-header.in-unit .ws-back-btn{display:inline-flex;}
+.ws-back-btn:active{background:rgba(255,167,38,.18);border-color:rgba(255,167,38,.4);color:#ffb74d;}
+.home-user-line{font-size:13px;color:#e8ecf5;font-weight:600;margin-top:2px;}
+.home-user-line a{color:#ffa726;font-weight:700;text-decoration:none;}
+.home-user-line a.logout{color:#64b5f6;}
+.home-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 18px rgba(255,167,38,0.35);overflow:hidden;background:#0a0e1a;border:2px solid rgba(255,167,38,0.4);cursor:pointer;transition:transform .15s;}
 .home-avatar:active{transform:scale(0.92);}
 .home-avatar img{width:100%;height:100%;object-fit:cover;object-position:center;}
 .export-popover-wrap{position:relative;z-index:200;}
-.export-popover{display:none;position:absolute;top:58px;right:0;z-index:210;background:var(--bg-card);border:1px solid var(--border-soft);box-shadow:0 8px 28px rgba(0,0,0,.45);
-  border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.5);padding:8px;min-width:210px;}
+.export-popover{display:none;position:absolute;top:52px;right:0;z-index:210;background:rgba(19,24,38,.94);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.55);padding:8px;min-width:220px;}
 .export-popover.show{display:block;}
-.export-popover button{width:100%;text-align:left;background:none;border:none;color:#fff;font-size:13px;font-weight:700;
-  padding:11px 12px;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;}
+.export-popover button{width:100%;text-align:left;background:none;border:none;color:#f0f3fa;font-size:13px;font-weight:700;
+  padding:11px 12px;border-radius:10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;}
 .export-popover button:active{background:rgba(255,255,255,0.08);}
-.home-cards{display:flex;flex-direction:column;gap:16px;width:100%;max-width:420px;position:relative;z-index:1;}
-.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.mod-tile{position:relative;background:linear-gradient(145deg,var(--bg-card),var(--bg-card2));border-radius:14px;padding:12px 12px;cursor:pointer;
-  display:flex;flex-direction:row;align-items:center;gap:10px;min-height:64px;
-  box-shadow:0 3px 14px rgba(0,0,0,0.35);border:1px solid var(--border-soft);transition:transform 0.15s,opacity .2s,filter .2s;overflow:hidden;}
-.mod-tile:active{transform:scale(0.96);}
-.mod-tile::after{content:'';position:absolute;top:0;bottom:0;left:0;width:3px;background:linear-gradient(180deg,var(--accent1),var(--accent2));opacity:0.9;}
-.mod-tile.c-ns{--accent1:#2196f3;--accent2:#64b5f6;}
-.mod-tile.c-mmtb{--accent1:#ff9800;--accent2:#ffc947;}
-.mod-tile.c-ldt{--accent1:#4caf50;--accent2:#81c784;}
-.mod-tile.c-hc{--accent1:#7c4dff;--accent2:#b388ff;}
-.mod-tile.c-db{--accent1:#00acc1;--accent2:#4dd0e1;}
-.mod-tile .mod-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;position:relative;z-index:1;}
-.mod-tile.c-ns .mod-icon{background:linear-gradient(145deg,rgba(33,150,243,0.18),rgba(33,150,243,0.06));box-shadow:inset 0 0 0 1.5px rgba(33,150,243,0.4);}
-.mod-tile.c-mmtb .mod-icon{background:linear-gradient(145deg,rgba(255,152,0,0.18),rgba(255,152,0,0.06));box-shadow:inset 0 0 0 1.5px rgba(255,152,0,0.4);}
-.mod-tile.c-ldt .mod-icon{background:linear-gradient(145deg,rgba(76,175,80,0.18),rgba(76,175,80,0.06));box-shadow:inset 0 0 0 1.5px rgba(76,175,80,0.4);}
-.mod-tile.c-hc .mod-icon{background:linear-gradient(145deg,rgba(124,77,255,0.18),rgba(124,77,255,0.06));box-shadow:inset 0 0 0 1.5px rgba(124,77,255,0.4);}
-.mod-tile.c-db .mod-icon{background:linear-gradient(145deg,rgba(0,172,193,0.18),rgba(0,172,193,0.06));box-shadow:inset 0 0 0 1.5px rgba(0,172,193,0.4);}
-.mod-tile .mod-title{font-size:12px;font-weight:800;color:#fff;text-align:left;line-height:1.3;position:relative;z-index:1;}
-/* Trạng thái không có quyền: mờ đi thay vì ẩn hẳn — vẫn thấy mục có tồn tại */
+.ws-meta-bar{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:10px 14px;
+  background:rgba(19,24,38,.8);border:1px solid rgba(255,255,255,.08);border-radius:14px;position:relative;z-index:1;}
+.ws-meta-bar .meta-left{font-size:12px;color:#c5cad6;font-weight:600;}
+.ws-meta-bar .meta-refresh{cursor:pointer;color:#64b5f6;font-weight:800;font-size:12px;display:flex;align-items:center;gap:5px;}
+.home-cards{display:flex;flex-direction:column;gap:12px;width:100%;max-width:420px;position:relative;z-index:1;}
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.mod-tile{position:relative;background:linear-gradient(145deg,rgba(22,28,42,.92),rgba(14,18,30,.95));border-radius:16px;padding:14px;cursor:pointer;
+  display:flex;flex-direction:row;align-items:center;gap:12px;min-height:74px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);transition:transform 0.15s;overflow:hidden;}
+.mod-tile:active{transform:scale(0.97);}
+.mod-tile::before{content:'';position:absolute;inset:0;border-radius:16px;background:radial-gradient(120% 80% at 0% 0%,color-mix(in srgb,var(--accent1) 20%,transparent),transparent 55%);pointer-events:none;}
+.mod-tile::after{content:'';position:absolute;top:0;bottom:0;left:0;width:3px;background:linear-gradient(180deg,var(--accent1),var(--accent2));border-radius:16px 0 0 16px;}
+.mod-tile.c-ns{--accent1:#42a5f5;--accent2:#90caf9;}
+.mod-tile.c-mmtb{--accent1:#ff9800;--accent2:#ffd54f;}
+.mod-tile.c-ldt{--accent1:#66bb6a;--accent2:#a5d6a7;}
+.mod-tile.c-hc{--accent1:#ab47bc;--accent2:#ce93d8;}
+.mod-tile.c-db{--accent1:#26c6da;--accent2:#80deea;}
+.mod-tile.c-dinh{--accent1:#26a69a;--accent2:#80cbc4;}
+.mod-tile.c-ban{--accent1:#5c6bc0;--accent2:#9fa8da;}
+.mod-tile.span2{grid-column:1 / -1;}
+.mod-tile .mod-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;position:relative;z-index:1;}
+.mod-tile.c-ns .mod-icon{background:linear-gradient(145deg,rgba(66,165,245,.28),rgba(66,165,245,.08));box-shadow:0 0 14px rgba(66,165,245,.22),inset 0 0 0 1.5px rgba(66,165,245,.45);}
+.mod-tile.c-mmtb .mod-icon{background:linear-gradient(145deg,rgba(255,152,0,.28),rgba(255,152,0,.08));box-shadow:0 0 14px rgba(255,152,0,.22),inset 0 0 0 1.5px rgba(255,152,0,.45);}
+.mod-tile.c-ldt .mod-icon{background:linear-gradient(145deg,rgba(102,187,106,.28),rgba(102,187,106,.08));box-shadow:inset 0 0 0 1.5px rgba(102,187,106,.4);}
+.mod-tile.c-hc .mod-icon{background:linear-gradient(145deg,rgba(171,71,188,.28),rgba(171,71,188,.08));box-shadow:0 0 14px rgba(171,71,188,.2),inset 0 0 0 1.5px rgba(171,71,188,.45);}
+.mod-tile.c-db .mod-icon{background:linear-gradient(145deg,rgba(38,198,218,.28),rgba(38,198,218,.08));box-shadow:inset 0 0 0 1.5px rgba(38,198,218,.45);}
+.mod-tile.c-dinh .mod-icon{background:linear-gradient(145deg,rgba(38,166,154,.28),rgba(38,166,154,.08));box-shadow:0 0 14px rgba(38,166,154,.2),inset 0 0 0 1.5px rgba(38,166,154,.45);}
+.mod-tile.c-ban .mod-icon{background:linear-gradient(145deg,rgba(92,107,192,.28),rgba(92,107,192,.08));box-shadow:0 0 14px rgba(92,107,192,.2),inset 0 0 0 1.5px rgba(92,107,192,.45);}
+.mod-tile .mod-title{font-size:13px;font-weight:800;color:#f5f7ff;text-align:left;line-height:1.25;position:relative;z-index:1;}
+.mod-tile .mod-sub{font-size:10px;font-weight:600;color:#9aa3b8;margin-top:2px;position:relative;z-index:1;}
 .mod-tile.locked{opacity:0.4;filter:grayscale(0.6);pointer-events:none;cursor:not-allowed;}
+.weather-card{margin-top:4px!important;}
 
 /* Thông báo trang chủ — thẻ, không full-bar */
 #home-tb-list{width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;position:relative;z-index:1;}
@@ -389,17 +413,22 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 <div id="screen-home" class="app-screen active">
   <div class="home-wrap">
     <img src="icon.png" class="home-watermark" alt="">
-    <div class="home-header">
-      <div style="display:flex;flex-direction:column;">
-        <h1 class="brand-title" id="home-brand-title" style="order:1;"><span style="color:#42a5f5">KHỐI SAN LẤP</span> <span style="color:#fff">-</span> <span style="color:#ffa726">XÂY DỰNG HẠ TẦNG 3</span></h1>
-        <div class="sub" style="order:4;">📅 <span id="home-date"></span></div>
-      </div>
-      <div style="text-align:right" class="export-popover-wrap">
-        <div class="home-avatar" id="home-avatar" onclick="toggleExportPopover()"><img src="icon.png" alt="VB"></div>
-        <div class="export-popover" id="exportPopover">
-          <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo đơn vị này (ảnh)</button>
-          <button onclick="toggleExportPopover();exportTongHop4DonVi();">📊 Xuất tổng hợp 4 đơn vị (ảnh)</button>
+    <div class="home-header" id="home-header">
+      <div class="hh-top">
+        <button type="button" id="home-don-vi-btn" class="ws-back-btn" onclick="backToDonViHub()">‹ Khối</button>
+        <div style="flex:1"></div>
+        <div class="export-popover-wrap">
+          <div class="home-avatar" id="home-avatar" onclick="toggleExportPopover()"><img src="icon.png" alt="VB"></div>
+          <div class="export-popover" id="exportPopover">
+            <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo đơn vị này (ảnh)</button>
+            <button onclick="toggleExportPopover();exportTongHop4DonVi();">📊 Xuất tổng hợp 4 đơn vị (ảnh)</button>
+          </div>
         </div>
+      </div>
+      <div class="hh-body">
+        <h1 class="brand-title" id="home-brand-title"><span style="color:#42a5f5">KHỐI SAN LẤP</span> <span style="color:#fff">-</span> <span style="color:#ffa726">XÂY DỰNG HẠ TẦNG 3</span></h1>
+        <div id="home-user-slot" class="home-user-line"></div>
+        <div class="sub">📅 <span id="home-date"></span></div>
       </div>
     </div>
 
@@ -424,66 +453,40 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
     <!-- Workspace trong đơn vị -->
     <div id="home-workspace" class="hide">
-    <!-- Về trang Khối -->
-    <div style="width:100%;max-width:420px;margin-bottom:10px;position:relative;z-index:1;">
-      <button type="button" id="home-don-vi-btn" onclick="backToDonViHub()"
-        style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid rgba(249,168,37,.45);background:var(--bg-card);color:#f9a825;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;">
-        ← Về trang Khối
-      </button>
-      <span id="home-don-vi-label" style="display:none;"></span>
-    </div>
-
-    <!-- Thanh cập nhật + làm mới (ngay dưới logo app) -->
-    <div style="width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;position:relative;z-index:1;">
-      <span style="font-size:11px;color:var(--txt-dim);">🕐 Cập nhật: <span id="qs-update-time">--:--</span> • <span id="qs-update-date">--/--/----</span></span>
-      <span id="home-refresh-btn" style="cursor:pointer;color:var(--accent-blue);font-weight:700;font-size:12px;display:flex;align-items:center;gap:5px;" onclick="homeRefresh()">
-        <span id="home-refresh-icon" style="display:inline-block;transition:transform 0.5s;">🔄</span> Làm mới
+    <span id="home-don-vi-label" style="display:none;"></span>
+    <div class="ws-meta-bar">
+      <span class="meta-left">📅 <span id="qs-update-date">--/--/----</span> · <span id="qs-update-time">--:--</span></span>
+      <span id="home-refresh-btn" class="meta-refresh" onclick="homeRefresh()">
+        <span id="home-refresh-icon" style="display:inline-block;transition:transform 0.5s;">↻</span> Làm mới
       </span>
     </div>
-
     <div class="home-cards">
-      <!-- Banner bật thông báo — TẠM TẮT HẲN (không đạt hiệu quả, để làm lại sau).
-      <div id="home-notif-banner" style="display:none;background:linear-gradient(135deg,#1565c0,#1976d2);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(21,101,192,0.35);">
-        <span style="font-size:26px;">🔔</span>
-        <div style="flex:1;">
-          <div style="font-weight:800;color:#fff;font-size:13px;">Bật thông báo nhắc nhở</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;" id="notif-banner-times">Nhắc 7:30 (NS/MMTB) và 15:30 (Nghiệm thu)</div>
-        </div>
-        <button onclick="bchRequestNotif();document.getElementById('home-notif-banner').style.display='none';" style="background:#fff;color:#1565c0;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">Bật ngay</button>
-      </div>
-      -->
     <div id="home-tb-list"></div>
     <div class="mod-grid">
       <div class="mod-tile c-ns" data-quyen="bao_cao_nhan_su" onclick="goModule('ns')">
         <span class="mod-badge" id="badge-ns"></span>
         <div class="mod-icon">📋</div>
-        <div class="mod-title">Báo cáo Nhân sự</div>
+        <div><div class="mod-title">Nhân sự</div><div class="mod-sub">Báo cáo nhân sự</div></div>
       </div>
       <div class="mod-tile c-mmtb" data-quyen="bao_cao_mmtb" onclick="goModule('mmtb')">
         <span class="mod-badge" id="badge-mmtb"></span>
         <div class="mod-icon">🚜</div>
-        <div class="mod-title">Báo cáo MMTB</div>
+        <div><div class="mod-title">MMTB</div><div class="mod-sub">Máy móc thiết bị</div></div>
       </div>
-      <div class="mod-tile c-ldt" data-quyen="bao_lich_nghiem_thu" onclick="goModule('ldt')">
-        <span class="mod-badge" id="badge-ldt"></span>
-        <div class="mod-icon">📅</div>
-        <div class="mod-title">Lịch nghiệm thu</div>
-      </div>
-      <div class="mod-tile c-db" data-quyen="dinh_bien" onclick="goModuleDinhBien()">
+      <div class="mod-tile c-dinh" data-quyen="dinh_bien" onclick="goModuleDinhBien()">
         <div class="mod-icon">📊</div>
-        <div class="mod-title">Định biên</div>
+        <div><div class="mod-title">Định biên</div><div class="mod-sub">Biên chế theo dự án</div></div>
       </div>
-      <div class="mod-tile c-db" data-quyen="danh_ba" onclick="openDanhBa()" style="border-color:rgba(249,168,37,.35);">
+      <div class="mod-tile c-hc" data-quyen="danh_ba" onclick="openDanhBa()">
         <div class="mod-icon">📞</div>
-        <div class="mod-title">Danh bạ</div>
+        <div><div class="mod-title">Danh bạ</div><div class="mod-sub">Liên hệ nội bộ</div></div>
       </div>
-      <div class="mod-tile c-db" data-quyen="ban_tin" onclick="goModuleBanTin()" style="border-color:rgba(66,165,245,.35);">
+      <div class="mod-tile c-ban span2" data-quyen="ban_tin" onclick="goModuleBanTin()">
         <div class="mod-icon">📰</div>
-        <div class="mod-title">Bản tin</div>
+        <div><div class="mod-title">Bản tin</div><div class="mod-sub">Tin tức & thông báo dự án</div></div>
       </div>
     </div>
     </div>
-
     </div><!-- /home-workspace -->
 
     <div class="weather-card" id="weatherCard">
@@ -658,7 +661,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   </div>
 </div>
 <!-- ============ MODULE LỊCH NGHIỆM THU ============ -->
-<div id="screen-ldt" class="app-screen">
+<div id="screen-ldt" class="app-screen" style="display:none!important;">
   <div class="back-bar">
     <button class="back-btn" onclick="showScreen('home')">← Quay lại</button>
   </div>
@@ -817,8 +820,24 @@ function qsToggleStats(){
   btn.querySelector('span').textContent = isOpen ? '📊 Thống kê nhanh' : '📊 Thống kê nhanh — bấm để xem';
 }
 
-// ============ THỜI TIẾT (Open-Meteo — miễn phí, không cần API key) ============
-var WEATHER_LAT=11.9214, WEATHER_LON=109.1591; // Cam Ranh, Khánh Hoà
+// ============ THỜI TIẾT (Open-Meteo) — theo đơn vị ==========
+var WEATHER_BY_DON_VI = {
+  khanh_hoa: { lat: 11.9214, lon: 109.1591, label: 'Cam Ranh, Khánh Hoà' },
+  lang_van:  { lat: 16.1200, lon: 108.1300, label: 'Làng Vân, Đà Nẵng' },
+  st99:      { lat: 21.0285, lon: 105.8542, label: 'Hà Nội (tạm ST99)' },
+  ha_tinh:   { lat: 18.3420, lon: 105.9060, label: 'Hà Tĩnh' }
+};
+function getWeatherLoc(){
+  var id = (typeof getDonViId === 'function' ? getDonViId() : '') || localStorage.getItem('bch_don_vi_id') || 'khanh_hoa';
+  var ten = (window.BCH_DON_VI_TEN || localStorage.getItem('bch_don_vi_ten') || '') + '';
+  id = String(id).toLowerCase().trim(); ten = ten.toLowerCase();
+  if(WEATHER_BY_DON_VI[id]) return WEATHER_BY_DON_VI[id];
+  if(/lang\s*van|làng\s*vân|đà\s*nẵng|da\s*nang/.test(id+' '+ten)) return WEATHER_BY_DON_VI.lang_van;
+  if(/st\s*99|st99/.test(id+' '+ten)) return WEATHER_BY_DON_VI.st99;
+  if(/ha\s*tinh|hà\s*tĩnh/.test(id+' '+ten)) return WEATHER_BY_DON_VI.ha_tinh;
+  return WEATHER_BY_DON_VI.khanh_hoa;
+}
+var WEATHER_LAT=11.9214, WEATHER_LON=109.1591; // fallback
 var WEATHER_ICONS_DAY={0:'☀️',1:'🌤️',2:'⛅',3:'☁️'};
 var WEATHER_ICONS_NIGHT={0:'🌙',1:'🌙',2:'☁️',3:'☁️'};
 var WEATHER_ICONS={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌦️',
@@ -845,7 +864,9 @@ function weatherDesc(c,isDay){
 
 async function loadWeather(){
   try{
-    var url='https://api.open-meteo.com/v1/forecast?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON
+    var loc=getWeatherLoc(); WEATHER_LAT=loc.lat; WEATHER_LON=loc.lon;
+    var locEl=document.querySelector('.weather-loc'); if(locEl) locEl.textContent='📍 '+loc.label;
+    var url='https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon
       +'&current=temperature_2m,weather_code,is_day'
       +'&daily=weather_code,temperature_2m_max,temperature_2m_min'
       +'&timezone=Asia%2FHo_Chi_Minh&forecast_days=5';
@@ -1369,13 +1390,13 @@ async function exportFullReport(){
   // đây là ảnh TĨNH nên chỉ lấy đúng số liệu tại thời điểm bấm xuất, không tự cập nhật sau đó.
   var repWeather=null;
   try{
-    var wUrl='https://api.open-meteo.com/v1/forecast?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON
+    var wLoc=getWeatherLoc(); var wUrl='https://api.open-meteo.com/v1/forecast?latitude='+wLoc.lat+'&longitude='+wLoc.lon
       +'&current=temperature_2m,weather_code,is_day&timezone=Asia%2FHo_Chi_Minh';
     var wRes=await fetch(wUrl);
     var wD=await wRes.json();
     if(wD&&wD.current){
       var wTime=wD.current.time?wD.current.time.split('T')[1].slice(0,5):'';
-      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code,wD.current.is_day),icon:weatherIcon(wD.current.weather_code,wD.current.is_day),time:wTime};
+      repWeather={temp:Math.round(wD.current.temperature_2m),desc:weatherDesc(wD.current.weather_code,wD.current.is_day),icon:weatherIcon(wD.current.weather_code,wD.current.is_day),time:wTime,label:wLoc.label};
     }
   }catch(e){}
 
@@ -1387,13 +1408,22 @@ async function exportFullReport(){
   try{var r1=await sc.from('nhansu').select('data').eq('ngay',tk).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();nsToday=r1.data?r1.data.data:null;}catch(e){}
   try{var r2=await sc.from('mmtb').select('data').eq('ngay',tk).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();mmtbToday=r2.data?r2.data.data:null;}catch(e){}
 
-  // Định biên áp dụng cho ĐÚNG NGÀY đang xuất báo cáo (tự tìm mốc ngày gần nhất <= ngày đó)
+  // Định biên — RPC trả MẢNG [{chuc_danh_id, so_luong}] không phải map số
   var dinhBienThangNay={};
   try{
-    var dbR=await rpcDonViDoc('dinhbien_lay_gia_tri_ngay',{p_ngay:tk},false);
-    var dbRaw=dbR.data||{};
-    // dbRaw trả về key là ID số (dạng text, VD "17") — đổi sang đúng mã cột "cd_17" đang dùng trong báo cáo
-    Object.keys(dbRaw).forEach(function(id){ dinhBienThangNay['cd_'+id]=dbRaw[id]; });
+    var dbR=await rpcDinhBienDV('dinhbien_lay_gia_tri_ngay',{p_ngay:tk});
+    var dbRaw=dbR.data;
+    if(Array.isArray(dbRaw)){
+      dbRaw.forEach(function(row){
+        if(!row || row.chuc_danh_id==null) return;
+        dinhBienThangNay['cd_'+row.chuc_danh_id] = Number(row.so_luong)||0;
+      });
+    }else if(dbRaw && typeof dbRaw==='object'){
+      Object.keys(dbRaw).forEach(function(id){
+        var v=dbRaw[id];
+        dinhBienThangNay['cd_'+id] = (v!=null && typeof v==='object') ? (Number(v.so_luong)||0) : (Number(v)||0);
+      });
+    }
   }catch(e){}
 
   var nsHist=await sHist();
@@ -1736,7 +1766,7 @@ async function exportFullReport(){
 
   var repWeatherHtml = repWeather ?
     ('<div style="text-align:right;color:#0F2A5C;">'
-      +'<div style="font-size:10px;color:#5a6b8c;">📍 '+(repWeather.time?'Lúc '+repWeather.time+' · ':'')+'Cam Ranh, Khánh Hoà</div>'
+      +'<div style="font-size:10px;color:#5a6b8c;">📍 '+(repWeather.time?'Lúc '+repWeather.time+' · ':'')+(repWeather.label||'—')+'</div>'
       +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">'
         +'<span style="font-size:22px;font-weight:800;color:#0F2A5C;">'+repWeather.temp+'°</span>'
         +'<span style="font-size:22px;">'+repWeather.icon+'</span>'
@@ -2187,7 +2217,6 @@ try{ window.BCH_DON_VI_MODULES = JSON.parse(localStorage.getItem('bch_don_vi_mod
 function getDonViId(){
   return window.BCH_DON_VI || localStorage.getItem(DON_VI_LS) || '';
 }
-function dvId(){ return getDonViId() || 'khanh_hoa'; } // máy chưa chọn đơn vị = Khánh Hòa (giống lúc ghi)
 function getDonViTenBaoCao(){
   var ten = window.BCH_DON_VI_TEN || localStorage.getItem(DON_VI_TEN_LS) || '';
   if(ten) return String(ten).toUpperCase();
@@ -2251,13 +2280,19 @@ var ORG_BRAND_HTML = '<span style="color:#42a5f5">KHỐI SAN LẤP</span> <span 
 
 function applyHomeBrand(){
   var el = document.getElementById('home-brand-title');
+  var hdr = document.getElementById('home-header');
   if(!el) return;
   var ten = window.BCH_DON_VI_TEN || '';
-  if(ten && getDonViId()){
-    el.innerHTML = '<span style="color:#f9a825">'+escHtmlHub(ten)+'</span>';
+  var inUnit = !!(ten && getDonViId());
+  if(inUnit){
+    el.innerHTML = '<span style="color:#ffa726">'+escHtmlHub(ten)+'</span>';
+    el.classList.add('in-unit');
+    if(hdr) hdr.classList.add('in-unit');
     document.title = ten;
   }else{
     el.innerHTML = ORG_BRAND_HTML;
+    el.classList.remove('in-unit');
+    if(hdr) hdr.classList.remove('in-unit');
     document.title = 'KHỐI SAN LẤP - XÂY DỰNG HẠ TẦNG 3';
   }
   var lab = document.getElementById('home-don-vi-label');
@@ -2530,9 +2565,18 @@ var COLS=DEF_COLS.map(function(c){return {k:c.k,n:c.n};});
 
 // Tải danh sách chức danh THẬT từ Định biên — mã cột dùng "cd_<id nội bộ>" để đổi tên
 // chức danh bên Định biên không làm lệch/mất dữ liệu đã nhập (dữ liệu gắn theo ID, không theo tên).
+// Gọi RPC Định biên kèm đơn vị đang chọn; server chưa chạy SQL tách đơn vị thì tự đọc kiểu cũ (báo cáo không bị lỗi).
+async function rpcDinhBienDV(tenHam, thamSo){
+  thamSo = thamSo || {};
+  try{
+    var r = await sc.rpc(tenHam, Object.assign({}, thamSo, { p_don_vi_id: getDonViId() || 'khanh_hoa' }));
+    if(!r.error) return r;
+  }catch(e){}
+  return await sc.rpc(tenHam, thamSo);
+}
 async function taiDinhBienChucDanh(){
   try{
-    var r = await rpcDonViDoc('dinhbien_lay_danh_sach_chuc_danh',{},false);
+    var r = await rpcDinhBienDV('dinhbien_lay_danh_sach_chuc_danh');
     if(r.data && r.data.length){
       // Thứ tự cột báo cáo NS = thu_tu trên Định biên (đổi ↑↓ bên Định biên là nhảy theo)
       var list = r.data.slice().sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
@@ -2570,7 +2614,7 @@ function isNghiType(t){ return TYPES.length>0 && t===nghiKey(); }
 
 async function taiCauHinhCaLamViec(){
   try{
-    var r1 = await rpcDonViDoc('cauhinh_lay_loai_ca',{},true);
+    var r1 = await rpcCoThuLai('cauhinh_lay_loai_ca');
     var caList = r1.data;
     if(caList && caList.length > 0){
       // Lọc bỏ ca đang ẨN — giống hệt cách taiCauHinhDuAn() đang lọc dự án ẩn.
@@ -2591,7 +2635,7 @@ async function taiCauHinhCaLamViec(){
         NGHI_MA = flagged ? flagged.ma : (TYPES.length ? TYPES[TYPES.length-1] : null);
       }
     }
-    var r2 = await rpcDonViDoc('cauhinh_lay_ten_ca_rieng',{},false);
+    var r2 = await sc.rpc('cauhinh_lay_ten_ca_rieng');
     var rieng = r2.data || [];
     TEN_RIENG_MAP = {};
     rieng.forEach(function(t){
@@ -2636,29 +2680,9 @@ async function rpcCoThuLai(tenHam, thamSo){
   }
 }
 
-// Đọc Định biên / Cấu hình CỦA ĐÚNG ĐƠN VỊ đang vào. Server chưa chạy SQL tách đơn vị => đọc kiểu cũ (không lỗi).
-var DV_PARAM_OK = {};
-async function rpcDonViDoc(tenHam, thamSo, coThuLai){
-  thamSo = thamSo || {};
-  if(DV_PARAM_OK[tenHam] !== false){
-    var r0;
-    try{ r0 = await sc.rpc(tenHam, Object.assign({}, thamSo, {p_don_vi_id: dvId()})); }catch(e){ r0 = {error:e}; }
-    if(!r0.error) return r0;
-    var em = (r0.error.message||'')+'';
-    if(r0.error.code==='PGRST202' || /Could not find the function/i.test(em)){
-      DV_PARAM_OK[tenHam] = false;
-    } else if(coThuLai){
-      return await rpcCoThuLai(tenHam, Object.assign({}, thamSo, {p_don_vi_id: dvId()}));
-    } else {
-      return r0;
-    }
-  }
-  return coThuLai ? await rpcCoThuLai(tenHam, thamSo) : await sc.rpc(tenHam, thamSo);
-}
-
 async function taiCauHinhDuAn(){
   try{
-    var r = await rpcDonViDoc('cauhinh_lay_du_an',{},true);
+    var r = await rpcCoThuLai('cauhinh_lay_du_an');
     var list = r.data;
     if(list && list.length){
       // Tên hiển thị lấy từ TOÀN BỘ danh sách (kể cả đang ẩn) — để dữ liệu lịch sử cũ nhắc tới
@@ -2684,7 +2708,7 @@ async function taiCauHinhDuAn(){
 // Riêng ẨN/HIỆN thì tách biệt (an_mmtb) — 1 dự án có thể ẩn ở Nhân sự nhưng vẫn hiện ở MMTB.
 async function taiCauHinhDuAnMMTB(){
   try{
-    var r = await rpcDonViDoc('cauhinh_lay_du_an',{},true);
+    var r = await rpcCoThuLai('cauhinh_lay_du_an');
     var list = r.data;
     if(list && list.length){
       list.forEach(function(d){ PROJ_NAME['duan_'+d.id]=d.ten; });
@@ -2705,7 +2729,7 @@ async function taiCauHinhDuAnMMTB(){
 // (MayXucBanhXich, MayUi...) nên dữ liệu máy móc đã nhập từ trước không cần chuyển đổi gì cả.
 async function taiCauHinhLoaiMayMMTB(){
   try{
-    var r = await rpcDonViDoc('cauhinh_lay_loai_may',{},true);
+    var r = await rpcCoThuLai('cauhinh_lay_loai_may');
     var list = r.data;
     if(list && list.length){
       var active = list.filter(function(m){ return !m.an; });
@@ -2722,7 +2746,7 @@ async function taiCauHinhLoaiMayMMTB(){
       }
     }
     try{
-      var rn = await rpcDonViDoc('cauhinh_lay_ten_nhom_may',{},true);
+      var rn = await rpcCoThuLai('cauhinh_lay_ten_nhom_may');
       if(rn && rn.data && rn.data.length){
         rn.data.forEach(function(row){ if(row.ma && row.ten) MMTB_TEN_NHOM[row.ma]=row.ten; });
       }
@@ -2831,30 +2855,33 @@ function copyFromYest(src,projs){
 }
 
 async function sLoad(d){
-  // Luôn lọc đúng đơn vị và lấy dòng MỚI NHẤT. Trước đây máy chưa chọn đơn vị đọc KHÔNG lọc: khi nhiều đơn vị
-  // cùng có dòng trong ngày, truy vấn báo lỗi => rơi về số hôm qua. Lỗi mạng/DB nay được ném ra (không giả làm "chưa có dữ liệu").
-  var r=await sc.from('nhansu').select('data').eq('ngay',d).eq('don_vi_id',dvId()).order('id',{ascending:false}).limit(1).maybeSingle();
-  if(r.error) throw r.error;
-  return r.data?r.data.data:null;
+  try{
+    var q=sc.from('nhansu').select('*').eq('ngay',d);
+    var dv=getDonViId(); if(dv) q=q.eq('don_vi_id',dv);
+    var r=await q.maybeSingle();
+    return r.data?r.data.data:null;
+  }catch(e){return null;}
 }
 
 async function sSave(pay){
   setSS('⏳ Đang lưu...');
   try{
-    var dv=dvId();
-    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',dv).order('id',{ascending:false}).limit(1).maybeSingle();
-    if(ex.error) throw ex.error;
-    var w = ex.data
-      ? await sc.from('nhansu').update({data:pay}).eq('id',ex.data.id)
-      : await sc.from('nhansu').insert({ngay:tkey(),data:pay,don_vi_id:dv});
-    if(w.error) throw w.error;
+    var dv=getDonViId()||'khanh_hoa';
+    var q=sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',dv);
+    var ex=await q.maybeSingle();
+    if(ex.data){
+      await sc.from('nhansu').update({data:pay}).eq('ngay',tkey()).eq('don_vi_id',dv);
+    }else{
+      await sc.from('nhansu').insert({ngay:tkey(),data:pay,don_vi_id:dv});
+    }
     setSS('✅ Đã cập nhật');
   }catch(e){setSS('⚠️ Lỗi: '+e.message);}
 }
 
 async function sHist(){
   try{
-    var q=sc.from('nhansu').select('ngay,data').eq('don_vi_id',dvId()).order('ngay',{ascending:false}).limit(60);
+    var q=sc.from('nhansu').select('ngay,data').order('ngay',{ascending:false}).limit(60);
+    var dv=getDonViId(); if(dv) q=q.eq('don_vi_id',dv);
     var r=await q;
     return r.data||[];
   }catch(e){return [];}
@@ -2863,18 +2890,13 @@ async function sHist(){
 async function sDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'nhansu',p_ngay:d});}
 async function sDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'nhansu'});}
 
-var nsLoadRetry=0;
 async function loadData(){
   setSS('🔄 Đang tải...');
   try{
-    // Đọc theo đúng đơn vị trước. Chỉ gọi dam_bao khi CHƯA có bản ghi đơn vị này —
-    // tránh RPC cũ (không biết don_vi_id) ghi đè số đã nhập.
+    // Đảm bảo dữ liệu hôm nay đã tồn tại đúng chuẩn ở SERVER trước khi đọc — server tự copy từ
+    // ngày gần nhất nếu chưa có, dùng đúng giờ Việt Nam, an toàn dù nhiều máy cùng mở lúc đầu ngày.
+    try{ await sc.rpc('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
     var td=await sLoad(tkey());
-    if(!td){
-      try{ await sc.rpc('dam_bao_du_lieu_hom_nay_nhansu',{p_don_vi_id:dvId()}); }catch(e){}
-      td=await sLoad(tkey());
-    }
-    nsLoadRetry=0;
     if(td){
       // projects LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (đã tải sẵn ở taiCauHinhDuAn()) —
       // không dùng projects cũ đã lưu trên server, để sửa/ẩn-hiện dự án ở Quản lý chung là nhảy theo ngay.
@@ -2917,16 +2939,7 @@ async function loadData(){
       toast('📋 Đã copy từ ngày '+pts[2]+'/'+pts[1]+'/'+pts[0]+' — kiểm tra trước khi lưu!');
       renderTable();renderLog();return;
     }
-  }catch(e){
-    console.error(e);
-    // Lỗi tải (mạng/DB): KHÔNG hiện số hôm qua / số 0 như thể là dữ liệu thật — báo rõ và tự thử lại
-    if(nsLoadRetry<3){
-      nsLoadRetry++;
-      setSS('<span style="color:#c62828;font-weight:800">⚠️ Không tải được dữ liệu ('+nsEscMsg(e&&e.message?e.message:e)+') — đang thử lại...</span>');
-      setTimeout(function(){ loadData(); },3000);
-      return;
-    }
-  }
+  }catch(e){console.error(e);}
   COLS=DEF_COLS.map(function(c){return {k:c.k,n:c.n};});
   data=initData();
   logItems=[];
@@ -3030,258 +3043,94 @@ async function saveStructure(){
   setSS('⏳ Đang lưu...');
   try{
     var payload={projects:projects,cols:COLS,data:data,log:logItems};
-    var dv=dvId();
-    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',dv).order('id',{ascending:false}).limit(1).maybeSingle();
-    if(ex.error) throw ex.error;
-    var w = ex.data
-      ? await sc.from('nhansu').update({data:payload}).eq('id',ex.data.id)
-      : await sc.from('nhansu').insert({ngay:tkey(),data:payload,don_vi_id:dv});
-    if(w.error) throw w.error;
+    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    if(ex.data){
+      await sc.from('nhansu').update({data:payload}).eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
+    }else{
+      await sc.from('nhansu').insert({ngay:tkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
+    }
     setSS('✅ Đã cập nhật');
     renderTable();renderLog();
   }catch(e){setSS('⚠️ Lỗi: '+e.message);alert('Lỗi lưu: '+e.message);}
 }
 
 var mergeSaveBusy=false;
-var mergeSaveQueued=false;
-var NS_RPC_OK=true;      // false nếu server chưa có nhansu_gop_o => dùng cách ghép cũ (đã có kiểm tra lỗi)
-var nsInFlight=null;     // các ô ĐANG gửi lên server (được bảo vệ khỏi bị tin từ máy khác đè)
-var nsRetryTimer=null;
-var nsRetryN=0;
-function _nsHasPending(obj){
-  if(!obj) return false;
-  var ps=Object.keys(obj);
-  for(var i=0;i<ps.length;i++){
-    var ts=obj[ps[i]]||{};
-    var tks=Object.keys(ts);
-    for(var j=0;j<tks.length;j++){
-      if(Object.keys(ts[tks[j]]||{}).length) return true;
-    }
-  }
-  return false;
-}
-function nsHasUnsaved(){
-  return _nsHasPending(pendingChanges) || Object.keys(pendingBienDong||{}).length>0;
-}
-// Ô đang gõ dở HOẶC đang gửi lên server => không cho tin từ máy khác / bản dội lại đè lên
-function nsCellProtected(p,t,k){
-  if(pendingChanges[p]&&pendingChanges[p][t]&&pendingChanges[p][t][k]!==undefined) return true;
-  if(nsInFlight&&nsInFlight[p]&&nsInFlight[p][t]&&nsInFlight[p][t][k]!==undefined) return true;
-  return false;
-}
-// Lưu thất bại => trả lại các ô chưa lưu được (không đè ô đã gõ mới hơn) để tự thử lại, KHÔNG để mất số
-function nsRestorePending(snap){
-  Object.keys(snap||{}).forEach(function(p){
-    Object.keys(snap[p]||{}).forEach(function(t){
-      Object.keys(snap[p][t]||{}).forEach(function(k){
-        if(!pendingChanges[p])pendingChanges[p]={};
-        if(!pendingChanges[p][t])pendingChanges[p][t]={};
-        if(pendingChanges[p][t][k]===undefined) pendingChanges[p][t][k]=snap[p][t][k];
-      });
-    });
-  });
-}
-function nsRestoreBD(snap){
-  Object.keys(snap||{}).forEach(function(k){
-    if(pendingBienDong[k]===undefined) pendingBienDong[k]=snap[k];
-  });
-}
-// Cập nhật số hiển thị TẠI CHỖ (không dựng lại bảng) — giữ nguyên ô đang gõ, không làm mất focus khi chuyển ô
-function nsRefreshInputsInPlace(){
-  var mt=document.getElementById('mt');
-  if(!mt) return;
-  var act=document.activeElement;
-  var inputs=mt.querySelectorAll('input.ni');
-  for(var i=0;i<inputs.length;i++){
-    var el=inputs[i];
-    if(el===act) continue;
-    var p=el.getAttribute('data-proj'), t=el.getAttribute('data-type'), k=el.getAttribute('data-col');
-    if(nsCellProtected(p,t,k)) continue;
-    var v=(data[p]&&data[p][t]&&data[p][t][k])?data[p][t][k]:0;
-    var disp=v===0?'-':(v<10?'0'+v:String(v));
-    if(el.value!==disp) el.value=disp;
-  }
-}
-// Áp bản ĐÃ GHÉP từ server vào máy này (số của các máy khác + số mình vừa lưu).
-// Ô mình vừa gõ SAU khi gửi (chưa lưu) giữ nguyên số mới của mình.
-function nsApplyMerged(payload){
-  if(!payload) return;
-  var srv=migrateLegacyProjKeys(payload.data||{});
-  Object.keys(pendingChanges).forEach(function(p){
-    Object.keys(pendingChanges[p]||{}).forEach(function(t){
-      Object.keys(pendingChanges[p][t]||{}).forEach(function(k){
-        if(!srv[p])srv[p]={};
-        if(!srv[p][t])srv[p][t]={};
-        srv[p][t][k]=pendingChanges[p][t][k];
-      });
-    });
-  });
-  data=srv;
-  if(vDate){
-    // Đang sửa ngày cũ: giữ đúng cấu trúc ngày đó đã lưu
-    if(payload.projects) projects=payload.projects;
-    if(payload.cols) COLS=payload.cols;
-    bienDong=payload.bienDong||{};
-  } else {
-    var bd={};
-    var inc=payload.bienDong||{};
-    Object.keys(inc).forEach(function(k){ bd[k]=inc[k]; });
-    Object.keys(pendingBienDong||{}).forEach(function(k){
-      if(pendingBienDong[k]===null) delete bd[k]; else bd[k]=pendingBienDong[k];
-    });
-    bienDong=bd;
-  }
-  if(payload.log) logItems=payload.log;
-  projects.forEach(function(p){ensureProj(p);});
-  renderLog();
-  nsRefreshInputsInPlace();
-  calcTotals();
-  renderCharts();
-}
-function nsEscMsg(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-// Cách ghép CŨ (dùng khi server chưa có nhansu_gop_o) — giữ nguyên logic, bổ sung kiểm tra lỗi
-async function nsGhiKieuCu(targetKey,dv,pendingSnap,pendingBDSnap){
-  var ex=await sc.from('nhansu').select('id,data').eq('ngay',targetKey).eq('don_vi_id',dv).order('id',{ascending:false}).limit(1).maybeSingle();
-  if(ex.error) throw ex.error;
-  var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
-  var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems, mergedBienDong=bienDong;
-  if(vDate){
-    if(serverData){
-      mergedProjects = serverData.projects || projects;
-      mergedCols = serverData.cols || COLS;
-      mergedData = serverData.data || {};
-      mergedLog = serverData.log || [];
-      mergedBienDong = serverData.bienDong || {};
-      Object.keys(pendingSnap).forEach(function(p){
+async function mergeSave(askReason){
+  if(dangBiKhoaCapNhat){ setSS('🔄 Thiết bị đang chạy bản cũ — vui lòng tải lại trang trước khi lưu.'); return; }
+  if(mergeSaveBusy)return; // đang có 1 lượt lưu khác chạy (có thể đang chờ nhập lý do) — bỏ qua, lượt sau tự thử lại
+  mergeSaveBusy=true;
+  var targetKey = vDate || tkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
+  setSS('⏳ Đang lưu...');
+  try{
+    // Lấy bản mới nhất từ server
+    var ex=await sc.from('nhansu').select('id,data').eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
+    var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems, mergedBienDong=bienDong;
+    if(vDate){
+      // ĐANG SỬA NGÀY CŨ: giữ NGUYÊN cấu trúc (dự án/chức danh/loại ca) đúng như ngày đó đã lưu —
+      // TUYỆT ĐỐI không đối chiếu/dọn theo cấu hình hiện tại (khác thời điểm), chỉ ghi đè đúng ô
+      // vừa sửa lên nguyên trạng, để không làm mất/về 0 phần còn lại của ngày cũ.
+      if(serverData){
+        mergedProjects = serverData.projects || projects;
+        mergedCols = serverData.cols || COLS;
+        mergedData = serverData.data || {};
+        mergedLog = serverData.log || [];
+        mergedBienDong = serverData.bienDong || {}; // Ghi chú biến động KHÔNG áp dụng cho ngày cũ — giữ nguyên
+        Object.keys(pendingChanges).forEach(function(p){
+          if(!mergedData[p])mergedData[p]={};
+          Object.keys(pendingChanges[p]).forEach(function(type){
+            if(!mergedData[p][type])mergedData[p][type]={};
+            Object.keys(pendingChanges[p][type]).forEach(function(k){
+              mergedData[p][type][k]=pendingChanges[p][type][k];
+            });
+          });
+        });
+        var existingTsH=mergedLog.map(function(l){return l.ts;});
+        logItems.forEach(function(l){if(existingTsH.indexOf(l.ts)<0)mergedLog.unshift(l);});
+        mergedLog=mergedLog.slice(0,50);
+      }
+    } else if(serverData){
+      // Cột LUÔN lấy đúng bộ hiện tại từ Định biên (COLS) — không dùng cols cũ đã lưu trên
+      // server và không cộng dồn nữa, để sửa/thêm/xoá bên Định biên là bên này nhảy theo ngay,
+      // không bị cộng dồn cột cũ + cột mới chồng lên nhau như trước.
+      mergedCols=COLS;
+      mergedData=migrateLegacyProjKeys(serverData.data||{});
+      mergedLog=serverData.log||[];
+      mergedBienDong=serverData.bienDong||{};
+      // Ghi đè CHỈ những ô mình vừa sửa lên bản server mới nhất
+      Object.keys(pendingChanges).forEach(function(p){
         if(!mergedData[p])mergedData[p]={};
-        Object.keys(pendingSnap[p]).forEach(function(type){
+        Object.keys(pendingChanges[p]).forEach(function(type){
           if(!mergedData[p][type])mergedData[p][type]={};
-          Object.keys(pendingSnap[p][type]).forEach(function(k){
-            mergedData[p][type][k]=pendingSnap[p][type][k];
+          Object.keys(pendingChanges[p][type]).forEach(function(k){
+            mergedData[p][type][k]=pendingChanges[p][type][k];
           });
         });
       });
-      var existingTsH=mergedLog.map(function(l){return l.ts;});
-      logItems.forEach(function(l){if(existingTsH.indexOf(l.ts)<0)mergedLog.unshift(l);});
+      // Ghi đè/xoá CHỈ những lý do biến động vừa đổi trong phiên này (null = đã xoá vì hết biến động)
+      Object.keys(pendingBienDong).forEach(function(k){
+        if(pendingBienDong[k]===null) delete mergedBienDong[k];
+        else mergedBienDong[k]=pendingBienDong[k];
+      });
+      // Merge log: giữ log mới nhất từ cả 2 bên, không trùng
+      var existingTs=mergedLog.map(function(l){return l.ts;});
+      logItems.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
       mergedLog=mergedLog.slice(0,50);
     }
-  } else if(serverData){
-    mergedCols=COLS;
-    mergedData=migrateLegacyProjKeys(serverData.data||{});
-    mergedLog=serverData.log||[];
-    mergedBienDong=serverData.bienDong||{};
-    Object.keys(pendingSnap).forEach(function(p){
-      if(!mergedData[p])mergedData[p]={};
-      Object.keys(pendingSnap[p]).forEach(function(type){
-        if(!mergedData[p][type])mergedData[p][type]={};
-        Object.keys(pendingSnap[p][type]).forEach(function(k){
-          mergedData[p][type][k]=pendingSnap[p][type][k];
-        });
-      });
-    });
-    Object.keys(pendingBDSnap).forEach(function(k){
-      if(pendingBDSnap[k]===null) delete mergedBienDong[k];
-      else mergedBienDong[k]=pendingBDSnap[k];
-    });
-    var existingTs=mergedLog.map(function(l){return l.ts;});
-    logItems.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
-    mergedLog=mergedLog.slice(0,50);
-  }
-  var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:ghiChuTuyChinh};
-  var w = ex.data
-    ? await sc.from('nhansu').update({data:payload}).eq('id',ex.data.id)
-    : await sc.from('nhansu').insert({ngay:targetKey,data:payload,don_vi_id:dv});
-  if(w.error) throw w.error;
-  nsApplyMerged(payload);
-}
-
-// Ghi các ô vừa sửa lên server: ghép NGUYÊN TỬ trên server (nhansu_gop_o) => 2 máy lưu cùng lúc không đè nhau.
-// Mọi lỗi đều được ném ra (không còn báo "đã lưu" khi thực ra chưa lưu).
-async function nsGhiLenServer(targetKey,dv,snap,bdSnap){
-  var isOld=!!vDate;
-  if(NS_RPC_OK){
-    var alias={};
-    (projects||[]).forEach(function(p){ if(PROJ_NAME[p]) alias[p]=PROJ_NAME[p]; });
-    var args={p_ngay:targetKey,p_don_vi_id:dv,p_changes:snap,p_log:logItems,p_ngay_cu:isOld,p_alias:alias};
-    if(!isOld){
-      args.p_bien_dong=bdSnap;
-      args.p_ghi_chu=ghiChuTuyChinh||'';
-      args.p_cols=COLS;
-      args.p_projects=projects;
+    var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:ghiChuTuyChinh};
+    if(ex.data){
+      await sc.from('nhansu').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
+    }else{
+      await sc.from('nhansu').insert({ngay:targetKey,data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
-    var r=await sc.rpc('nhansu_gop_o',args);
-    if(r.error){
-      var em=(r.error.message||'')+'';
-      if(r.error.code==='PGRST202'||/Could not find the function/i.test(em)){ NS_RPC_OK=false; }
-      else throw r.error;
-    } else if(r.data&&r.data.status==='ok'){
-      nsApplyMerged(r.data.payload);
-      return;
-    } else if(r.data&&r.data.status==='no_row'){
-      var payload0={projects:projects,cols:COLS,data:data,log:logItems,bienDong:bienDong,ghiChuTuyChinh:ghiChuTuyChinh};
-      var ins=await sc.from('nhansu').insert({ngay:targetKey,data:payload0,don_vi_id:dv});
-      if(!ins.error) return;
-      // Máy khác vừa tạo dòng cùng lúc => ghép vào dòng đó
-      var r2=await sc.rpc('nhansu_gop_o',args);
-      if(r2.error||!r2.data||r2.data.status!=='ok') throw (ins.error||r2.error||new Error('Không tạo được dòng ngày'));
-      nsApplyMerged(r2.data.payload);
-      return;
-    } else {
-      throw new Error('Phản hồi lưu không hợp lệ');
-    }
-  }
-  await nsGhiKieuCu(targetKey,dv,snap,bdSnap);
-}
-
-async function mergeSave(askReason){
-  if(dangBiKhoaCapNhat){ setSS('🔄 Thiết bị đang chạy bản cũ — vui lòng tải lại trang trước khi lưu.'); return; }
-  // Đang lưu: xếp hàng — KHÔNG bỏ thay đổi
-  if(mergeSaveBusy){ mergeSaveQueued=true; return; }
-  if(nsRetryTimer){ clearTimeout(nsRetryTimer); nsRetryTimer=null; }
-  mergeSaveBusy=true;
-  var targetKey = vDate || tkey();
-  var dv = dvId();
-  var failed=false;
-  setSS('⏳ Đang lưu...');
-  try{
-    do {
-      mergeSaveQueued=false;
-      // Chụp snapshot pending rồi để object mới nhận thêm lần gõ trong lúc await
-      var pendingSnap=pendingChanges; pendingChanges={};
-      var pendingBDSnap=pendingBienDong; pendingBienDong={};
-      nsInFlight=pendingSnap;
-      try{
-        await nsGhiLenServer(targetKey,dv,pendingSnap,pendingBDSnap);
-      }catch(e){
-        // GIỮ LẠI số chưa lưu được để tự thử lại — không bao giờ để mất số vừa gõ
-        nsRestorePending(pendingSnap);
-        nsRestoreBD(pendingBDSnap);
-        throw e;
-      }finally{
-        nsInFlight=null;
-      }
-    } while(mergeSaveQueued || nsHasUnsaved());
-    nsRetryN=0;
+    // Cập nhật lại biến cục bộ theo bản đã merge (để không bị lệch UI)
+    projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;bienDong=mergedBienDong;/* ghiChuTuyChinh giữ nguyên */
+    pendingChanges={};
+    pendingBienDong={};
     setSS('✅ Đã cập nhật');
-  }catch(e){
-    failed=true;
-    nsRetryN++;
-    var wait=Math.min(30000,2000*nsRetryN);
-    var msg=(e&&e.message)?e.message:String(e);
-    setSS('<span style="color:#c62828;font-weight:800">⚠️ CHƯA LƯU ĐƯỢC — số đã gõ được giữ lại, tự thử lại sau '+Math.round(wait/1000)+'s ('+nsEscMsg(msg)+')</span>');
-    console.error('[mergeSave]',e);
-    nsRetryTimer=setTimeout(function(){
-      nsRetryTimer=null;
-      if(nsHasUnsaved()) mergeSave();
-    },wait);
-  }
-  finally{
-    mergeSaveBusy=false;
-    if(!failed && nsHasUnsaved()){
-      setTimeout(function(){ mergeSave(); }, 50);
-    }
-  }
+    renderLog();
+  }catch(e){setSS('⚠️ Lỗi: '+e.message);}
+  finally{mergeSaveBusy=false;}
 }
 
 async function saveData(){
@@ -4216,8 +4065,7 @@ async function checkAutoSaveAt8(){
   if(autoSavedToday||vDate)return;
   if(!isAfterCutoff())return;
   try{
-    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',dvId()).order('id',{ascending:false}).limit(1).maybeSingle();
-    if(ex.error) return; // đọc lỗi => không tự ghi đè (tránh ghi bản sao lên dữ liệu thật)
+    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){autoSavedToday=true;return;} // đã có data hôm nay rồi, không cần làm gì
     // Chưa có data hôm nay và đã qua giờ khoá -> tự lưu bản hiện tại (copy từ hôm qua) lên server
     await sSave({projects:projects,cols:COLS,data:data,log:logItems});
@@ -4234,7 +4082,7 @@ function subscribeNSRealtime(){
   if(nsRealtimeChannel){ try{sc.removeChannel(nsRealtimeChannel);}catch(e){} }
   nsRealtimeChannel = sc.channel('ns_rt_'+tkey()+'_'+(getDonViId()||'khanh_hoa'))
     .on('postgres_changes', {event:'*', schema:'public', table:'nhansu', filter:'ngay=eq.'+tkey()}, function(payload){
-      try{ var row=(payload.new||payload.old||{}); if(!row.don_vi_id || row.don_vi_id!==dvId()) return; }catch(e){}
+      try{ var row=(payload.new||payload.old||{}); if(row.don_vi_id && getDonViId() && row.don_vi_id!==getDonViId()) return; }catch(e){}
       if(vDate) return; // đang xem ngày cũ (chỉ đọc) — không áp cập nhật tức thời
       var incoming = payload.new && payload.new.data;
       if(!incoming) return;
@@ -4244,33 +4092,31 @@ function subscribeNSRealtime(){
 }
 
 function applyNSRealtimeUpdate(incoming){
-  // projects không còn lấy từ payload realtime — luôn do cauhinh_du_an quyết định (taiCauHinhDuAn()).
+  // projects không còn lấy từ payload realtime nữa — luôn do cauhinh_du_an quyết định (taiCauHinhDuAn()).
   var incomingData = migrateLegacyProjKeys(incoming.data || {});
   Object.keys(incomingData).forEach(function(proj){
     ensureProj(proj);
     TYPES.forEach(function(type){
       if(!incomingData[proj] || !incomingData[proj][type]) return;
       Object.keys(incomingData[proj][type]).forEach(function(k){
-        // Ô đang gõ dở HOẶC đang gửi lên server thì bỏ qua, không cho tin từ máy khác / bản dội lại đè lên
-        if(nsCellProtected(proj,type,k)) return;
+        // Ô nào mình đang gõ dở (chưa lưu xong) thì bỏ qua, không cho người khác đè lên
+        if(pendingChanges[proj] && pendingChanges[proj][type] && pendingChanges[proj][type][k]!==undefined) return;
         data[proj][type][k]=incomingData[proj][type][k];
       });
     });
   });
   if(incoming.log) logItems = incoming.log;
-  if(incoming.bienDong){
-    var nb={};
-    Object.keys(incoming.bienDong).forEach(function(k){ nb[k]=incoming.bienDong[k]; });
-    Object.keys(pendingBienDong||{}).forEach(function(k){
-      if(pendingBienDong[k]===null) delete nb[k]; else nb[k]=pendingBienDong[k];
-    });
-    bienDong=nb;
+
+  var activeInMt = document.activeElement && document.activeElement.closest && document.activeElement.closest('#mt');
+  if(activeInMt){
+    // Đang gõ dở trong bảng — chỉ cập nhật tổng, không vẽ lại cả bảng để khỏi mất focus/con trỏ
+    nsRealtimePending = true;
+    calcTotals();
+    renderCharts();
+  } else {
+    renderTable();
+    renderLog();
   }
-  // Cập nhật số TẠI CHỖ — không dựng lại cả bảng (dựng lại làm mất focus/số vừa gõ khi đang chuyển ô)
-  nsRefreshInputsInPlace();
-  calcTotals();
-  renderCharts();
-  renderLog();
 }
 
 async function init(){
@@ -4282,18 +4128,10 @@ async function init(){
   subscribeNSRealtime();
   // Khi rời khỏi ô đang gõ mà có cập nhật realtime bị hoãn lại — vẽ lại bảng ngay lúc đó
   document.getElementById('mt').addEventListener('focusout', function(){
-    // Chuyển ô: chỉ cập nhật số tại chỗ (không dựng lại bảng) để không làm mất ô sắp gõ
-    setTimeout(nsRefreshInputsInPlace, 80);
-  });
-  // Rời tab / tắt trang / chuyển app: lưu NGAY phần chưa lưu (điện thoại hay không kịp chạy bộ đếm 0,5 giây)
-  function nsFlushNgay(){ if(!vDate && nsHasUnsaved()) mergeSave(); }
-  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden') nsFlushNgay(); });
-  window.addEventListener('pagehide', nsFlushNgay);
-  window.addEventListener('beforeunload', function(e){
-    if(nsHasUnsaved() || nsInFlight){ nsFlushNgay(); e.preventDefault(); e.returnValue=''; }
+    if(nsRealtimePending){ nsRealtimePending=false; renderTable(); renderLog(); }
   });
   setInterval(function(){
-    if(!vDate&&isEdit&&nsHasUnsaved()){
+    if(!vDate&&isEdit&&Object.keys(pendingChanges).length>0){
       mergeSave();
     }
   },15000);
@@ -4475,7 +4313,7 @@ async function mmtbLoadData(){
   mmtbSetSS('🔄 Đang tải...');
   try{
     // Đảm bảo dữ liệu hôm nay đã tồn tại đúng chuẩn ở SERVER trước khi đọc (giống hệt Nhân sự).
-    // Chỉ dam_bao khi chưa có dữ liệu đơn vị (tránh ghi đè)
+    try{ await sc.rpc('dam_bao_du_lieu_hom_nay_mmtb'); }catch(e){}
     var td=await mmtbSLoad(mmtbTkey());
     if(td){
       mmtbMachines=mmtbMergeMachines(td.machines);
@@ -4624,9 +4462,9 @@ async function mmtbSaveStructure(){
     var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog};
     var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){
-      await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
+      await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey());
     }else{
-      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
+      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:payload});
     }
     mmtbSetSS('✅ Đã cập nhật');
     mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();
@@ -4634,32 +4472,14 @@ async function mmtbSaveStructure(){
 }
 
 var mmtbMergeSaveBusy=false;
-var mmtbMergeSaveQueued=false;
-function _mmtbHasPending(obj){
-  if(!obj) return false;
-  var ps=Object.keys(obj);
-  for(var i=0;i<ps.length;i++){
-    var st=obj[ps[i]]||{};
-    for(var j=0;j<Object.keys(st).length;j++){
-      var sk=Object.keys(st)[j];
-      if(Object.keys(st[sk]||{}).length) return true;
-    }
-  }
-  return false;
-}
 async function mmtbMergeSave(askReason){
   if(dangBiKhoaCapNhat){ mmtbSetSS('🔄 Thiết bị đang chạy bản cũ — vui lòng tải lại trang trước khi lưu.'); return; }
-  if(mmtbMergeSaveBusy){ mmtbMergeSaveQueued=true; return; }
+  if(mmtbMergeSaveBusy)return;
   mmtbMergeSaveBusy=true;
-  var targetKey = mmtbVDate || mmtbTkey();
+  var targetKey = mmtbVDate || mmtbTkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
   mmtbSetSS('⏳ Đang lưu...');
   try{
-  do {
-    mmtbMergeSaveQueued=false;
-    var pendingSnap=mmtbPendingChanges; mmtbPendingChanges={};
-    var pendingNotesSnap=mmtbPendingNotesChanges; mmtbPendingNotesChanges={};
-    var pendingBDSnap=mmtbPendingBienDong; mmtbPendingBienDong={};
-    var ex=await sc.from('mmtb').select('id,data').eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    var ex=await sc.from('mmtb').select('id,data').eq('ngay',targetKey).single();
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
     var mergedMachines=mmtbMachines, mergedProjects=mmtbProjects, mergedData=mmtbData, mergedNotes=mmtbNotes, mergedLog=mmtbLog, mergedBienDong=mmtbBienDong;
     if(mmtbVDate){
@@ -4671,16 +4491,16 @@ async function mmtbMergeSave(askReason){
         mergedNotes = serverData.notes || {};
         mergedLog = serverData.log || [];
         mergedBienDong = serverData.bienDong || {}; // Ghi chú biến động KHÔNG áp dụng cho ngày cũ — giữ nguyên
-        Object.keys(pendingSnap).forEach(function(proj){
+        Object.keys(mmtbPendingChanges).forEach(function(proj){
           if(!mergedData[proj])mergedData[proj]={};
-          Object.keys(pendingSnap[proj]).forEach(function(status){
+          Object.keys(mmtbPendingChanges[proj]).forEach(function(status){
             if(!mergedData[proj][status])mergedData[proj][status]={};
-            Object.keys(pendingSnap[proj][status]).forEach(function(k){
-              mergedData[proj][status][k]=pendingSnap[proj][status][k];
+            Object.keys(mmtbPendingChanges[proj][status]).forEach(function(k){
+              mergedData[proj][status][k]=mmtbPendingChanges[proj][status][k];
             });
           });
         });
-        Object.keys(pendingNotesSnap).forEach(function(k){ mergedNotes[k]=pendingNotesSnap[k]; });
+        Object.keys(mmtbPendingNotesChanges).forEach(function(k){ mergedNotes[k]=mmtbPendingNotesChanges[k]; });
         var existingTsH=mergedLog.map(function(l){return l.ts;});
         mmtbLog.forEach(function(l){if(existingTsH.indexOf(l.ts)<0)mergedLog.unshift(l);});
         mergedLog=mergedLog.slice(0,50);
@@ -4694,17 +4514,17 @@ async function mmtbMergeSave(askReason){
       mergedNotes=serverData.notes||{};
       mergedLog=serverData.log||[];
       mergedBienDong=serverData.bienDong||{};
-      Object.keys(pendingSnap).forEach(function(proj){
+      Object.keys(mmtbPendingChanges).forEach(function(proj){
         if(!mergedData[proj])mergedData[proj]={};
-        Object.keys(pendingSnap[proj]).forEach(function(status){
+        Object.keys(mmtbPendingChanges[proj]).forEach(function(status){
           if(!mergedData[proj][status])mergedData[proj][status]={};
-          Object.keys(pendingSnap[proj][status]).forEach(function(k){
-            mergedData[proj][status][k]=pendingSnap[proj][status][k];
+          Object.keys(mmtbPendingChanges[proj][status]).forEach(function(k){
+            mergedData[proj][status][k]=mmtbPendingChanges[proj][status][k];
           });
         });
       });
-      Object.keys(pendingNotesSnap).forEach(function(k){
-        mergedNotes[k]=pendingNotesSnap[k];
+      Object.keys(mmtbPendingNotesChanges).forEach(function(k){
+        mergedNotes[k]=mmtbPendingNotesChanges[k];
       });
       mmtbMachines.forEach(function(m){if(!mergedMachines.find(function(mm){return mm.k===m.k;}))mergedMachines.push(m);});
       var existingTs=mergedLog.map(function(l){return l.ts;});
@@ -4725,16 +4545,13 @@ async function mmtbMergeSave(askReason){
       await sc.from('mmtb').insert({ngay:targetKey,data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
     mmtbMachines=mergedMachines;mmtbProjects=mergedProjects;mmtbData=mergedData;mmtbNotes=mergedNotes;mmtbLog=mergedLog;mmtbBienDong=mergedBienDong;
+    mmtbPendingChanges={};
+    mmtbPendingNotesChanges={};
+    mmtbPendingBienDong={};
     mmtbSetSS('✅ Đã cập nhật');
     mmtbRenderLog();
-  } while(mmtbMergeSaveQueued || _mmtbHasPending(mmtbPendingChanges) || Object.keys(mmtbPendingNotesChanges||{}).length || Object.keys(mmtbPendingBienDong||{}).length);
   }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);}
-  finally{
-    mmtbMergeSaveBusy=false;
-    if(_mmtbHasPending(mmtbPendingChanges) || Object.keys(mmtbPendingNotesChanges||{}).length){
-      setTimeout(function(){ mmtbMergeSave(); }, 50);
-    }
-  }
+  finally{mmtbMergeSaveBusy=false;}
 }
 
 async function mmtbSaveData(){
@@ -5139,7 +4956,7 @@ function subscribeMMTBRealtime(){
   if(mmtbRealtimeChannel){ try{sc.removeChannel(mmtbRealtimeChannel);}catch(e){} }
   mmtbRealtimeChannel = sc.channel('mmtb_rt_'+mmtbTkey()+'_'+(getDonViId()||'khanh_hoa'))
     .on('postgres_changes', {event:'*', schema:'public', table:'mmtb', filter:'ngay=eq.'+mmtbTkey()}, function(payload){
-      try{ var row=(payload.new||payload.old||{}); if(!row.don_vi_id || row.don_vi_id!==dvId()) return; }catch(e){}
+      try{ var row=(payload.new||payload.old||{}); if(row.don_vi_id && getDonViId() && row.don_vi_id!==getDonViId()) return; }catch(e){}
       if(mmtbVDate) return;
       var incoming = payload.new && payload.new.data;
       if(!incoming) return;
@@ -5627,8 +5444,7 @@ function bchTinhLichThongBao(){
   var ns=minus30(parseHM(GIO_HAN.gio_han_ns_mmtb));
   var ldt=minus30(parseHM(GIO_HAN.gio_han_nghiem_thu));
   return [
-    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'},
-    {h:ldt.h,m:ldt.m,id:'ldt_reminder',     title:'📅 Sắp hết giờ báo lịch!', body:'Còn 30 phút nữa là hết giờ báo Lịch nghiệm thu ngày mai (deadline '+(GIO_HAN.gio_han_nghiem_thu||'16:00:00').slice(0,5)+')'}
+    {h:ns.h, m:ns.m, id:'ns_mmtb_reminder', title:'⏰ Sắp hết giờ nhập liệu!', body:'Còn 30 phút nữa là hết giờ báo cáo Nhân sự & MMTB (deadline '+gioKhoaHienThi()+')'}
   ];
 }
 
@@ -6067,25 +5883,20 @@ async function renderHomeThongBao(){
   if(elColNS) elColNS.style.display = coNS ? '' : 'none';
   if(elColMMTB) elColMMTB.style.display = coMMTB ? '' : 'none';
   if(elGroupNSMMTB) elGroupNSMMTB.style.display = (coNS || coMMTB) ? '' : 'none';
-  if(elGroupLDT) elGroupLDT.style.display = coLDT ? '' : 'none';
+  if(elGroupLDT) elGroupLDT.style.display = 'none';
   // Nếu 2 cột NS/MMTB chỉ còn 1 cột hiện, cho nó chiếm trọn hàng thay vì lệch
   var elRow = document.querySelector('.qs-donut-row');
   if(elRow && (coNS !== coMMTB)) elRow.style.gridTemplateColumns = '1fr';
   var elNone = document.getElementById('qs-group-none');
-  if(elNone) elNone.style.display = (!coNS && !coMMTB && !coLDT) ? '' : 'none';
+  if(elNone) elNone.style.display = (!coNS && !coMMTB) ? '' : 'none';
 
-  // Thêm dòng tên + nút xem thông tin tài khoản + đăng xuất (chỉ chèn thêm bằng JS)
-  var headerDiv = document.querySelector('.home-header > div');
-  if(headerDiv){
-    var who = document.createElement('div');
-    who.style.cssText = 'font-size:12px;margin-top:4px;order:2;';
-    who.innerHTML = '👤 <a href="#" id="bch-profile-link" style="color:#ffa726;font-weight:700;text-decoration:underline;">' + res.data.ten + '</a> &nbsp;·&nbsp; <a href="#" style="color:#2196f3;" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
-    headerDiv.appendChild(who);
-
-    var greetSub = document.createElement('div');
-    greetSub.className = 'greet-sub';
-    greetSub.textContent = 'Chúc bạn một ngày làm việc vui vẻ!';
-    headerDiv.appendChild(greetSub);
+  // Dòng tên + đăng xuất (slot cố định)
+  var userSlot = document.getElementById('home-user-slot');
+  if(userSlot){
+    userSlot.innerHTML = '<a href="#" id="bch-profile-link">' + res.data.ten + '</a> · <a href="#" class="logout" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
+  }
+  if(true){
+    var headerDiv = userSlot || document.querySelector('.hh-body');
 
     var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', danh_ba:'Danh bạ', ban_tin:'Bản tin' };
     var overlay = document.createElement('div');
