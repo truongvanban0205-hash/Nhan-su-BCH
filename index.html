@@ -5967,6 +5967,15 @@ async function renderHomeThongBao(){
       try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN)); }catch(e){}
     }
   }catch(e){}
+  // Làm mới danh sách mục (tile) đơn vị được dùng, để Quản lý chung đổi là áp dụng ngay, không phải chọn lại đơn vị
+  try{
+    var rdv = await sc.rpc('lay_danh_sach_don_vi');
+    var dvCur = ((rdv && rdv.data) || []).find(function(d){ return String(d.id) === String(getDonViId()); });
+    if(dvCur && dvCur.modules && typeof dvCur.modules === 'object'){
+      window.BCH_DON_VI_MODULES = dvCur.modules;
+      try{ localStorage.setItem('bch_don_vi_modules', JSON.stringify(dvCur.modules)); }catch(e){}
+    }
+  }catch(e){}
   applyHomeBrand();
   document.dispatchEvent(new CustomEvent('bch-auth-ready', { detail: window.BCH_USER }));
   applyDonViModuleVisibility();
