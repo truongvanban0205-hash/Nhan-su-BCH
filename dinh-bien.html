@@ -389,7 +389,7 @@ async function init(){
     return;
   }
 
-  let quyen = (res.data && res.data.quyen) || {};
+  let quyen = (res.data && res.data.quyen_theo_don_vi && res.data.quyen_theo_don_vi[DON_VI]) || (res.data && res.data.quyen) || {};
   try{
     if(!quyen.dinh_bien){
       const c = JSON.parse(localStorage.getItem('bch_quyen_cache')||'{}');
@@ -431,7 +431,7 @@ document.getElementById('btnUnlock').addEventListener('click', async ()=>{
   if(unlocked) return;
   const p = prompt('🔒 Nhập mật khẩu Định biên:');
   if(p===null) return;
-  const { data, error } = await sb.rpc('dinhbien_dang_nhap', { p_pass: p });
+  const { data, error } = await sb.rpc('dinhbien_dang_nhap', { p_pass: p, p_don_vi_id: DON_VI });
   if(error || !data){ alert('❌ Sai mật khẩu.'); return; }
   unlocked = true;
   dinhBienPass = p;

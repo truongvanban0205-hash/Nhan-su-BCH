@@ -1107,7 +1107,7 @@ async function kiemTraPhienBan(){
 var GIO_HAN = { gio_han_ns_mmtb: '08:00:00', gio_han_nghiem_thu: '16:00:00' };
 async function taiGioHan(){
   try{
-    var r = await rpcCoThuLai('cauhinh_lay_gio_han');
+    var r = await rpcCoThuLai('cauhinh_lay_gio_han',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     // Phòng trường hợp hàm RPC trả về dạng mảng 1 phần tử (setof) thay vì thẳng 1 object —
     // trước đây gán thẳng r.data khiến GIO_HAN.gio_han_ns_mmtb bị undefined, tự rơi về mặc định
     // 08:00 dù đã đổi giờ khoá trong Quản lý chung.
@@ -2495,7 +2495,7 @@ var prevDayData=null;
 async function kiemTraMatKhauBaoCao(p){
   if(!p)return false;
   try{
-    var r=await sc.rpc('baocao_kiem_tra_mat_khau',{p_pass:p});
+    var r=await sc.rpc('baocao_kiem_tra_mat_khau',{p_pass:p,p_don_vi_id:getDonViId()||''});
     return r.data===true;
   }catch(e){ return false; }
 }
@@ -5693,7 +5693,7 @@ function dbTelHref(s){
 async function loadDanhBa(force){
   if(danhBaLoaded && !force) return danhBaCache;
   try{
-    var r = await sc.rpc('danh_ba_lay_danh_sach');
+    var r = await sc.rpc('danh_ba_lay_danh_sach',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     danhBaCache = r.data || [];
     danhBaLoaded = true;
   }catch(e){
@@ -5959,6 +5959,14 @@ async function renderHomeThongBao(){
   window.BCH_USER.don_vi_id = window.BCH_USER.don_vi_ids[0] || 'khanh_hoa';
   document.body.style.display = '';
   await ensureDonViSelected();
+  // Quyền truy cập riêng từng đơn vị: lấy đúng quyền của đơn vị đang làm việc
+  try{
+    var qdv = res.data.quyen_theo_don_vi, dvNow = getDonViId();
+    if(qdv && dvNow && qdv[dvNow]){
+      window.BCH_QUYEN = qdv[dvNow];
+      try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN)); }catch(e){}
+    }
+  }catch(e){}
   applyHomeBrand();
   document.dispatchEvent(new CustomEvent('bch-auth-ready', { detail: window.BCH_USER }));
   applyDonViModuleVisibility();

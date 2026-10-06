@@ -246,6 +246,8 @@
     <input type="text" id="nvChucVu" placeholder="Ví dụ: Nhân viên kỹ thuật hiện trường" onkeydown="if(event.key==='Enter')document.getElementById('nvSdt').focus()">
     <label>Số điện thoại</label>
     <input type="tel" id="nvSdt" placeholder="Ví dụ: 0912345678" onkeydown="if(event.key==='Enter')document.getElementById('btnDangKyMoi').click()">
+    <label>Đơn vị</label>
+    <select id="nvDonViReg" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--panel2);color:inherit;font:inherit;margin-bottom:10px;"><option value="khanh_hoa">Cụm dự án Khánh Hòa</option></select>
     <button class="btn" id="btnDangKyMoi">Gửi đăng ký</button>
     <a class="reset" id="btnBackStep1">‹ Quay lại đăng nhập</a>
   </div>
@@ -465,9 +467,10 @@
   <div class="modal" style="max-width:440px;">
     <h3>⏱️ Giờ khoá &amp; Mật khẩu báo cáo</h3>
     <p class="sub" style="margin-top:-8px;">
-      <b>2 cấp mật khẩu:</b> (1) <b>Quản lý chung</b> — mật khẩu của trang này (nút «Đổi mật khẩu» ở trên);
-      (2) <b>Mật khẩu vận hành</b> — một mật khẩu đơn giản dùng chung cho vào <b>Định biên</b>, mở khoá «🔒 Quản lý» trong Nhân sự / MMTB / Lịch nghiệm thu và <b>xuất báo cáo</b>.
-      Mật khẩu Quản lý chung cũng dùng được ở các chỗ của cấp (2).
+      <b>2 cấp mật khẩu:</b> (1) <b>Quản lý chung</b> — một mật khẩu cho cả hệ thống (nút «Đổi mật khẩu» ở trên);
+      (2) <b>Mật khẩu vận hành của từng đơn vị</b> — mỗi đơn vị một mật khẩu đơn giản riêng, dùng cho <b>Định biên</b>,
+      mở khoá «🔒 Quản lý» và <b>xuất báo cáo</b> của đơn vị đó. <b>Giờ khoá</b> cũng đặt riêng từng đơn vị.
+      Vào một đơn vị rồi mở «Giờ khoá báo cáo» để đặt. Mật khẩu Quản lý chung dùng được ở mọi đơn vị.
     </p>
 
     <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
@@ -482,7 +485,7 @@
     </div>
 
     <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px;">
-      <div style="font-weight:800; font-size:13px; margin-bottom:10px;">Đặt mật khẩu vận hành</div>
+      <div style="font-weight:800; font-size:13px; margin-bottom:10px;">Đặt mật khẩu vận hành (cho đơn vị đang mở)</div>
       <label>Mật khẩu Quản lý chung (để xác nhận)</label>
       <input type="password" id="inputMkQuanLyChung" placeholder="Mật khẩu Quản lý chung">
       <label>Mật khẩu vận hành mới</label>
@@ -789,12 +792,24 @@ document.getElementById("btnBackStep1").addEventListener("click", ()=>{
   showStep1();
 });
 
+(async function loadDonViDangKy(){
+  try{
+    const r = await sb.rpc("lay_danh_sach_don_vi");
+    const list = (r && r.data) || [];
+    const sel = document.getElementById("nvDonViReg");
+    if(sel && list.length){
+      sel.innerHTML = list.map(d=>'<option value="'+String(d.id).replace(/"/g,'')+'">'+String(d.ten||d.id).replace(/</g,'&lt;')+'</option>').join("");
+    }
+  }catch(e){}
+})();
+
 document.getElementById("btnDangKyMoi").addEventListener("click", async ()=>{
   const ten = document.getElementById("nvTenReg").value.trim();
   const pin = document.getElementById("nvPinReg").value.trim();
   const pin2 = document.getElementById("nvPinReg2").value.trim();
   const chucVu = document.getElementById("nvChucVu").value.trim();
   const sdt = document.getElementById("nvSdt").value.trim();
+  const dvReg = (document.getElementById("nvDonViReg")||{}).value || "khanh_hoa";
   if(!ten || !pin || !chucVu || !sdt){ alert("Vui lòng nhập đủ Họ tên, PIN, Chức vụ và SĐT."); return; }
   if(pin.length < 4){ alert("PIN tối thiểu 4 ký tự."); return; }
   if(pin !== pin2){ alert("Hai lần nhập PIN không khớp."); return; }
@@ -803,13 +818,13 @@ document.getElementById("btnDangKyMoi").addEventListener("click", async ()=>{
   // MSNV tự sinh phía server (hoặc tạm thời client) — không còn dùng để đăng nhập
   const msnvAuto = "P" + Date.now().toString().slice(-10);
   const { data, error } = await sb.rpc("dang_ky_moi_pin", {
-    p_ten: ten, p_pin: pin, p_chuc_vu: chucVu, p_sdt: sdt, p_msnv: msnvAuto
+    p_ten: ten, p_pin: pin, p_chuc_vu: chucVu, p_sdt: sdt, p_msnv: msnvAuto, p_don_vi_id: dvReg
   });
   btn.disabled = false; btn.textContent = "Gửi đăng ký";
   if(error || !data){
     // fallback RPC cũ nếu chưa chạy SQL mới
     const r2 = await sb.rpc("dang_ky_moi", {
-      p_ten: ten, p_msnv: msnvAuto, p_chuc_vu: chucVu, p_sdt: sdt
+      p_ten: ten, p_msnv: msnvAuto, p_chuc_vu: chucVu, p_sdt: sdt, p_don_vi_id: dvReg
     });
     if(r2.error || !r2.data){ alert("Có lỗi xảy ra, vui lòng chạy SQL đăng ký PIN hoặc thử lại."); return; }
     if(r2.data.status === "da_ton_tai"){ alert("Tài khoản vừa được đăng ký, vui lòng đăng nhập hoặc đổi tên."); showStep1(); return; }
@@ -1490,7 +1505,7 @@ document.getElementById("btnCloseAdmin").addEventListener("click", ()=>{
 
 /* ================= QUẢN LÝ: TẢI DANH SÁCH ================= */
 async function loadModules(){
-  const { data, error } = await sb.rpc("lay_danh_sach_modules");
+  const { data, error } = await sb.rpc("lay_danh_sach_modules", { p_don_vi_id: window.currentAdminDonVi || null });
   if(!error && data) modulesCache = data;
 }
 
@@ -1505,7 +1520,7 @@ async function loadAdminData(){
     if(loading) loading.style.display = "block";
     if(wrap) wrap.style.display = "none";
     await loadModules();
-    const { data, error } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass });
+    const { data, error } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass, p_don_vi_id: window.currentAdminDonVi || null });
     if(error){
       showToast("Không tải được danh sách: " + (error.message||"thử lại"));
       employeesCache = employeesCache || [];
@@ -1578,7 +1593,7 @@ function renderAdminTable(){
       const newQuyen = { ...(emp.quyen||{}), [ma]: e.target.checked };
       const { error } = await sb.rpc("admin_cap_nhat", {
         p_pass: currentAdminPass, p_id: id, p_ten: null, p_msnv: null,
-        p_chuc_vu: null, p_sdt: null, p_quyen: newQuyen, p_trang_thai: null
+        p_chuc_vu: null, p_sdt: null, p_quyen: newQuyen, p_trang_thai: null, p_don_vi_id: window.currentAdminDonVi || null
       });
       if(error){ showToast("Không lưu được thay đổi."); e.target.checked = !e.target.checked; }
       else emp.quyen = newQuyen;
@@ -1613,19 +1628,19 @@ async function handleAction(action, id){
   if(action === "approve"){
     const { error } = await sb.rpc("admin_cap_nhat", {
       p_pass: currentAdminPass, p_id: id, p_ten: null, p_msnv: null,
-      p_chuc_vu: null, p_sdt: null, p_quyen: null, p_trang_thai: "da_duyet"
+      p_chuc_vu: null, p_sdt: null, p_quyen: null, p_trang_thai: "da_duyet", p_don_vi_id: window.currentAdminDonVi || null
     });
     if(!error) loadAdminData();
   } else if(action === "reject"){
     if(!confirm(`Từ chối tài khoản của ${emp.ten}?`)) return;
     const { error } = await sb.rpc("admin_cap_nhat", {
       p_pass: currentAdminPass, p_id: id, p_ten: null, p_msnv: null,
-      p_chuc_vu: null, p_sdt: null, p_quyen: null, p_trang_thai: "tu_choi"
+      p_chuc_vu: null, p_sdt: null, p_quyen: null, p_trang_thai: "tu_choi", p_don_vi_id: window.currentAdminDonVi || null
     });
     if(!error) loadAdminData();
   } else if(action === "delete"){
-    if(!confirm(`Xoá vĩnh viễn ${emp.ten} khỏi danh sách?`)) return;
-    const { error } = await sb.rpc("admin_xoa", { p_pass: currentAdminPass, p_id: id });
+    if(!confirm(`Gỡ ${emp.ten} khỏi đơn vị này? (Nếu người này còn thuộc đơn vị khác thì ở đó vẫn giữ nguyên.)`)) return;
+    const { error } = await sb.rpc("admin_xoa", { p_pass: currentAdminPass, p_id: id, p_don_vi_id: window.currentAdminDonVi || null });
     if(!error) loadAdminData();
   } else if(action === "edit"){
     openEmpModal(emp);
@@ -1684,12 +1699,12 @@ document.getElementById("btnSaveEmp").addEventListener("click", async ()=>{
   if(id){
     const { error } = await sb.rpc("admin_cap_nhat", {
       p_pass: currentAdminPass, p_id: empId, p_ten: ten, p_msnv: msnv,
-      p_chuc_vu: chucVu, p_sdt: sdt, p_quyen: null, p_trang_thai: null
+      p_chuc_vu: chucVu, p_sdt: sdt, p_quyen: null, p_trang_thai: null, p_don_vi_id: window.currentAdminDonVi || null
     });
     if(error){ alert("Không lưu được: " + (error.message||"")); return; }
   } else {
     const { data, error } = await sb.rpc("admin_them_moi", {
-      p_pass: currentAdminPass, p_ten: ten, p_msnv: msnv, p_chuc_vu: chucVu, p_sdt: sdt, p_quyen: {}
+      p_pass: currentAdminPass, p_ten: ten, p_msnv: msnv, p_chuc_vu: chucVu, p_sdt: sdt, p_quyen: {}, p_don_vi_id: window.currentAdminDonVi || null
     });
     if(error){ alert("Không thêm được: " + (error.message||"")); return; }
     if(data && data.id) empId = data.id;
@@ -1736,7 +1751,7 @@ document.getElementById("btnSaveModule").addEventListener("click", async ()=>{
   const ma = document.getElementById("moduleSelect").value;
   const catalogItem = MODULE_CATALOG.find(c=>c.ma===ma);
   if(!catalogItem) return;
-  const { error } = await sb.rpc("admin_them_module", { p_pass: currentAdminPass, p_ma: catalogItem.ma, p_nhan: catalogItem.nhan });
+  const { error } = await sb.rpc("admin_them_module", { p_pass: currentAdminPass, p_ma: catalogItem.ma, p_nhan: catalogItem.nhan, p_don_vi_id: window.currentAdminDonVi || null });
   if(error){ alert("Không thêm được quyền này (có thể đã tồn tại)."); return; }
   modalModule.classList.remove("show");
   loadAdminData();
@@ -1771,7 +1786,7 @@ document.getElementById("btnKhoaBaoCao").addEventListener("click", async ()=>{
   hideMsg(errEl);
   document.getElementById("inputMatKhauBaoCaoXacNhan").value = "";
   try{
-    const { data } = await sb.rpc("cauhinh_lay_gio_han");
+    const { data } = await sb.rpc("cauhinh_lay_gio_han", { p_don_vi_id: window.currentAdminDonVi || "khanh_hoa" });
     if(data){
       document.getElementById("inputGioHanNSMoi").value = (data.gio_han_ns_mmtb || "08:00:00").slice(0,5);
       document.getElementById("inputGioHanLDTMoi").value = (data.gio_han_nghiem_thu || "16:00:00").slice(0,5);
@@ -1790,7 +1805,7 @@ document.getElementById("btnLuuGioKhoa").addEventListener("click", async ()=>{
   if(!gioNS || !gioLDT){ showMsg(errEl,"bad","Vui lòng chọn đầy đủ 2 mốc giờ khoá."); return; }
   if(!pass){ showMsg(errEl,"bad","Vui lòng nhập mật khẩu để xác nhận."); return; }
   const { data, error } = await sb.rpc("baocao_luu_gio_han", {
-    p_pass: pass, p_gio_han_ns_mmtb: gioNS + ":00", p_gio_han_nghiem_thu: gioLDT + ":00"
+    p_pass: pass, p_gio_han_ns_mmtb: gioNS + ":00", p_gio_han_nghiem_thu: gioLDT + ":00", p_don_vi_id: window.currentAdminDonVi || ""
   });
   if(error || !data){ showMsg(errEl,"bad","Sai mật khẩu hoặc có lỗi, vui lòng thử lại."); return; }
   document.getElementById("inputMatKhauBaoCaoXacNhan").value = "";
@@ -1804,8 +1819,9 @@ document.getElementById("btnDatMkVanHanh").addEventListener("click", async ()=>{
   const adminP = document.getElementById("inputMkQuanLyChung").value;
   const newP = document.getElementById("inputMkVanHanhMoi").value;
   if(!adminP){ showMsg(errEl,"bad","Vui lòng nhập mật khẩu Quản lý chung để xác nhận."); return; }
+  if(!window.currentAdminDonVi){ showMsg(errEl,"bad","Hãy vào một đơn vị trước khi đặt mật khẩu vận hành."); return; }
   if(!newP || newP.length < 4){ showMsg(errEl,"bad","Mật khẩu vận hành mới quá ngắn (tối thiểu 4 ký tự)."); return; }
-  const { data, error } = await sb.rpc("admin_dat_mat_khau_van_hanh", { p_pass_admin: adminP, p_pass_moi: newP });
+  const { data, error } = await sb.rpc("admin_dat_mat_khau_van_hanh", { p_pass_admin: adminP, p_don_vi_id: window.currentAdminDonVi || "", p_pass_moi: newP });
   if(error || !data){ showMsg(errEl,"bad","Sai mật khẩu Quản lý chung hoặc có lỗi, vui lòng thử lại."); return; }
   document.getElementById("inputMkQuanLyChung").value = "";
   document.getElementById("inputMkVanHanhMoi").value = "";
@@ -1814,6 +1830,8 @@ document.getElementById("btnDatMkVanHanh").addEventListener("click", async ()=>{
 
 /* ================= XUẤT EXCEL ================= */
 document.getElementById("btnExport").addEventListener("click", ()=>{
+  const dvX = window.currentAdminDonVi;
+  if(!dvX){ showToast("Hãy vào một đơn vị trước khi xuất Excel."); return; }
   const rows = employeesCache.map(e=>{
     const row = {
       "STT": e.stt ?? "", "MSNV": e.msnv, "Tên nhân viên": e.ten,
@@ -1825,7 +1843,7 @@ document.getElementById("btnExport").addEventListener("click", ()=>{
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Danh sách");
-  XLSX.writeFile(wb, "danh_sach_nhan_su_BCH.xlsx");
+  XLSX.writeFile(wb, "danh_sach_nhan_su_" + dvX + ".xlsx");
 });
 
 /* ================= NHẬP EXCEL HÀNG LOẠT ================= */
@@ -1897,7 +1915,7 @@ document.getElementById("btnConfirmImport").addEventListener("click", async ()=>
   const hopLe = importRows.filter(r=>!r.loi).map(r=>({ten:r.ten, msnv:r.msnv, chuc_vu:r.chuc_vu, sdt:r.sdt}));
   if(hopLe.length === 0) return;
   document.getElementById("btnConfirmImport").disabled = true;
-  const { data, error } = await sb.rpc("admin_them_hang_loat", { p_pass: currentAdminPass, p_ds: hopLe });
+  const { data, error } = await sb.rpc("admin_them_hang_loat", { p_pass: currentAdminPass, p_ds: hopLe, p_don_vi_id: window.currentAdminDonVi || null });
   const box = document.getElementById("importResultBox");
   box.style.display = "block";
   if(error){
@@ -1909,6 +1927,7 @@ document.getElementById("btnConfirmImport").addEventListener("click", async ()=>
   box.style.background = "#e8f5e9"; box.style.color = "#2e7d32";
   let txt = `✓ Đã thêm thành công ${data.da_them} nhân viên.`;
   if(data.trung_msnv && data.trung_msnv.length) txt += ` Trùng MSNV (bỏ qua): ${data.trung_msnv.join(", ")}.`;
+  if(data.lien_ket_nguoi_co_san) txt += ` (${data.lien_ket_nguoi_co_san} người đã có ở đơn vị khác, được gắn thêm vào đơn vị này.)`;
   if(data.thieu_thong_tin) txt += ` ${data.thieu_thong_tin} dòng thiếu thông tin đã bỏ qua.`;
   box.textContent = txt;
   loadAdminData();
@@ -2058,7 +2077,8 @@ document.getElementById('btnConfirmImportDanhBa').addEventListener('click', asyn
   const { data, error } = await sb.rpc('admin_import_danh_ba', {
     p_pass: currentAdminPass,
     p_ds: payload,
-    p_replace_all: replace
+    p_replace_all: replace,
+    p_don_vi_id: window.currentAdminDonVi || 'khanh_hoa'
   });
   btn.disabled = false; btn.textContent = 'Nhập vào danh bạ';
   const box = document.getElementById('dbImportResult');
@@ -2097,9 +2117,19 @@ async function renderAdminUnitGrid(){
   try{ await loadDonVi(); }catch(e){}
   // Đếm NV theo đơn vị
   const counts = {};
+  try{
+    const rAll = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass });
+    if(!rAll.error && Array.isArray(rAll.data)) employeesCache = rAll.data;
+  }catch(e){}
   (employeesCache||[]).forEach(function(e){
-    const k = e.don_vi_id || 'khanh_hoa';
-    counts[k] = (counts[k]||0)+1;
+    let tv = e.thanh_vien;
+    if(!Array.isArray(tv)){
+      let ids = e.don_vi_ids;
+      if(typeof ids === 'string'){ try{ ids = JSON.parse(ids); }catch(err){ ids = null; } }
+      if(!Array.isArray(ids) || !ids.length) ids = [e.don_vi_id || 'khanh_hoa'];
+      tv = ids.map(function(x){ return { don_vi_id: x }; });
+    }
+    tv.forEach(function(m){ const k = m.don_vi_id; counts[k] = (counts[k]||0)+1; });
   });
   const list = (donViCache||[]).filter(function(d){ return !d.an; });
   if(!list.length){
