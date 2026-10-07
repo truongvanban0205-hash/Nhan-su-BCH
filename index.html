@@ -2896,6 +2896,12 @@ async function sLoadStrict(d){
   if(r.error) throw r.error;
   return r.data?r.data.data:null;
 }
+// Chỉ lấy NGÀY GẦN NHẤT trước hôm nay của đơn vị (đủ để so sánh / copy), không tải 60 ngày
+async function sPrevStrict(){
+  var r=await sc.from('nhansu').select('ngay,data').eq('don_vi_id',getDonViId()||'khanh_hoa').lt('ngay',tkey()).order('ngay',{ascending:false}).limit(1);
+  if(r.error) throw r.error;
+  return r.data||[];
+}
 async function sHistStrict(){
   var r=await sc.from('nhansu').select('ngay,data').eq('don_vi_id',getDonViId()||'khanh_hoa').order('ngay',{ascending:false}).limit(60);
   if(r.error) throw r.error;
@@ -2953,8 +2959,11 @@ async function loadData(){
     var _td, _hist;
     try{
       try{ await rpcDinhBienDV('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
-      _td=await nsThuLai(function(){return sLoadStrict(tkey());});
-      _hist=await nsThuLai(sHistStrict);
+      var _kq = await Promise.all([
+        nsThuLai(function(){return sLoadStrict(tkey());}),
+        nsThuLai(sPrevStrict)
+      ]);
+      _td=_kq[0]; _hist=_kq[1];
     }catch(e){
       console.error('[loadData] Đọc Nhân sự lỗi:',e);
       nsLoadFailed=true; isEdit=false;
@@ -2965,7 +2974,6 @@ async function loadData(){
     if(curUser && !vDate && !timeLocked) isEdit=true;
     // Đảm bảo dữ liệu hôm nay đã tồn tại đúng chuẩn ở SERVER trước khi đọc — server tự copy từ
     // ngày gần nhất nếu chưa có, dùng đúng giờ Việt Nam, an toàn dù nhiều máy cùng mở lúc đầu ngày.
-    try{ await rpcDinhBienDV('dam_bao_du_lieu_hom_nay_nhansu'); }catch(e){}
     var td=_td;
     if(td){
       // projects LUÔN lấy đúng bộ hiện tại từ cauhinh_du_an (đã tải sẵn ở taiCauHinhDuAn()) —
@@ -3010,7 +3018,7 @@ async function loadData(){
       renderTable();renderLog();return;
     }
   }catch(e){console.error(e);}
-  COLS=DEF_COLS.map(function(c){return {k:c.k,n:c.n};});
+  COLS=mergeCols();
   data=initData();
   logItems=[];
   bienDong={};
@@ -4441,7 +4449,7 @@ async function mmtbLoadData(){
       mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();return;
     }
   }catch(e){console.error(e);}
-  mmtbMachines=DEF_MACHINES.map(function(c){return {k:c.k,n:c.n};});
+  mmtbMachines=mmtbMergeMachines();
   mmtbData=mmtbInitData();
   mmtbNotes={};
   mmtbEnsureNotes();
