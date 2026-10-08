@@ -3147,6 +3147,7 @@ var mergeSaveBusy=false;
 async function mergeSave(askReason){
   if(dangBiKhoaCapNhat){ setSS('🔄 Thiết bị đang chạy bản cũ — vui lòng tải lại trang trước khi lưu.'); return; }
   if(nsLoadFailed&&!vDate){ setSS('⚠️ Chưa tải được dữ liệu — không lưu để tránh ghi đè. Bấm tải lại.'); return; }
+  if(!vDate && (!CFG_CD_OK || !CFG_DUAN_OK)){ setSS('Đang tải cấu hình, chưa lưu. Đợi vài giây rồi thử lại.'); return; }
   if(mergeSaveBusy)return; // đang có 1 lượt lưu khác chạy (có thể đang chờ nhập lý do) — bỏ qua, lượt sau tự thử lại
   mergeSaveBusy=true;
   var targetKey = vDate || tkey(); // Lưu đúng NGÀY ĐANG XEM/SỬA — không phải lúc nào cũng là hôm nay
@@ -3272,6 +3273,7 @@ function renderTable(){
   h+='<th style="background:#F7C31E;color:#0F2A5C;min-width:42px">Tổng</th>';
   var _hdHoTro=projects.some(function(p){return HO_TRO_PROJS[p];});
   var _hdNow=new Date(), _hdDate=p2(_hdNow.getDate())+'/'+p2(_hdNow.getMonth()+1)+'/'+_hdNow.getFullYear();
+  if(vDate){ var _vp=vDate.split('-'); _hdDate=_vp[2]+'/'+_vp[1]+'/'+_vp[0]; }
   h+='<th style="min-width:280px;background:#e3e9f5;">Báo cáo tổng hợp '+getDonViTenBaoCao()+(_hdHoTro?' <span style="font-weight:400;color:#888;">(có dự án hỗ trợ)</span>':'')+'<div style="font-weight:400;font-size:10px;color:#667;margin-top:2px;">'+_hdDate+'</div></th>';
   h+='</tr></thead><tbody>';
   if(!projects.length){
@@ -3720,7 +3722,26 @@ async function renderDayList(){
 }
 
 var histEditKey=null;
+// Mức khớp giữa danh sách cột và số liệu của ngày (0..1), chỉ tính các ô có số khác 0
+function nsColsFit(cols,dt){
+  if(!cols||!cols.length) return 0;
+  var have={}; cols.forEach(function(c){ have[c.k]=1; });
+  var seen={}, tot=0, hit=0;
+  Object.keys(dt||{}).forEach(function(p){
+    var b=dt[p]; if(!b||typeof b!=='object') return;
+    Object.keys(b).forEach(function(t){
+      var cell=b[t]; if(!cell||typeof cell!=='object') return;
+      Object.keys(cell).forEach(function(k){
+        if(seen[k]) return;
+        var n=Number(cell[k]); if(!n) return;
+        seen[k]=1; tot++; if(have[k]) hit++;
+      });
+    });
+  });
+  return tot ? hit/tot : 1;
+}
 async function viewDay(key){
+  if(!vDate) window.LIVE_COLS = COLS.map(function(c){ return {k:c.k,n:c.n}; });
   var rows=await sHist();
   var row=null;
   for(var i=0;i<rows.length;i++){if(rows[i].ngay===key){row=rows[i];break;}}
@@ -3731,7 +3752,12 @@ async function viewDay(key){
   // XEM LỊCH SỬ: giữ NGUYÊN cấu trúc của đúng ngày đó (chức danh, dự án, loại ca) — TUYỆT ĐỐI
   // không trộn/lọc theo cấu hình hiện tại (Định biên, Quản lý chung có thể đã đổi khác từ đó tới
   // nay), nếu không sẽ làm mất/về 0 dữ liệu ngày cũ như đã xảy ra.
-  COLS = (h.cols && h.cols.length) ? h.cols : COLS;
+  var _savedCols=(h.cols && h.cols.length) ? h.cols : null, _liveCols=window.LIVE_COLS||null;
+  if(_savedCols && _liveCols && nsColsFit(_liveCols,h.data||{}) > nsColsFit(_savedCols,h.data||{}) + 0.2){
+    COLS = _liveCols.map(function(c){ return {k:c.k,n:c.n}; }); // cột đã lưu của ngày này không khớp số liệu -> dùng cột hiện tại
+  }else{
+    COLS = _savedCols ? _savedCols : COLS;
+  }
   data = h.data || {};
   projects = (h.projects && h.projects.length) ? h.projects : Object.keys(data);
   // Loại ca: suy ra đúng từ chính dữ liệu ngày đó (mã ca có thể đã đổi số lượng/tên theo thời gian),
