@@ -3681,6 +3681,62 @@ async function askP(fn,lbl){
   fn(p);
 }
 
+// ===== XOÁ LỊCH SỬ THEO KHOẢNG NGÀY (thay cho xoá toàn bộ) =====
+// bang: 'nhansu' | 'mmtb' | 'ldt'. Chỉ xoá của đơn vị đang mở, KHÔNG cho xoá ngày hôm nay (máy chủ cũng chặn).
+// Cần SQL: hàm baocao_xoa_khoang(p_pass, p_bang, p_tu, p_den, p_don_vi_id).
+function ngayCongTru(key,soNgay){
+  var pt=key.split('-'); var d=new Date(+pt[0],+pt[1]-1,+pt[2]+soNgay);
+  return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+}
+function fmtNgayVN(key){ var pt=key.split('-'); return pt[2]+'/'+pt[1]+'/'+pt[0]; }
+function moXoaKhoangNgay(bang,nhan,sauKhiXoa){
+  var homQua=ngayCongTru(tkey(),-1);
+  var cu=document.getElementById('xkn-overlay'); if(cu) cu.remove();
+  var oStyle='width:100%;box-sizing:border-box;padding:8px;border:1.5px solid #ccc;border-radius:8px;font-family:inherit;font-size:14px;';
+  var ov=document.createElement('div');
+  ov.id='xkn-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  ov.innerHTML='<div style="background:#fff;color:#1a1a1a;border-radius:14px;padding:18px;width:340px;max-width:100%;box-shadow:0 10px 30px rgba(0,0,0,.3);font-size:13px;">'
+    +'<div style="font-weight:800;font-size:15px;color:#0F2A5C;margin-bottom:6px;">🗑️ Xoá lịch sử '+nhan+'</div>'
+    +'<div style="color:#666;margin-bottom:12px;">Chọn khoảng ngày cần xoá. Chỉ xoá của đơn vị đang mở, không xoá được ngày hôm nay.</div>'
+    +'<label style="display:block;font-weight:700;margin-bottom:4px;">Từ ngày</label>'
+    +'<input type="date" id="xkn-tu" max="'+homQua+'" style="'+oStyle+'margin-bottom:10px;">'
+    +'<label style="display:block;font-weight:700;margin-bottom:4px;">Đến ngày</label>'
+    +'<input type="date" id="xkn-den" max="'+homQua+'" value="'+homQua+'" style="'+oStyle+'">'
+    +'<div id="xkn-msg" style="color:#c62828;font-weight:700;min-height:18px;margin:10px 0;"></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    +'<button type="button" id="xkn-huy" class="btn btn-sm">Huỷ</button>'
+    +'<button type="button" id="xkn-ok" class="btn btn-sm btn-re">Tiếp tục</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  document.getElementById('xkn-huy').onclick=function(){ ov.remove(); };
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  document.getElementById('xkn-ok').onclick=async function(){
+    var tu=document.getElementById('xkn-tu').value, den=document.getElementById('xkn-den').value;
+    var msg=document.getElementById('xkn-msg');
+    if(!tu||!den){ msg.textContent='Chọn đủ Từ ngày và Đến ngày.'; return; }
+    if(tu>den){ msg.textContent='Từ ngày phải trước hoặc bằng Đến ngày.'; return; }
+    if(den>homQua){ msg.textContent='Không xoá được ngày hôm nay — Đến ngày tối đa là '+fmtNgayVN(homQua)+'.'; return; }
+    msg.textContent='Đang đếm số ngày...';
+    var c=await sc.from(bang).select('ngay',{count:'exact',head:true}).eq('don_vi_id',getDonViId()||'khanh_hoa').gte('ngay',tu).lte('ngay',den);
+    if(c.error){ msg.textContent='Lỗi: '+(c.error.message||''); return; }
+    var soNgay=c.count||0;
+    if(!soNgay){ msg.textContent='Không có ngày nào có dữ liệu trong khoảng này.'; return; }
+    ov.remove();
+    askP(async function(pass){
+      if(!confirm('Xoá '+soNgay+' ngày lịch sử '+nhan+' từ '+fmtNgayVN(tu)+' đến '+fmtNgayVN(den)+' của đơn vị này?\nKhông thể khôi phục!')) return;
+      var r=await sc.rpc('baocao_xoa_khoang',{p_pass:pass,p_bang:bang,p_tu:tu,p_den:den,p_don_vi_id:getDonViId()||'khanh_hoa'});
+      if(r.error){
+        var em=r.error.message||'';
+        alert('Không xoá được: '+em+(/Could not find the function|baocao_xoa_khoang/i.test(em)?'\n(Chưa chạy SQL baocao_xoa_khoang)':''));
+        return;
+      }
+      if(sauKhiXoa) await sauKhiXoa();
+      toast('🗑️ Đã xoá '+(r.data!=null?r.data:soNgay)+' ngày lịch sử '+nhan);
+    },'xoá lịch sử '+nhan);
+  };
+}
+
 // doAddProj/doRenameProj/doDelProj đã bỏ — Dự án giờ quản lý 100% ở trang Quản lý chung
 // (quan-ly-tai-khoan.html: Cấu hình Nhân sự → Dự án & Ca làm việc), báo cáo Nhân sự chỉ đọc theo.
 
@@ -3734,12 +3790,8 @@ function doReset(){
 }
 
 function doDelAll(){
-  askP(async function(pass){
-    if(!confirm('Xoá TOÀN BỘ lịch sử? Không thể khôi phục!'))return;
-    await sDelAll(pass);
-    if(curTab===2)await renderDayList();
-    toast('🗑️ Đã xoá toàn bộ!');
-  },'xoá lịch sử');
+  // Bỏ xoá toàn bộ — chỉ còn xoá theo khoảng ngày
+  moXoaKhoangNgay('nhansu','Nhân sự',async function(){ if(curTab===2)await renderDayList(); });
 }
 
 // HISTORY
@@ -4365,6 +4417,7 @@ var mmtbProjects=['CL-CR'];
 var mmtbData={};
 var mmtbNotes={}; // ghi chú tự do theo từng máy (không tách theo dự án)
 var mmtbLog=[];
+var mmtbEditorsMap={}; // ai đã đăng nhập / đã sửa MMTB trong ngày: {tên:'login'|'edit'} (giống Nhân sự)
 var mmtbUser='';
 var mmtbEdit=false;
 var mmtbVDate=null;
@@ -4496,6 +4549,7 @@ async function mmtbSDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_ba
 async function mmtbSDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'mmtb',p_don_vi_id:getDonViId()||'khanh_hoa'});}
 
 async function mmtbLoadData(){
+  mmtbEditorsMap={};
   mmtbSetSS('🔄 Đang tải...');
   try{
     // Đảm bảo dữ liệu hôm nay đã tồn tại đúng chuẩn ở SERVER trước khi đọc (giống hệt Nhân sự).
@@ -4507,7 +4561,7 @@ async function mmtbLoadData(){
       // — không dùng projects cũ đã lưu trên server, để sửa/ẩn-hiện dự án ở Quản lý chung nhảy theo ngay.
       mmtbData=mmtbMigrateLegacyProjKeys(td.data||{});
       mmtbNotes=td.notes||{};
-      mmtbLog=td.log||[];
+      mmtbLog=td.log||[]; mmtbEditorsMap=td.editors||{};
       mmtbBienDong=td.bienDong||{};
       mmtbGhiChuTuyChinh=td.ghiChuTuyChinh||'';
       mmtbPendingBienDong={};
@@ -4579,6 +4633,7 @@ async function mmtbSetUser(){
   var time=p2(now.getHours())+':'+p2(now.getMinutes());
   mmtbLog.unshift({time:time,u:mmtbUser,p:'— đăng nhập —',ts:now.toISOString(),login:true});
   if(mmtbLog.length>100)mmtbLog.pop();
+  if(!mmtbEditorsMap[mmtbUser]) mmtbEditorsMap[mmtbUser]='login';
   mmtbRenderLog();
   mmtbRenderTable();
   await mmtbMergeSave();
@@ -4627,17 +4682,20 @@ function mmtbUpdVal(proj,status,k,val){
   if(!mmtbEdit)return;
   mmtbEnsureProj(proj);
   var v=Math.max(0,parseInt(val)||0);
+  var oldV=mmtbData[proj][status][k]||0;
   mmtbData[proj][status][k]=v;
   if(!mmtbPendingChanges[proj])mmtbPendingChanges[proj]={};
   if(!mmtbPendingChanges[proj][status])mmtbPendingChanges[proj][status]={};
   mmtbPendingChanges[proj][status][k]=v;
   mmtbCalcTotals();
-  mmtbAddLog(projName(proj)+' - '+mmtbMachines.find(function(m){return m.k===k;}).n);
+  mmtbAddLog(proj,{s:status,k:k,o:oldV,n:v});
   mmtbRenderCharts();
   mmtbSchSave();
 }
 function mmtbUpdNote(k,val){
   if(!mmtbEdit)return;
+  var oldNote=mmtbNotes[k]||'';
+  if(String(val||'')!==String(oldNote)) mmtbAddLog(null,{note:true,k:k,o:oldNote,n:val||''});
   mmtbNotes[k]=val;
   mmtbPendingNotesChanges[k]=val;
   mmtbSchSave();
@@ -4654,7 +4712,7 @@ function mmtbSchSave(){
 async function mmtbSaveStructure(){
   mmtbSetSS('⏳ Đang lưu...');
   try{
-    var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog};
+    var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog,editors:mmtbEditorsMap};
     var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){
       await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
@@ -4733,13 +4791,18 @@ async function mmtbMergeSave(askReason){
         else mergedBienDong[k]=mmtbPendingBienDong[k];
       });
     }
-    var payload={machines:mergedMachines,projects:mergedProjects,data:mergedData,notes:mergedNotes,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:mmtbGhiChuTuyChinh};
+    // Gộp người đăng nhập/sửa trong ngày (có sửa luôn thắng chỉ đăng nhập) — giống Nhân sự
+    var mergedEditors={};
+    var _srvEdM=(serverData&&serverData.editors)||{};
+    Object.keys(_srvEdM).forEach(function(n){ mergedEditors[n]=_srvEdM[n]; });
+    Object.keys(mmtbEditorsMap||{}).forEach(function(n){ if(mergedEditors[n]!=='edit') mergedEditors[n]=mmtbEditorsMap[n]; });
+    var payload={machines:mergedMachines,projects:mergedProjects,data:mergedData,notes:mergedNotes,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:mmtbGhiChuTuyChinh,editors:mergedEditors};
     if(ex.data){
       await sc.from('mmtb').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
       await sc.from('mmtb').insert({ngay:targetKey,data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
-    mmtbMachines=mergedMachines;mmtbProjects=mergedProjects;mmtbData=mergedData;mmtbNotes=mergedNotes;mmtbLog=mergedLog;mmtbBienDong=mergedBienDong;
+    mmtbMachines=mergedMachines;mmtbProjects=mergedProjects;mmtbData=mergedData;mmtbNotes=mergedNotes;mmtbLog=mergedLog;mmtbBienDong=mergedBienDong;mmtbEditorsMap=mergedEditors;
     mmtbPendingChanges={};
     mmtbPendingNotesChanges={};
     mmtbPendingBienDong={};
@@ -4757,23 +4820,66 @@ async function mmtbSaveData(){
   if(mmtbCurTab===2)await mmtbRenderDayList();
 }
 
-function mmtbAddLog(machineName){
+// Nhật ký MMTB chi tiết (giống Nhân sự): giờ, người sửa, dự án, trạng thái, máy, số cũ -> số mới;
+// sửa ghi chú cũng ghi (ghi chú cũ -> mới). Sửa cùng 1 ô trong 1 phút gộp 1 dòng, giữ số cũ ban đầu.
+// proj=null với dòng ghi chú (ghi chú theo máy, không theo dự án).
+function mmtbAddLog(proj,info){
   var now=new Date();
   var time=p2(now.getHours())+':'+p2(now.getMinutes());
+  info=info||{};
+  var firstOld=null;
   mmtbLog=mmtbLog.filter(function(l){
-    return !(l.u===mmtbUser&&l.p===machineName&&(now-new Date(l.ts))<60000);
+    var same=(l.u===mmtbUser&&l.p===proj&&l.s===info.s&&l.k===info.k&&!!l.note===!!info.note&&(now-new Date(l.ts))<60000);
+    if(same&&firstOld===null)firstOld=l.o;
+    return !same;
   });
-  mmtbLog.unshift({time:time,u:mmtbUser,p:machineName,ts:now.toISOString()});
+  var m=mmtbMachines.find(function(x){return x.k===info.k;});
+  var it={time:time,u:mmtbUser,p:proj,ts:now.toISOString(),k:info.k,kn:m?m.n:info.k};
+  if(info.note){
+    it.note=true;
+  }else{
+    var si=MMTB_STATUS.indexOf(info.s);
+    it.pn=String(projName(proj)).split('\n').join(' ');
+    it.s=info.s; it.sn=si>=0?MMTB_STATUS_LABEL[si]:info.s;
+  }
+  it.o=(firstOld!==null&&firstOld!==undefined)?firstOld:info.o;
+  it.n=info.n;
+  mmtbLog.unshift(it);
   if(mmtbLog.length>50)mmtbLog.pop();
+  if(mmtbUser) mmtbEditorsMap[mmtbUser]='edit';
   mmtbRenderLog();
 }
 function mmtbRenderLog(){
   var el=document.getElementById('mmtb-logList');
-  if(!mmtbLog.length){el.innerHTML='<div style="font-size:11px;color:#aaa;padding:6px">Chưa có nhật ký.</div>';return;}
-  el.innerHTML=mmtbLog.map(function(l){
-    return '<div class="hlog-item"><span style="font-weight:800;color:#e65100">'+l.time+'</span>'
-      +' &nbsp;—&nbsp; <span style="font-weight:700;color:#2e7d32">'+l.u+'</span>'
-      +' &nbsp;—&nbsp; <span style="color:#666">'+l.p+'</span></div>';
+  var names=Object.keys(mmtbEditorsMap||{});
+  var top='';
+  if(names.length){
+    top='<div style="padding:6px 8px;border-bottom:1px solid #e0e0e0;background:#fafafa;font-size:11px;line-height:1.7">'
+      +'<span style="color:#666;font-weight:700">'+(mmtbVDate?'Ngày này: ':'Hôm nay: ')+'</span>'
+      +names.map(function(n){ return '<span style="font-weight:800;color:'+(mmtbEditorsMap[n]==='edit'?'#2e7d32':'#e65100')+'">'+nsEsc(n)+'</span>'; }).join(' &nbsp;·&nbsp; ')
+      +'<div style="font-size:10px;color:#999"><span style="color:#e65100">■</span> chỉ đăng nhập &nbsp; <span style="color:#2e7d32">■</span> có sửa</div></div>';
+  }
+  if(!mmtbLog.length){el.innerHTML=top+'<div style="font-size:11px;color:#aaa;padding:6px">Chưa có nhật ký.</div>';return;}
+  function ngan(s){ s=String(s==null?'':s); return s.length>40?s.slice(0,40)+'…':s; }
+  el.innerHTML=top+mmtbLog.map(function(l){
+    var color=l.login?'#e65100':'#2e7d32';
+    var icon=l.login?'🔑':'✏️';
+    var where;
+    if(l.note){
+      where='<span style="color:#444">Ghi chú '+nsEsc(l.kn||l.k)+'</span>: '
+        +'<b style="color:#b71c1c">'+(l.o?nsEsc(ngan(l.o)):'(trống)')+'</b> → <b style="color:#1b5e20">'+(l.n?nsEsc(ngan(l.n)):'(trống)')+'</b>';
+    }else if(l.s!==undefined){
+      where='<span style="color:#666">'+nsEsc(l.pn||String(projName(l.p)).split('\n').join(' '))+'</span>'
+        +' &nbsp;·&nbsp; <span style="color:#444">'+nsEsc(l.sn||l.s)+'</span>'
+        +' &nbsp;·&nbsp; <span style="color:#444">'+nsEsc(l.kn||l.k)+'</span>: '
+        +'<b style="color:#b71c1c">'+nsEsc(l.o)+'</b> → <b style="color:#1b5e20">'+nsEsc(l.n)+'</b>';
+    }else{
+      where='<span style="color:#666">'+nsEsc(l.p)+'</span>'; // dòng kiểu cũ / dòng đăng nhập
+    }
+    return '<div class="hlog-item">'
+      +'<span style="font-weight:800;color:#1565c0">'+l.time+'</span>'
+      +' &nbsp;·&nbsp; <span style="font-weight:700;color:'+color+'">'+icon+' '+nsEsc(l.u)+'</span>'
+      +' &nbsp;·&nbsp; '+where+'</div>';
   }).join('');
 }
 
@@ -4891,12 +4997,8 @@ function mmtbReset(){
   },'reset MMTB');
 }
 function mmtbDelAll(){
-  askP(async function(pass){
-    if(!confirm('Xoá TOÀN BỘ lịch sử MMTB? Không thể khôi phục!'))return;
-    await mmtbSDelAll(pass);
-    if(mmtbCurTab===2)await mmtbRenderDayList();
-    toast('🗑️ Đã xoá toàn bộ MMTB!');
-  },'xoá lịch sử MMTB');
+  // Bỏ xoá toàn bộ — chỉ còn xoá theo khoảng ngày
+  moXoaKhoangNgay('mmtb','MMTB',async function(){ if(mmtbCurTab===2)await mmtbRenderDayList(); });
 }
 
 function mmtbSwitchTab(n){
@@ -4940,7 +5042,7 @@ async function mmtbViewDay(key){
   mmtbData=h.data||{};
   mmtbProjects=(h.projects && h.projects.length)?h.projects:Object.keys(mmtbData);
   mmtbNotes=h.notes||{};
-  mmtbLog=h.log||[];
+  mmtbLog=h.log||[]; mmtbEditorsMap=h.editors||{};
   mmtbEdit=false;
   var pts=key.split('-');
   document.getElementById('mmtb-vb').style.display='flex';
@@ -5137,7 +5239,7 @@ async function mmtbCheckAutoSaveAt8(){
   try{
     var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){mmtbAutoSavedToday=true;return;}
-    await mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog});
+    await mmtbSSave({machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog,editors:mmtbEditorsMap});
     mmtbAutoSavedToday=true;
     toast('⏰ MMTB: Đã tự động lưu dữ liệu (copy từ hôm qua) lúc '+gioKhoaHienThi()+'!');
   }catch(e){}
@@ -5183,6 +5285,7 @@ function applyMMTBRealtimeUpdate(incoming){
     });
   }
   if(incoming.log) mmtbLog = incoming.log;
+  if(incoming.editors){ Object.keys(incoming.editors).forEach(function(n){ if(mmtbEditorsMap[n]!=='edit') mmtbEditorsMap[n]=incoming.editors[n]; }); }
 
   var activeInMt = document.activeElement && document.activeElement.closest && document.activeElement.closest('#mmtb-mt');
   if(activeInMt){
@@ -5451,12 +5554,8 @@ function ldtReset(){
   },'reset lịch nghiệm thu');
 }
 function ldtDelAll(){
-  askP(async function(pass){
-    if(!confirm('Xoá TOÀN BỘ lịch sử nghiệm thu? Không thể khôi phục!'))return;
-    await ldtSDelAll(pass);
-    if(ldtCurTab===2)await ldtRenderDayList();
-    toast('🗑️ Đã xoá toàn bộ!');
-  },'xoá lịch sử nghiệm thu');
+  // Bỏ xoá toàn bộ — chỉ còn xoá theo khoảng ngày
+  moXoaKhoangNgay('ldt','Lịch nghiệm thu',async function(){ if(ldtCurTab===2)await ldtRenderDayList(); });
 }
 
 function ldtSwitchTab(n){
@@ -6230,7 +6329,7 @@ async function renderHomeThongBao(){
       }
     }catch(e){ console.error('[dongBoCauHinhDinhKy] Lỗi đồng bộ cấu hình:', e); }
   }
-  // Giảm Log Ingestion: 45 giây -> 5 phút, và không hỏi khi app chạy ngầm (đổi tab / khoá màn hình).
+  // Giảm Log Ingestion: 45 giây -> 1 phút 30 giây, và không hỏi khi app chạy ngầm (đổi tab / khoá màn hình).
   // Mở lại app (sau hơn 1 phút) thì hỏi ngay 1 lần để thấy cấu hình + giờ chuẩn mới nhất.
   var DONG_BO_LAN_CUOI=Date.now(); // vừa tải cấu hình xong ở trên
   async function dongBoNeuCan(){
@@ -6239,8 +6338,8 @@ async function renderHomeThongBao(){
     await dongBoCauHinhDinhKy();
   }
   setInterval(function(){
-    if(Date.now()-DONG_BO_LAN_CUOI >= 300000) dongBoNeuCan();
-  }, 30000);
+    if(Date.now()-DONG_BO_LAN_CUOI >= 90000) dongBoNeuCan();
+  }, 15000);
   document.addEventListener('visibilitychange', function(){
     if(document.hidden) return;
     if(Date.now()-GIO_CHUAN_LAN_CUOI > 60000) layGioChuan();
