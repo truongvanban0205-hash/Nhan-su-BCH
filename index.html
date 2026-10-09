@@ -2616,6 +2616,7 @@ async function taiDinhBienChucDanh(){
 var projects=['duan_1','duan_2','duan_3','duan_4','duan_5'];
 var data={};
 var logItems=[];
+var editorsMap={}; // ai đã đăng nhập / đã sửa trong ngày: {tên:'login'|'edit'}
 var curUser='';
 var isEdit=false;
 var vDate=null;
@@ -2955,6 +2956,7 @@ async function sDel(pass,d){await sc.rpc('baocao_xoa_ngay',{p_pass:pass,p_bang:'
 async function sDelAll(pass){await sc.rpc('baocao_xoa_tat_ca',{p_pass:pass,p_bang:'nhansu',p_don_vi_id:getDonViId()||'khanh_hoa'});}
 
 async function loadData(){
+  editorsMap={};
   setSS('🔄 Đang tải...');
   try{
     // 1) Phải có cấu hình dự án/chức danh THẬT trước, nếu không khoá dữ liệu (duan_1, duan_2...) sẽ lệch -> bảng hiện 0
@@ -2988,7 +2990,7 @@ async function loadData(){
       // không dùng projects cũ đã lưu trên server, để sửa/ẩn-hiện dự án ở Quản lý chung là nhảy theo ngay.
       COLS=mergeCols(td.cols);
       data=migrateLegacyProjKeys(td.data||{});
-      logItems=td.log||[];
+      logItems=td.log||[]; editorsMap=td.editors||{};
       bienDong=td.bienDong||{};
       ghiChuTuyChinh=td.ghiChuTuyChinh||'';
       pendingBienDong={};
@@ -3059,6 +3061,7 @@ async function setUser(){
   var time=p2(now.getHours())+':'+p2(now.getMinutes());
   logItems.unshift({time:time,u:curUser,p:'— đăng nhập —',ts:now.toISOString(),login:true});
   if(logItems.length>100)logItems.pop();
+  if(!editorsMap[curUser]) editorsMap[curUser]='login';
   renderLog();
   renderTable();
   await mergeSave();
@@ -3107,13 +3110,14 @@ function updVal(p,type,k,val){
   if(!isEdit)return;
   ensureProj(p);
   var v=Math.max(0,parseInt(val)||0);
+  var oldV=data[p][type][k]||0;
   data[p][type][k]=v;
   if(!pendingChanges[p])pendingChanges[p]={};
   if(!pendingChanges[p][type])pendingChanges[p][type]={};
   pendingChanges[p][type][k]=v;
   calcTotals();
   renderCharts();
-  addLog(p);
+  addLog(p,{t:type,c:k,o:oldV,n:v});
   schSave();
 }
 
@@ -3128,7 +3132,7 @@ function schSave(){
 async function saveStructure(){
   setSS('⏳ Đang lưu...');
   try{
-    var payload={projects:projects,cols:COLS,data:data,log:logItems};
+    var payload={projects:projects,cols:COLS,data:data,log:logItems,editors:editorsMap};
     var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.error) throw ex.error;
     var wr;
@@ -3157,7 +3161,7 @@ async function mergeSave(askReason){
     var ex=await sc.from('nhansu').select('id,data').eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.error) throw ex.error; // đọc lỗi (mạng/trùng dòng) -> DỪNG, giữ pendingChanges, không insert thêm dòng mới
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
-    var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems, mergedBienDong=bienDong;
+    var mergedProjects=projects, mergedCols=COLS, mergedData=data, mergedLog=logItems, mergedBienDong=bienDong, mergedEditors=editorsMap;
     if(vDate){
       // ĐANG SỬA NGÀY CŨ: giữ NGUYÊN cấu trúc (dự án/chức danh/loại ca) đúng như ngày đó đã lưu —
       // TUYỆT ĐỐI không đối chiếu/dọn theo cấu hình hiện tại (khác thời điểm), chỉ ghi đè đúng ô
@@ -3209,7 +3213,12 @@ async function mergeSave(askReason){
       logItems.forEach(function(l){if(existingTs.indexOf(l.ts)<0)mergedLog.unshift(l);});
       mergedLog=mergedLog.slice(0,50);
     }
-    var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:ghiChuTuyChinh};
+    // Gộp người đăng nhập/sửa trong ngày (có sửa luôn thắng chỉ đăng nhập)
+    mergedEditors={};
+    var _srvEd=(serverData&&serverData.editors)||{};
+    Object.keys(_srvEd).forEach(function(n){ mergedEditors[n]=_srvEd[n]; });
+    Object.keys(editorsMap||{}).forEach(function(n){ if(mergedEditors[n]!=='edit') mergedEditors[n]=editorsMap[n]; });
+    var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:ghiChuTuyChinh,editors:mergedEditors};
     var wr;
     if(ex.data){
       wr=await sc.from('nhansu').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
@@ -3218,7 +3227,7 @@ async function mergeSave(askReason){
     }
     if(wr.error) throw wr.error; // ghi lỗi -> báo ⚠️, KHÔNG xoá pendingChanges, 15s sau tự lưu lại
     // Cập nhật lại biến cục bộ theo bản đã merge (để không bị lệch UI)
-    projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;bienDong=mergedBienDong;/* ghiChuTuyChinh giữ nguyên */
+    projects=mergedProjects;COLS=mergedCols;data=mergedData;logItems=mergedLog;editorsMap=mergedEditors;bienDong=mergedBienDong;/* ghiChuTuyChinh giữ nguyên */
     pendingChanges={};
     pendingBienDong={};
     setSS('✅ Đã cập nhật');
@@ -3235,31 +3244,66 @@ async function saveData(){
   if(curTab===2)await renderDayList();
 }
 
-function addLog(proj){
+function addLog(proj,info){
   var now=new Date();
   var time=p2(now.getHours())+':'+p2(now.getMinutes());
+  info=info||{};
+  var firstOld=null;
+  // Sửa liên tiếp cùng một ô trong 1 phút: gộp thành 1 dòng, giữ số cũ ban đầu
   logItems=logItems.filter(function(l){
-    return !(l.u===curUser&&l.p===proj&&(now-new Date(l.ts))<60000);
+    var same=(l.u===curUser&&l.p===proj&&l.t===info.t&&l.c===info.c&&(now-new Date(l.ts))<60000);
+    if(same&&firstOld===null)firstOld=l.o;
+    return !same;
   });
-  logItems.unshift({time:time,u:curUser,p:proj,ts:now.toISOString()});
+  var it={time:time,u:curUser,p:proj,ts:now.toISOString()};
+  if(info.t!==undefined){
+    var ti=TYPES.indexOf(info.t);
+    var cn=info.c;
+    COLS.forEach(function(c){ if(c.k===info.c) cn=c.n; });
+    it.pn=String(projName(proj)).split('\n').join(' ');
+    it.t=info.t; it.tn=(ti>=0&&TLABELS[ti])?TLABELS[ti]:info.t;
+    it.c=info.c; it.cn=cn;
+    it.o=(firstOld!==null&&firstOld!==undefined)?firstOld:info.o;
+    it.n=info.n;
+  }
+  logItems.unshift(it);
   if(logItems.length>50)logItems.pop();
+  if(curUser) editorsMap[curUser]='edit';
   renderLog();
 }
 
+function nsEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 function renderLog(){
   var el=document.getElementById('logList');
+  var names=Object.keys(editorsMap||{});
+  var top='';
+  if(names.length){
+    top='<div style="padding:6px 8px;border-bottom:1px solid #e0e0e0;background:#fafafa;font-size:11px;line-height:1.7">'
+      +'<span style="color:#666;font-weight:700">'+(vDate?'Ngày này: ':'Hôm nay: ')+'</span>'
+      +names.map(function(n){ return '<span style="font-weight:800;color:'+(editorsMap[n]==='edit'?'#2e7d32':'#e65100')+'">'+nsEsc(n)+'</span>'; }).join(' &nbsp;·&nbsp; ')
+      +'<div style="font-size:10px;color:#999"><span style="color:#e65100">■</span> chỉ đăng nhập &nbsp; <span style="color:#2e7d32">■</span> có sửa</div></div>';
+  }
   if(!logItems.length){
-    el.innerHTML='<div style="font-size:11px;color:#aaa;padding:6px">Chưa có nhật ký.</div>';
+    el.innerHTML=top+'<div style="font-size:11px;color:#aaa;padding:6px">Chưa có nhật ký.</div>';
     return;
   }
-  el.innerHTML=logItems.map(function(l){
+  el.innerHTML=top+logItems.map(function(l){
     var color=l.login?'#e65100':'#2e7d32';
     var icon=l.login?'🔑':'✏️';
+    var where;
+    if(l.t!==undefined){
+      where='<span style="color:#666">'+nsEsc(l.pn||String(projName(l.p)).split('\n').join(' '))+'</span>'
+        +' &nbsp;·&nbsp; <span style="color:#444">'+nsEsc(l.tn||l.t)+'</span>'
+        +' &nbsp;·&nbsp; <span style="color:#444">'+nsEsc(l.cn||l.c)+'</span>: '
+        +'<b style="color:#b71c1c">'+nsEsc(l.o)+'</b> → <b style="color:#1b5e20">'+nsEsc(l.n)+'</b>';
+    }else{
+      where='<span style="color:#666">'+nl2br(projName(l.p))+'</span>';
+    }
     return '<div class="hlog-item">'
       +'<span style="font-weight:800;color:#1565c0">'+l.time+'</span>'
-      +' &nbsp;—&nbsp; <span style="font-weight:700;color:'+color+'">'+icon+' '+l.u+'</span>'
-      +' &nbsp;—&nbsp; <span style="color:#666">'+nl2br(projName(l.p))+'</span>'
-      +'</div>';
+      +' &nbsp;·&nbsp; <span style="font-weight:700;color:'+color+'">'+icon+' '+nsEsc(l.u)+'</span>'
+      +' &nbsp;·&nbsp; '+where+'</div>';
   }).join('');
 }
 
@@ -3784,7 +3828,7 @@ async function viewDay(key){
       return idx>=0 ? LIVE_TLABELS[idx] : t; // mã lạ không còn trong cấu hình hiện tại -> hiện tạm mã gốc
     });
   }
-  logItems=h.log||[];
+  logItems=h.log||[]; editorsMap=h.editors||{};
   isEdit=false;
   var pts=key.split('-');
   document.getElementById('vb').style.display='flex';
@@ -4198,7 +4242,7 @@ async function checkAutoSaveAt8(){
     if(ex.error)return; // đọc lỗi KHÔNG đồng nghĩa chưa có dữ liệu -> tuyệt đối không tự ghi
     if(ex.data){autoSavedToday=true;return;} // đã có data hôm nay rồi, không cần làm gì
     // Chưa có data hôm nay và đã qua giờ khoá -> tự lưu bản hiện tại (copy từ hôm qua) lên server
-    await sSave({projects:projects,cols:COLS,data:data,log:logItems});
+    await sSave({projects:projects,cols:COLS,data:data,log:logItems,editors:editorsMap});
     autoSavedToday=true;
     toast('⏰ Đã tự động lưu dữ liệu (copy từ hôm qua) lúc '+gioKhoaHienThi()+'!');
   }catch(e){}
@@ -4236,6 +4280,7 @@ function applyNSRealtimeUpdate(incoming){
     });
   });
   if(incoming.log) logItems = incoming.log;
+  if(incoming.editors){ Object.keys(incoming.editors).forEach(function(n){ if(editorsMap[n]!=='edit') editorsMap[n]=incoming.editors[n]; }); }
 
   var activeInMt = document.activeElement && document.activeElement.closest && document.activeElement.closest('#mt');
   if(activeInMt){

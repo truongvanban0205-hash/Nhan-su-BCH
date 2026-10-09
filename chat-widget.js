@@ -105,7 +105,7 @@
     var panel=document.createElement('div');
     panel.id='cw-panel';
     panel.innerHTML=
-      '<div id="cw-head">💬 Chat BCH <span class="cw-close" id="cw-closebtn">✕</span></div>'
+      '<div id="cw-head">💬 Chat BCH <span style="display:flex;gap:16px;align-items:center"><span class="cw-close" id="cw-delbtn" title="Xóa toàn bộ cuộc trò chuyện" style="font-size:15px">🗑</span><span class="cw-close" id="cw-closebtn">✕</span></span></div>'
       +'<div id="cw-msgs"><div style="font-size:12px;color:#aaa;text-align:center;">Đang tải tin nhắn...</div></div>'
       +'<div id="cw-replybar"><div class="cw-rb-text" id="cw-rb-text"></div><div class="cw-rb-x" id="cw-rb-x">✕</div></div>'
       +'<div id="cw-img-preview"><img id="cw-img-thumb" alt=""><span id="cw-img-name" style="flex:1;color:#555;"></span><span class="cw-rb-x" id="cw-img-clear">✕</span></div>'
@@ -123,6 +123,7 @@
     document.body.appendChild(panel);
 
     document.getElementById('cw-closebtn').onclick=toggleOpen;
+    document.getElementById('cw-delbtn').onclick=xoaTatCaChat;
     document.getElementById('cw-rb-x').onclick=cancelReply;
     document.getElementById('cw-send').onclick=sendMsg;
     document.getElementById('cw-btn-emoji').onclick=toggleEmojiPanel;
@@ -277,6 +278,19 @@
         updateBadges();
       })
       .subscribe();
+  }
+
+  // Xóa toàn bộ cuộc trò chuyện của đơn vị đang mở (cần mật khẩu vận hành hoặc Quản lý chung)
+  async function xoaTatCaChat(){
+    var dv=getChatDonVi();
+    var chay=async function(pass){
+      if(!confirm('Xóa TOÀN BỘ cuộc trò chuyện của đơn vị này? Không thể khôi phục!')) return;
+      var r=await sc.rpc('chat_xoa_het',{p_pass:pass,p_don_vi_id:dv});
+      if(r.error){ alert('Không xóa được: '+r.error.message); return; }
+      chatMsgs=[]; renderMsgs(); updateBadges();
+    };
+    if(typeof askP==='function'){ askP(chay,'xóa toàn bộ cuộc trò chuyện'); }
+    else{ var p=prompt('Mật khẩu vận hành để xóa cuộc trò chuyện:'); if(p===null) return; await chay(p); }
   }
 
   function bumpBubble(){
