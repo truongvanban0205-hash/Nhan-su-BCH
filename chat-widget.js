@@ -5,7 +5,7 @@
 //   - window.BCH_USER = {ten, msnv} SAU KHI đăng nhập xong (bchAuthGate)
 //     báo sẵn sàng qua sự kiện document 'bch-auth-ready'
 // Bảng dữ liệu dùng chung: chat_messages (id, nguoi_gui, noi_dung, created_at, reply_to_id, anh_url)
-// RPC: lay_danh_sach_ten_da_duyet(), admin_xoa_chat_message(p_pass, p_id)
+// RPC: lay_danh_sach_ten_da_duyet(), chat_xoa_tin(p_pass, p_id) — mật khẩu vận hành, chat_xoa_het(p_pass, p_don_vi_id)
 // Storage bucket (tuỳ chọn): chat-images — để gửi ảnh
 // ============================================================
 (function(){
@@ -280,7 +280,7 @@
       .subscribe();
   }
 
-  // Xóa toàn bộ cuộc trò chuyện của đơn vị đang mở (cần mật khẩu vận hành hoặc Quản lý chung)
+  // Xóa toàn bộ cuộc trò chuyện của đơn vị đang mở (cần mật khẩu vận hành)
   async function xoaTatCaChat(){
     var dv=getChatDonVi();
     var chay=async function(pass){
@@ -380,7 +380,7 @@
         +'</div>'
         +'<div class="cw-msg-actions" style="'+(mine?'justify-content:flex-end;':'')+'">'
           +'<button type="button" data-reply="'+m.id+'">Trả lời</button>'
-          +'<button type="button" data-del="'+m.id+'" title="Chỉ Quản lý (admin) được xóa">Xóa</button>'
+          +'<button type="button" data-del="'+m.id+'" title="Cần mật khẩu vận hành">Xóa</button>'
         +'</div>'
         +'</div>';
     }).join('');
@@ -406,12 +406,16 @@
     if(!id)return;
     var m=findMsgById(id);
     if(!m)return;
-    if(!confirm('Xóa tin nhắn này?\n(Chỉ Quản lý / admin mới xóa được)')) return;
-    var pass=prompt('Nhập mật khẩu Quản lý chung để xóa tin:');
+    if(!confirm('Xóa tin nhắn này?\n(Cần mật khẩu vận hành)')) return;
+    var pass=prompt('🔒 Mật khẩu vận hành để xóa tin:');
     if(pass==null || !String(pass).trim()) return;
     try{
-      var r=await sc.rpc('admin_xoa_chat_message', { p_pass: String(pass).trim(), p_id: id });
-      if(r.error){ alert('Không xóa được: '+(r.error.message||'Sai mật khẩu hoặc chưa cấu hình SQL.')); return; }
+      var r=await sc.rpc('chat_xoa_tin', { p_pass: String(pass).trim(), p_id: id });
+      if(r.error){
+        var em=r.error.message||'';
+        alert(/SAI_MAT_KHAU/.test(em) ? '❌ Sai mật khẩu!' : 'Không xóa được: '+(em||'chưa chạy SQL chat_xoa_tin.'));
+        return;
+      }
       chatMsgs=chatMsgs.filter(function(x){ return x.id!==id; });
       renderMsgs();
       updateBadges();

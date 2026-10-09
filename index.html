@@ -544,8 +544,8 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 <div class="rotate-banner">📱 Xoay ngang điện thoại để xem bảng tốt hơn!</div>
 
 <div id="lock-banner" class="lock-banner">
-  🔒 Đã qua <span id="lock-time-ns">08:00</span> — Nhập mật khẩu để chỉnh sửa:
-  <input type="password" id="lock-pass" placeholder="Mật khẩu..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')unlockEdit()">
+  🔒 Đã qua <span id="lock-time-ns">08:00</span> — Nhập mật khẩu vận hành để chỉnh sửa:
+  <input type="password" id="lock-pass" placeholder="Mật khẩu vận hành..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')unlockEdit()">
   <button class="btn btn-sm btn-or" onclick="unlockEdit()">Mở khoá</button>
 </div>
 
@@ -615,8 +615,8 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <div class="rotate-banner">📱 Xoay ngang điện thoại để xem bảng tốt hơn!</div>
 
   <div id="mmtb-lock-banner" class="lock-banner">
-    🔒 Đã qua <span id="lock-time-mmtb">08:00</span> — Nhập mật khẩu để chỉnh sửa:
-    <input type="password" id="mmtb-lock-pass" placeholder="Mật khẩu..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')mmtbUnlockEdit()">
+    🔒 Đã qua <span id="lock-time-mmtb">08:00</span> — Nhập mật khẩu vận hành để chỉnh sửa:
+    <input type="password" id="mmtb-lock-pass" placeholder="Mật khẩu vận hành..." style="border:1.5px solid #ffb300;border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;outline:none;width:130px;" onkeydown="if(event.key==='Enter')mmtbUnlockEdit()">
     <button class="btn btn-sm btn-or" onclick="mmtbUnlockEdit()">Mở khoá</button>
   </div>
 
@@ -1210,7 +1210,7 @@ var nsInited=false, mmtbInited=false, ldtInited=false;
 
 /** P3 — Báo cáo tổng hợp 4 đơn vị (xuất ảnh, bảng gọn + CNCH/LXLM) */
 async function exportTongHop4DonVi(){
-  var pass=prompt('🔒 Mật khẩu để xuất báo cáo tổng hợp 4 đơn vị:');
+  var pass=prompt('🔒 Mật khẩu vận hành để xuất báo cáo tổng hợp 4 đơn vị:');
   if(pass===null)return;
   if(!(await kiemTraMatKhauBaoCao(pass))){alert('❌ Sai mật khẩu!');return;}
   toast('⏳ Đang tổng hợp 4 đơn vị...');
@@ -1385,7 +1385,7 @@ async function exportTongHop4DonVi(){
 
 
 async function exportFullReport(){
-  var pass=prompt('🔒 Mật khẩu để xuất báo cáo:');
+  var pass=prompt('🔒 Mật khẩu vận hành để xuất báo cáo:');
   if(pass===null)return;
   if(!(await kiemTraMatKhauBaoCao(pass))){alert('❌ Sai mật khẩu!');return;}
 
@@ -2498,8 +2498,8 @@ var timeLocked=false;
 var unlockedThisSession=false;
 var prevDayData=null;
 
-// Mật khẩu "Quản lý" giờ kiểm tra qua Supabase (bảng cauhinh_bao_cao), không còn hardcode ở client.
-// Đổi mật khẩu này ở trang Quản lý chung (quan-ly-tai-khoan.html).
+// Mật khẩu VẬN HÀNH của đơn vị đang mở (máy chủ nhận cả mật khẩu Quản lý chung để dự phòng khi quên).
+// Đặt mật khẩu vận hành ở trang Quản lý chung > Giờ khoá báo cáo (quan-ly-tai-khoan.html).
 async function kiemTraMatKhauBaoCao(p){
   if(!p)return false;
   try{
@@ -3665,7 +3665,7 @@ async function renderCharts(){
 async function nsToggleAdmin(){
   var bar=document.getElementById('ns-admin-bar');
   if(bar.classList.contains('admin-hidden')){
-    var p=prompt('🔒 Mật khẩu quản lý:');
+    var p=prompt('🔒 Mật khẩu vận hành:');
     if(p===null)return;
     if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
     bar.classList.remove('admin-hidden');
@@ -3675,7 +3675,7 @@ async function nsToggleAdmin(){
 }
 
 async function askP(fn,lbl){
-  var p=prompt('🔒 Mật khẩu để '+lbl+':');
+  var p=prompt('🔒 Mật khẩu vận hành để '+lbl+':');
   if(p===null)return;
   if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
   fn(p);
@@ -4211,7 +4211,7 @@ function htmlGhiChuBlock(module, bdRowsHtml){
     +'</div>';
 }
 async function suaGhiChuTuyChinh(module){
-  var p=prompt('🔒 Mật khẩu quản lý để sửa ghi chú:');
+  var p=prompt('🔒 Mật khẩu vận hành để sửa ghi chú:');
   if(p===null)return;
   if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
   var cur = module==='ns' ? (ghiChuTuyChinh||'') : (mmtbGhiChuTuyChinh||'');
@@ -5155,7 +5155,7 @@ function mmtbRenderCharts(){
 async function mmtbToggleAdmin(){
   var bar=document.getElementById('mmtb-admin-bar');
   if(bar.classList.contains('admin-hidden')){
-    var p=prompt('🔒 Mật khẩu quản lý:');
+    var p=prompt('🔒 Mật khẩu vận hành:');
     if(p===null)return;
     if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
     bar.classList.remove('admin-hidden');
@@ -5662,7 +5662,7 @@ async function ldtExportXLRange(){
 async function ldtToggleAdmin(){
   var bar=document.getElementById('ldt-admin-bar');
   if(bar.classList.contains('admin-hidden')){
-    var p=prompt('🔒 Mật khẩu quản lý:');
+    var p=prompt('🔒 Mật khẩu vận hành:');
     if(p===null)return;
     if(!(await kiemTraMatKhauBaoCao(p))){alert('❌ Sai mật khẩu!');return;}
     bar.classList.remove('admin-hidden');
@@ -6356,7 +6356,7 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').catch(function(){});
 }
 </script>
-<script src="chat-widget.js?v=6"></script>
+<script src="chat-widget.js?v=7"></script>
 
 <div id="danhba-overlay">
   <div id="danhba-head">

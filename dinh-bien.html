@@ -429,7 +429,7 @@ document.getElementById('selNam').addEventListener('change', async (e)=>{
 
 document.getElementById('btnUnlock').addEventListener('click', async ()=>{
   if(unlocked) return;
-  const p = prompt('🔒 Nhập mật khẩu Định biên:');
+  const p = prompt('🔒 Nhập mật khẩu vận hành:');
   if(p===null) return;
   const { data, error } = await sb.rpc('dinhbien_dang_nhap', { p_pass: p, p_don_vi_id: DON_VI });
   if(error || !data){ alert('❌ Sai mật khẩu.'); return; }

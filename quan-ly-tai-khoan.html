@@ -479,8 +479,6 @@
       <input type="time" id="inputGioHanNSMoi">
       <label>Giờ khoá Lịch nghiệm thu</label>
       <input type="time" id="inputGioHanLDTMoi">
-      <label>Mật khẩu vận hành hoặc Quản lý chung (để xác nhận lưu)</label>
-      <input type="password" id="inputMatKhauBaoCaoXacNhan" placeholder="Nhập mật khẩu hiện tại">
       <button class="btn small" id="btnLuuGioKhoa" style="width:100%;">Lưu giờ khoá</button>
     </div>
 
@@ -1784,7 +1782,6 @@ const modalKhoaBaoCao = document.getElementById("modalKhoaBaoCao");
 document.getElementById("btnKhoaBaoCao").addEventListener("click", async ()=>{
   const errEl = document.getElementById("khoaBaoCaoErr");
   hideMsg(errEl);
-  document.getElementById("inputMatKhauBaoCaoXacNhan").value = "";
   try{
     const { data } = await sb.rpc("cauhinh_lay_gio_han", { p_don_vi_id: window.currentAdminDonVi || "khanh_hoa" });
     if(data){
@@ -1801,14 +1798,14 @@ document.getElementById("btnLuuGioKhoa").addEventListener("click", async ()=>{
   hideMsg(errEl);
   const gioNS = document.getElementById("inputGioHanNSMoi").value;
   const gioLDT = document.getElementById("inputGioHanLDTMoi").value;
-  const pass = document.getElementById("inputMatKhauBaoCaoXacNhan").value;
+  // Đã vào Quản lý chung (đúng mật khẩu Quản lý chung) thì không hỏi lại — dùng luôn mật khẩu đã đăng nhập
+  const pass = currentAdminPass;
   if(!gioNS || !gioLDT){ showMsg(errEl,"bad","Vui lòng chọn đầy đủ 2 mốc giờ khoá."); return; }
-  if(!pass){ showMsg(errEl,"bad","Vui lòng nhập mật khẩu để xác nhận."); return; }
+  if(!pass){ showMsg(errEl,"bad","Phiên Quản lý chung đã hết, vui lòng đăng nhập lại."); return; }
   const { data, error } = await sb.rpc("baocao_luu_gio_han", {
     p_pass: pass, p_gio_han_ns_mmtb: gioNS + ":00", p_gio_han_nghiem_thu: gioLDT + ":00", p_don_vi_id: window.currentAdminDonVi || ""
   });
-  if(error || !data){ showMsg(errEl,"bad","Sai mật khẩu hoặc có lỗi, vui lòng thử lại."); return; }
-  document.getElementById("inputMatKhauBaoCaoXacNhan").value = "";
+  if(error || !data){ showMsg(errEl,"bad","Không lưu được giờ khoá, vui lòng thử lại."); return; }
   showToast("✓ Đã lưu giờ khoá mới — trang Báo cáo sẽ áp dụng ngay lần tải tiếp theo.");
 });
 
