@@ -2821,7 +2821,18 @@ function p2(x){return String(x).padStart(2,'0');}
 // Ngày "hôm nay" giờ lấy CHUẨN từ server (gio_chuan_vn()) — không phụ thuộc đồng hồ máy/điện thoại
 // đang chạy sai giờ. SERVER_TODAY được tải 1 lần lúc mở app (layGioChuan()), tự làm mới định kỳ.
 var SERVER_TODAY=null;
+// Giảm số lần hỏi máy chủ (Log Ingestion gói miễn phí 1 GB/tháng): chỉ hỏi giờ chuẩn khi đang mở app
+// trước mặt (không chạy ngầm), mỗi 2 phút một lần; riêng quanh nửa đêm (23:55–00:10) hỏi dày như cũ
+// để sang ngày đúng lúc.
+var GIO_CHUAN_LAN_CUOI=0;
+function canHoiGioChuan(){
+  if(document.hidden) return false;
+  var n=new Date(), phut=n.getHours()*60+n.getMinutes();
+  var ganNuaDem = phut>=23*60+55 || phut<10;
+  return ganNuaDem || (Date.now()-GIO_CHUAN_LAN_CUOI >= 120000);
+}
 async function layGioChuan(){
+  GIO_CHUAN_LAN_CUOI=Date.now();
   try{
     var r = await sc.rpc('gio_chuan_vn');
     if(r.data) SERVER_TODAY = r.data;
@@ -4321,7 +4332,7 @@ async function init(){
   // sang ngày mới là tự tải lại đúng chuẩn (server đã tự copy sẵn từ ngày gần nhất).
   setInterval(async function(){
     if(vDate) return; // đang xem ngày cũ (chỉ đọc) thì không can thiệp
-    await layGioChuan();
+    if(canHoiGioChuan()) await layGioChuan();
     if(tkey()!==lastLoadedDate){
       lastLoadedDate=tkey();
       autoSavedToday=false; timeLocked=false; unlockedThisSession=false;
@@ -5204,7 +5215,7 @@ async function mmtbInit(){
   // Phát hiện SANG NGÀY MỚI khi tab để mở liên tục — y hệt cơ chế bên Nhân sự, dùng giờ chuẩn server.
   setInterval(async function(){
     if(mmtbVDate) return;
-    await layGioChuan();
+    if(canHoiGioChuan()) await layGioChuan();
     if(tkey()!==mmtbLastLoadedDate){
       mmtbLastLoadedDate=tkey();
       mmtbAutoSavedToday=false; mmtbTimeLocked=false; mmtbUnlockedSession=false;
@@ -6219,7 +6230,22 @@ async function renderHomeThongBao(){
       }
     }catch(e){ console.error('[dongBoCauHinhDinhKy] Lỗi đồng bộ cấu hình:', e); }
   }
-  setInterval(dongBoCauHinhDinhKy, 45000);
+  // Giảm Log Ingestion: 45 giây -> 5 phút, và không hỏi khi app chạy ngầm (đổi tab / khoá màn hình).
+  // Mở lại app (sau hơn 1 phút) thì hỏi ngay 1 lần để thấy cấu hình + giờ chuẩn mới nhất.
+  var DONG_BO_LAN_CUOI=Date.now(); // vừa tải cấu hình xong ở trên
+  async function dongBoNeuCan(){
+    if(document.hidden) return;
+    DONG_BO_LAN_CUOI=Date.now();
+    await dongBoCauHinhDinhKy();
+  }
+  setInterval(function(){
+    if(Date.now()-DONG_BO_LAN_CUOI >= 300000) dongBoNeuCan();
+  }, 30000);
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) return;
+    if(Date.now()-GIO_CHUAN_LAN_CUOI > 60000) layGioChuan();
+    if(Date.now()-DONG_BO_LAN_CUOI > 60000) dongBoNeuCan();
+  });
 
   // Khởi động: hiện trang chọn module trước
   showScreen('home');

@@ -596,7 +596,8 @@
     loadHistory();
     subscribeRealtime();
     // Danh sách người đã duyệt hay được bổ sung/sửa -> làm mới định kỳ, không cần tải lại trang
-    setInterval(loadApprovedNames, 60000);
+    // (10 phút/lần, bỏ qua khi app chạy ngầm — giảm Log Ingestion gói miễn phí)
+    setInterval(function(){ if(!document.hidden) loadApprovedNames(); }, 600000);
   }
 
   document.addEventListener('bch-auth-ready', function(e){ boot(e.detail); });
