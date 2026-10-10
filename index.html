@@ -1335,6 +1335,7 @@ async function exportTongHop4DonVi(){
     tot.lxlmDl+=ns.lxlmDl; tot.lxlmT+=ns.lxlmT;
     tot.mHd+=mm.hd; tot.mTong+=mm.tong;
   }
+
   function fmt2(a,b){ return (b? (a+'/'+b) : String(a||0)); }
 
   var wrap=document.createElement('div');
@@ -2603,7 +2604,8 @@ async function rpcDinhBienDV(tenHam, thamSo){
     return { data:null, error:e };
   }
 }
-var CFG_DUAN_OK=false, CFG_CD_OK=false; // đã tải được cấu hình THẬT từ server chưa (khác dùng mặc định)
+var CFG_DUAN_OK=false, CFG_CD_OK=false, CFG_CA_OK=false, CFG_MAY_OK=false;
+var PROJ_ALL={}, CA_ALL={}, CD_ALL={}, MAY_ALL={}; // mọi mục CÓ trong Quản lý chung / Định biên (kể cả đang ẩn) — dùng để dọn số mồ côi khi lưu // đã tải được cấu hình THẬT từ server chưa (khác dùng mặc định)
 async function taiDinhBienChucDanh(){
   try{
     var r = await rpcDinhBienDV('dinhbien_lay_danh_sach_chuc_danh');
@@ -2611,6 +2613,7 @@ async function taiDinhBienChucDanh(){
       CFG_CD_OK=true;
       // Thứ tự cột báo cáo NS = thu_tu trên Định biên (đổi ↑↓ bên Định biên là nhảy theo)
       var list = r.data.slice().sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
+      CD_ALL={}; list.forEach(function(c){ CD_ALL['cd_'+c.id]=true; });
       COLS = list.filter(function(c){ return !c.an; }).map(function(c){ return {k:'cd_'+c.id, n:(c.ten_tat && c.ten_tat.trim()) ? c.ten_tat : c.ten}; });
     }
   }catch(e){ /* lỗi mạng/chưa chạy patch -> giữ nguyên COLS mặc định để trang vẫn chạy được */ }
@@ -2649,6 +2652,7 @@ async function taiCauHinhCaLamViec(){
     var r1 = await rpcCoThuLai('cauhinh_lay_loai_ca',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var caList = r1.data;
     if(caList && caList.length > 0){
+      CA_ALL={}; caList.forEach(function(c){ CA_ALL[c.ma]=true; }); CFG_CA_OK=true;
       // Lọc bỏ ca đang ẨN — giống hệt cách taiCauHinhDuAn() đang lọc dự án ẩn.
       caList = caList.filter(function(c){ return !c.an; });
       // Khử trùng lặp theo mã (ma) — phòng trường hợp bảng cấu hình loại ca có dòng bị lặp,
@@ -2720,7 +2724,7 @@ async function taiCauHinhDuAn(){
       CFG_DUAN_OK=true;
       // Tên hiển thị lấy từ TOÀN BỘ danh sách (kể cả đang ẩn) — để dữ liệu lịch sử cũ nhắc tới
       // 1 dự án đã bị ẩn sau này vẫn hiện đúng tên, không hiện mã thô "duan_12".
-      var nm={}; var ht={}; list.forEach(function(d){ nm['duan_'+d.id]=d.ten; ht['duan_'+d.id]=!!d.ho_tro; });
+      var nm={}; var ht={}; PROJ_ALL={}; list.forEach(function(d){ nm['duan_'+d.id]=d.ten; ht['duan_'+d.id]=!!d.ho_tro; PROJ_ALL['duan_'+d.id]=true; });
       PROJ_NAME = nm;
       HO_TRO_PROJS = ht;
       // Nhân sự lọc theo an_nhansu — ẩn/hiện riêng cho từng module, độc lập với MMTB.
@@ -2743,7 +2747,7 @@ async function taiCauHinhDuAnMMTB(){
     var r = await rpcCoThuLai('cauhinh_lay_du_an',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var list = r.data;
     if(!r.error && Array.isArray(list)){
-      list.forEach(function(d){ PROJ_NAME['duan_'+d.id]=d.ten; });
+      PROJ_ALL={}; list.forEach(function(d){ PROJ_NAME['duan_'+d.id]=d.ten; PROJ_ALL['duan_'+d.id]=true; });
       var active = list.filter(function(d){ return !d.an_mmtb; });
       active.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
       mmtbProjects = active.map(function(d){ return 'duan_'+d.id; });
@@ -2762,6 +2766,7 @@ async function taiCauHinhLoaiMayMMTB(){
     var r = await rpcCoThuLai('cauhinh_lay_loai_may',{p_don_vi_id:getDonViId()||'khanh_hoa'});
     var list = r.data;
     if(list && list.length){
+      MAY_ALL={}; list.forEach(function(m){ MAY_ALL[m.ma]=true; }); CFG_MAY_OK=true;
       var active = list.filter(function(m){ return !m.an; });
       active.sort(function(a,b){
         var ga = (a.nhom==='phu_tro') ? 1 : 0;
@@ -2784,6 +2789,41 @@ async function taiCauHinhLoaiMayMMTB(){
   }catch(e){
     console.error('[taiCauHinhLoaiMayMMTB] Lỗi tải danh sách loại máy, đang dùng mặc định:', e);
   }
+}
+// Dọn số "mồ côi" của NGÀY ĐANG NHẬP khi lưu: chỉ giữ dự án có trong Quản lý chung, ca có trong cấu hình ca,
+// chức danh có trong Định biên (KỂ CẢ đang ẩn — giữ số để bấm hiện lại là có ngay). Không đụng ngày cũ.
+// Chỉ chạy khi đã tải được cấu hình thật từ máy chủ (tránh xoá nhầm lúc mạng lỗi).
+function donSoMoCoiNS(dt){
+  if(!CFG_CD_OK || !CFG_DUAN_OK || !CFG_CA_OK || !dt) return dt;
+  var out={};
+  Object.keys(dt).forEach(function(p){
+    if(!PROJ_ALL[p]) return;
+    var blk=dt[p]; if(!blk||typeof blk!=='object') return;
+    out[p]={};
+    Object.keys(blk).forEach(function(t){
+      if(!CA_ALL[t]) return;
+      var cell=blk[t]; if(!cell||typeof cell!=='object') return;
+      out[p][t]={};
+      Object.keys(cell).forEach(function(k){ if(CD_ALL[k]) out[p][t][k]=cell[k]; });
+    });
+  });
+  return out;
+}
+// Giống trên cho MMTB: dự án có trong Quản lý chung, máy có trong cấu hình loại máy (kể cả đang ẩn).
+function donSoMoCoiMMTB(dt){
+  if(!CFG_DUAN_OK || !CFG_MAY_OK || !dt) return dt;
+  var out={};
+  Object.keys(dt).forEach(function(p){
+    if(!PROJ_ALL[p]) return;
+    var blk=dt[p]; if(!blk||typeof blk!=='object') return;
+    out[p]={};
+    MMTB_STATUS.forEach(function(s){
+      var cell=blk[s]; if(!cell||typeof cell!=='object') return;
+      out[p][s]={};
+      Object.keys(cell).forEach(function(k){ if(MAY_ALL[k]) out[p][s][k]=cell[k]; });
+    });
+  });
+  return out;
 }
 function mmtbMayThiCongList(list){
   list = list || mmtbMachines || [];
@@ -3145,6 +3185,7 @@ function schSave(){
 async function saveStructure(){
   setSS('⏳ Đang lưu...');
   try{
+    data=donSoMoCoiNS(data);
     var payload={projects:projects,cols:COLS,data:data,log:logItems,editors:editorsMap};
     var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.error) throw ex.error;
@@ -3231,6 +3272,7 @@ async function mergeSave(askReason){
     var _srvEd=(serverData&&serverData.editors)||{};
     Object.keys(_srvEd).forEach(function(n){ mergedEditors[n]=_srvEd[n]; });
     Object.keys(editorsMap||{}).forEach(function(n){ if(mergedEditors[n]!=='edit') mergedEditors[n]=editorsMap[n]; });
+    if(!vDate) mergedData=donSoMoCoiNS(mergedData); // chỉ ngày đang nhập, không đụng lịch sử
     var payload={projects:mergedProjects,cols:mergedCols,data:mergedData,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:ghiChuTuyChinh,editors:mergedEditors};
     var wr;
     if(ex.data){
@@ -4714,6 +4756,7 @@ function mmtbSchSave(){
 async function mmtbSaveStructure(){
   mmtbSetSS('⏳ Đang lưu...');
   try{
+    mmtbData=donSoMoCoiMMTB(mmtbData);
     var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog,editors:mmtbEditorsMap};
     var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.data){
@@ -4798,6 +4841,7 @@ async function mmtbMergeSave(askReason){
     var _srvEdM=(serverData&&serverData.editors)||{};
     Object.keys(_srvEdM).forEach(function(n){ mergedEditors[n]=_srvEdM[n]; });
     Object.keys(mmtbEditorsMap||{}).forEach(function(n){ if(mergedEditors[n]!=='edit') mergedEditors[n]=mmtbEditorsMap[n]; });
+    if(!mmtbVDate) mergedData=donSoMoCoiMMTB(mergedData); // chỉ ngày đang nhập, không đụng lịch sử
     var payload={machines:mergedMachines,projects:mergedProjects,data:mergedData,notes:mergedNotes,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:mmtbGhiChuTuyChinh,editors:mergedEditors};
     if(ex.data){
       await sc.from('mmtb').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
