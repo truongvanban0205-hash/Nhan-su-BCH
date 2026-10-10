@@ -1216,8 +1216,8 @@ async function exportTongHop4DonVi(){
   toast('⏳ Đang tổng hợp 4 đơn vị...');
 
   var n=new Date();
-  var tk=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());
-  var dateStr=p2(n.getDate())+'/'+p2(n.getMonth()+1)+'/'+n.getFullYear();
+  var tk=tkey(); // ngày chuẩn theo giờ máy chủ, không theo đồng hồ máy
+  var dateStr=tk.split('-').reverse().join('/');
 
   var units=[];
   try{ units = await fetchDonViList(); }catch(e){ units=[]; }
@@ -1236,87 +1236,89 @@ async function exportTongHop4DonVi(){
     if(d.data && typeof d.data==='object' && !Array.isArray(d.data)) return d;
     return { data:d, projects:Object.keys(d), cols:null };
   }
-  function sumNsPayload(raw){
-    var d=unwrap(raw);
-    if(!d) return {tong:0,diLam:0,nghi:0,cnchDl:0,cnchT:0,lxlmDl:0,lxlmT:0};
-    var dt=d.data||{};
-    var projs=d.projects||Object.keys(dt);
-    var cols=(d.cols&&d.cols.length)?d.cols:[];
-    var colByName={};
-    cols.forEach(function(c){ if(c&&c.n) colByName[c.n]=c.k; });
-    // fallback mã phổ biến
-    var kCnch=colByName['CNCH']||'CNCH';
-    var kLxlm=colByName['NV.LXLM']||colByName['LXLM']||'NVLXLM';
-
-    var tong=0, nghi=0, cnchT=0, lxlmT=0;
-    // đoán ca nghỉ: key chứa nghi hoặc cuối
-    var nghiKeys={};
-    projs.forEach(function(p){
-      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p]) return;
-      var block=dt[p]; if(!block||typeof block!=='object') return;
-      Object.keys(block).forEach(function(ty){
-        var low=String(ty).toLowerCase();
-        if(low.indexOf('nghi')>=0 || low==='nghỉ' || low==='off') nghiKeys[ty]=1;
+  // Tính Y HỆT báo cáo từng đơn vị: tải cấu hình RIÊNG của mỗi đơn vị (ca nào là Nghỉ, dự án ẩn/hỗ trợ,
+  // chức danh đang hiện trong Định biên, máy thi công) rồi chỉ cộng đúng những thứ đó.
+  // Trước đây đoán Nghỉ theo tên mã ("nghi") nên Nghỉ hay ra 0, cộng cả chức danh/dự án đã ẩn,
+  // chỉ nhận ra dự án hỗ trợ của đơn vị đang mở, và cộng mọi loại máy.
+  async function taiCfgDonVi(dv){
+    var cfg={types:[], nghi:null, projs:[], hoTro:{}, cols:[], mays:[]};
+    try{
+      var rc=await sc.rpc('cauhinh_lay_loai_ca',{p_don_vi_id:dv});
+      var seen={}, ca=(rc.data||[]).filter(function(c){ if(c.an||seen[c.ma]) return false; seen[c.ma]=true; return true; });
+      ca.sort(function(a,b){ return (a.thu_tu||0)-(b.thu_tu||0); });
+      cfg.types=ca.map(function(c){ return c.ma; });
+      var f=ca.find(function(c){ return c.la_nghi===true; });
+      cfg.nghi=f?f.ma:(ca.length?ca[ca.length-1].ma:null);
+    }catch(e){}
+    try{
+      var rd=await sc.rpc('cauhinh_lay_du_an',{p_don_vi_id:dv});
+      (rd.data||[]).forEach(function(d){
+        var k='duan_'+d.id;
+        if(d.ho_tro) cfg.hoTro[k]=true;
+        if(!d.an_nhansu) cfg.projs.push(k);
       });
-    });
-    projs.forEach(function(p){
-      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p]) return;
-      var block=dt[p]; if(!block||typeof block!=='object') return;
-      Object.keys(block).forEach(function(ty){
-        var cell=block[ty]; if(!cell||typeof cell!=='object') return;
-        var isNghi=!!nghiKeys[ty];
-        Object.keys(cell).forEach(function(ck){
-          var v=numVal(cell[ck]);
-          tong+=v;
-          if(isNghi) nghi+=v;
-          if(ck===kCnch || ck==='CNCH' || ck==='cd_cnch') cnchT+=v;
-          if(ck===kLxlm || ck==='NVLXLM' || ck==='NV.LXLM') lxlmT+=v;
-        });
-        // CNCH/LXLM trên từng ca — đã cộng theo key
-      });
-    });
-    // CNCH/LXLM: tách đi làm = tổng - nghỉ trên cùng cột (xấp xỉ: đếm lại không nghỉ)
-    var cnchDl=0,lxlmDl=0;
-    projs.forEach(function(p){
-      if(typeof HO_TRO_PROJS!=='undefined' && HO_TRO_PROJS[p]) return;
-      var block=dt[p]; if(!block||typeof block!=='object') return;
-      Object.keys(block).forEach(function(ty){
-        if(nghiKeys[ty]) return;
-        var cell=block[ty]; if(!cell||typeof cell!=='object') return;
-        cnchDl+=numVal(cell[kCnch]||cell['CNCH']);
-        lxlmDl+=numVal(cell[kLxlm]||cell['NVLXLM']||cell['NV.LXLM']);
-      });
-    });
-    return {tong:tong, diLam:Math.max(0,tong-nghi), nghi:nghi, cnchDl:cnchDl, cnchT:cnchT, lxlmDl:lxlmDl, lxlmT:lxlmT};
+    }catch(e){}
+    try{
+      var rb=await sc.rpc('dinhbien_lay_danh_sach_chuc_danh',{p_don_vi_id:dv});
+      cfg.cols=(rb.data||[]).filter(function(c){ return !c.an; }).map(function(c){ return {k:'cd_'+c.id, n:(c.ten_tat&&c.ten_tat.trim())?c.ten_tat:c.ten}; });
+    }catch(e){}
+    try{
+      var rm=await sc.rpc('cauhinh_lay_loai_may',{p_don_vi_id:dv});
+      cfg.mays=(rm.data||[]).filter(function(m){ return !m.an && m.nhom!=='phu_tro'; }).map(function(m){ return m.ma; });
+    }catch(e){}
+    return cfg;
   }
-  function sumMmtbPayload(raw){
-    if(!raw||typeof raw!=='object') return {hd:0,tong:0};
+  function sumNsPayload(raw,cfg){
+    var kq={tong:0,diLam:0,nghi:0,hoTro:0,cnchDl:0,cnchT:0,lxlmDl:0,lxlmT:0};
+    var d=unwrap(raw);
+    if(!d) return kq;
+    var dt=d.data||{};
+    var cols=cfg.cols.length?cfg.cols:((d.cols&&d.cols.length)?d.cols:[]);
+    var cn=cols.find(function(c){ return c.n==='CNCH'; });
+    var lx=cols.find(function(c){ return c.n==='NV.LXLM'; });
+    cfg.projs.forEach(function(p){
+      var block=dt[p]; if(!block||typeof block!=='object') return;
+      var types=cfg.types.length?cfg.types:Object.keys(block);
+      cols.forEach(function(c){
+        types.forEach(function(t){
+          var v=numVal(block[t]&&block[t][c.k]);
+          if(!v) return;
+          if(cfg.hoTro[p]){ kq.hoTro+=v; return; } // hỗ trợ: dòng riêng, không cộng vào Tổng/Đi làm/Nghỉ
+          kq.tong+=v;
+          var laNghi=(t===cfg.nghi);
+          if(laNghi) kq.nghi+=v;
+          if(cn&&c.k===cn.k){ kq.cnchT+=v; if(!laNghi) kq.cnchDl+=v; }
+          if(lx&&c.k===lx.k){ kq.lxlmT+=v; if(!laNghi) kq.lxlmDl+=v; }
+        });
+      });
+    });
+    kq.diLam=kq.tong-kq.nghi;
+    return kq;
+  }
+  function sumMmtbPayload(raw,cfg){
+    var kq={hd:0,tong:0};
+    if(!raw||typeof raw!=='object') return kq;
     var dt=raw.data||raw;
     if(dt.data && typeof dt.data==='object') dt=dt.data;
-    var hd=0,tong=0;
-    Object.keys(dt||{}).forEach(function(p){
-      var block=dt[p]; if(!block||typeof block!=='object') return;
-      // status: hd/hh/lk or Vietnamese
-      Object.keys(block).forEach(function(st){
-        var cell=block[st];
-        if(typeof cell==='object'){
-          Object.keys(cell).forEach(function(mk){
-            var v=numVal(cell[mk]);
-            tong+=v;
-            var low=String(st).toLowerCase();
-            if(low.indexOf('hd')>=0||low.indexOf('hoat')>=0||low==='hoat_dong') hd+=v;
-          });
-        }
+    // giống khung Tổng hợp của báo cáo từng đơn vị: máy thi công, dự án Nhân sự không phải hỗ trợ
+    cfg.projs.forEach(function(p){
+      if(cfg.hoTro[p]) return;
+      var pd=dt[p]; if(!pd||typeof pd!=='object') return;
+      cfg.mays.forEach(function(mk){
+        var h=numVal(pd.hoatdong&&pd.hoatdong[mk]);
+        kq.hd+=h;
+        kq.tong+=h+numVal(pd.huhong&&pd.huhong[mk])+numVal(pd.luukho&&pd.luukho[mk]);
       });
     });
-    return {hd:hd,tong:tong};
+    return kq;
   }
 
   var rows=[];
-  var tot={tong:0,diLam:0,nghi:0,cnchDl:0,cnchT:0,lxlmDl:0,lxlmT:0,mHd:0,mTong:0};
+  var tot={tong:0,diLam:0,nghi:0,hoTro:0,cnchDl:0,cnchT:0,lxlmDl:0,lxlmT:0,mHd:0,mTong:0};
   for(var i=0;i<units.length;i++){
     var u=units[i];
     var nsRaw=null, mRaw=null;
+    var cfg=await taiCfgDonVi(u.id);
     try{
       var r1=await sc.from('nhansu').select('data').eq('ngay',tk).eq('don_vi_id',u.id).maybeSingle();
       nsRaw=r1.data?r1.data.data:null;
@@ -1325,15 +1327,14 @@ async function exportTongHop4DonVi(){
       var r2=await sc.from('mmtb').select('data').eq('ngay',tk).eq('don_vi_id',u.id).maybeSingle();
       mRaw=r2.data?r2.data.data:null;
     }catch(e){}
-    var ns=sumNsPayload(nsRaw);
-    var mm=sumMmtbPayload(mRaw);
+    var ns=sumNsPayload(nsRaw,cfg);
+    var mm=sumMmtbPayload(mRaw,cfg);
     rows.push({ten:u.ten||u.id, ns:ns, mm:mm});
-    tot.tong+=ns.tong; tot.diLam+=ns.diLam; tot.nghi+=ns.nghi;
+    tot.tong+=ns.tong; tot.diLam+=ns.diLam; tot.nghi+=ns.nghi; tot.hoTro+=ns.hoTro;
     tot.cnchDl+=ns.cnchDl; tot.cnchT+=ns.cnchT;
     tot.lxlmDl+=ns.lxlmDl; tot.lxlmT+=ns.lxlmT;
     tot.mHd+=mm.hd; tot.mTong+=mm.tong;
   }
-
   function fmt2(a,b){ return (b? (a+'/'+b) : String(a||0)); }
 
   var wrap=document.createElement('div');
@@ -1361,9 +1362,10 @@ async function exportTongHop4DonVi(){
   addRow('Tổng NS', function(r){return r.ns.tong;}, tot.tong, false);
   addRow('Đi làm', function(r){return r.ns.diLam;}, tot.diLam, true);
   addRow('Nghỉ', function(r){return r.ns.nghi;}, tot.nghi, false);
-  addRow('CNCH (đi làm/tổng)', function(r){return fmt2(r.ns.cnchDl,r.ns.cnchT);}, fmt2(tot.cnchDl,tot.cnchT), true);
-  addRow('LXLM (đi làm/tổng)', function(r){return fmt2(r.ns.lxlmDl,r.ns.lxlmT);}, fmt2(tot.lxlmDl,tot.lxlmT), false);
-  addRow('SL.MMTB (HĐ/tổng)', function(r){return fmt2(r.mm.hd,r.mm.tong);}, fmt2(tot.mHd,tot.mTong), true);
+  addRow('Hỗ trợ dự án khác', function(r){return r.ns.hoTro;}, tot.hoTro, true);
+  addRow('CNCH (đi làm/tổng)', function(r){return fmt2(r.ns.cnchDl,r.ns.cnchT);}, fmt2(tot.cnchDl,tot.cnchT), false);
+  addRow('LXLM (đi làm/tổng)', function(r){return fmt2(r.ns.lxlmDl,r.ns.lxlmT);}, fmt2(tot.lxlmDl,tot.lxlmT), true);
+  addRow('SL.MMTB (HĐ/tổng)', function(r){return fmt2(r.mm.hd,r.mm.tong);}, fmt2(tot.mHd,tot.mTong), false);
   html+='</table>';
   html+='<div style="margin-top:12px;font-size:11px;color:#5d6478;">Nguồn: số liệu đã lưu trong ngày của từng đơn vị · Xuất lúc '+p2(n.getHours())+':'+p2(n.getMinutes())+'</div>';
   wrap.innerHTML=html;
@@ -1977,10 +1979,10 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
   html+='<div style="border-top:1px solid #ddd;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;"><span style="color:#555;">Tổng</span><span style="font-weight:700;color:#1a1a1a">'+grandTotal+'</span></div>';
   // Tách dòng Đi làm/Nghỉ theo loại ca CUỐI CÙNG trong cấu hình (quy ước Nghỉ theo vị trí)
   if(nk){
+    // Chỉ cộng chức danh ĐANG HIỆN (giống bảng trên màn hình) — trước đây cộng mọi số trong hàng Nghỉ,
+    // kể cả chức danh đã ẩn/cũ còn sót, làm ảnh xuất lệch Đi làm/Nghỉ so với màn hình.
     var nghiTotal=0;
-    nsProjsSum.forEach(function(p){
-      if(nsData[p]&&nsData[p][nk])Object.values(nsData[p][nk]).forEach(function(v){nghiTotal+=v||0;});
-    });
+    (nsCols&&nsCols.length?nsCols:DEF_COLS).forEach(function(c){ nghiTotal+=calcColNghi(c.k,nsProjsSum,nsData); });
     var diLamTotal=grandTotal-nghiTotal;
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#555;">Đi làm</span><span style="font-weight:700;color:#1a1a1a">'+diLamTotal+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#e53935;">Nghỉ</span><span style="font-weight:700;color:#e53935">'+nghiTotal+'</span></div>';
