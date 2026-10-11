@@ -485,10 +485,6 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">📞</div>
         <div><div class="mod-title">Danh bạ</div><div class="mod-sub">Liên hệ nội bộ</div></div>
       </div>
-      <div class="mod-tile c-mmtb span2" data-quyen="dinh_bien_mmtb" onclick="goModuleDinhBienMMTB()">
-        <div class="mod-icon">🚜</div>
-        <div><div class="mod-title">Định biên MMTB</div><div class="mod-sub">Định biên máy móc thiết bị</div></div>
-      </div>
       <div class="mod-tile c-ban span2" data-quyen="ban_tin" onclick="goModuleBanTin()">
         <div class="mod-icon">📰</div>
         <div><div class="mod-title">Bản tin</div><div class="mod-sub">Tin tức & thông báo dự án</div></div>
@@ -603,10 +599,54 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
 
 </div>
+<!-- ============ ĐỊNH BIÊN MMTB (trong báo cáo MMTB) ============ -->
+<style>
+#screen-dbm .dbm-card{background:#fff;border:1px solid #d7dee6;border-radius:14px;padding:14px;margin-top:6px}
+#screen-dbm h2{font-size:16px;margin:0 0 4px;color:#e65100;font-weight:800}
+#screen-dbm .dbm-sub{font-size:12px;color:#5b6b7d;margin:0 0 10px;line-height:1.5}
+#screen-dbm .dbm-tabs{display:flex;gap:8px;border-bottom:2px solid #d7dee6;margin-bottom:10px}
+#screen-dbm .dbm-tab{background:none;border:none;border-bottom:3px solid transparent;padding:9px 12px;font-weight:700;font-size:12.5px;color:#5b6b7d;cursor:pointer;font-family:inherit}
+#screen-dbm .dbm-tab.active{color:#e65100;border-bottom-color:#ff8a3d}
+#screen-dbm .dbm-tool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+#screen-dbm select{padding:7px 9px;border-radius:8px;border:1.5px solid #d7dee6;font-family:inherit;font-size:12.5px}
+#dbm-tbl{border-collapse:collapse;font-size:12.5px;width:100%}
+#dbm-tbl th,#dbm-tbl td{border:1px solid #d7dee6;padding:0;text-align:center;white-space:nowrap}
+#dbm-tbl th{background:#f0f3f7;padding:4px;position:sticky;top:0}
+#dbm-tbl .dbm-l{position:sticky;left:0;background:#f0f3f7;text-align:left;padding:4px 6px;min-width:230px;z-index:1}
+#dbm-tbl .dbm-an{opacity:.45}
+#dbm-tbl .dbm-in{border:1.5px solid #d7dee6;border-radius:6px;font-family:inherit;font-size:12.5px;padding:5px;background:#fff}
+#dbm-tbl .dbm-cn{width:62px;text-align:center;font-weight:700}
+#dbm-tbl .dbm-rn{width:calc(100% - 78px);font-weight:700}
+#dbm-tbl .dbm-n{width:66px;border:none;text-align:center;padding:8px 4px}
+#dbm-tbl .dbm-x{cursor:pointer;color:#c62828;font-weight:900;font-size:12px;margin-left:4px}
+#dbm-tbl .dbm-ud button{border:1px solid #d7dee6;background:#fff;border-radius:3px;width:20px;height:13px;padding:0;font-size:8px;font-weight:900;cursor:pointer;display:block}
+#dbm-tbl .dbm-ud{display:inline-flex;flex-direction:column;gap:1px;vertical-align:middle;margin-right:4px}
+</style>
+<div id="screen-dbm" class="app-screen">
+  <div class="back-bar"><button class="back-btn" onclick="dbmVe()">← Về báo cáo MMTB</button></div>
+  <div class="dbm-card">
+    <h2>📐 Định biên MMTB</h2>
+    <p class="dbm-sub">Cột = mốc <b>ngày bắt đầu áp dụng</b> (VD "01/01" áp dụng từ 01/01 đến trước mốc kế tiếp). Hàng = loại máy. Có thể copy vùng từ Excel rồi dán vào ô số.</p>
+    <div class="dbm-tabs">
+      <button type="button" class="dbm-tab active" data-t="1">🚜 Máy thi công</button>
+      <button type="button" class="dbm-tab" data-t="2">🔧 Thiết bị hỗ trợ</button>
+    </div>
+    <div class="dbm-tool">
+      <select id="dbm-nam"></select>
+      <button class="btn btn-sm btn-or" onclick="dbmThemHang()">+ Thêm loại máy</button>
+      <button class="btn btn-sm btn-or" onclick="dbmThemCot()">+ Thêm cột ngày</button>
+      <button class="btn btn-sm btn-gr" onclick="dbmLuu()">💾 Lưu tất cả</button>
+    </div>
+    <div style="overflow-x:auto;border:1px solid #d7dee6;border-radius:10px"><table id="dbm-tbl"></table></div>
+  </div>
+</div>
+
 <!-- ============ MODULE MMTB ============ -->
 <div id="screen-mmtb" class="app-screen">
   <div class="back-bar">
     <button class="back-btn" onclick="showScreen('home')">← Quay lại</button>
+    <button class="back-btn" id="dbm-ss-btn" style="margin-left:auto" onclick="dbmDoiSoSanh()">⚖️ So sánh: Tắt</button>
+    <button class="back-btn" onclick="dbmMo()">📐 Định biên</button>
   </div>
 
   <div class="login-box" style="background:#e65100">
@@ -802,15 +842,6 @@ function goModuleDinhBien(){
   }
   try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN||{})); }catch(e){}
   location.href = 'dinh-bien.html';
-}
-
-function goModuleDinhBienMMTB(){
-  if(window.BCH_QUYEN && !window.BCH_QUYEN.dinh_bien_mmtb){
-    toast('🔒 Bạn chưa được cấp quyền Định biên MMTB. Liên hệ Ban chỉ huy.');
-    return;
-  }
-  try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN||{})); }catch(e){}
-  location.href = 'dinh-bien-mmtb.html';
 }
 
 function showScreen(name){
@@ -4943,6 +4974,7 @@ function mmtbRenderLog(){
 }
 
 function mmtbRenderTable(){
+  if(dbmNgayTai!==(getDonViId()||'')+'|'+(mmtbVDate||mmtbTkey())){ dbmTaiSoSanh().then(function(ch){ if(ch)dbmRenderLai(); }); }
   var iv=!!mmtbVDate;
   var dis=(!mmtbEdit)?'disabled':'';
   mmtbEnsureData();
@@ -4953,6 +4985,7 @@ function mmtbRenderTable(){
     h+='<th colspan="3" style="background:#e3e9f5;color:#1a1a1a;">'+projName(proj)+'</th>';
   });
   h+='<th rowspan="2" style="background:#F7C31E;color:#0F2A5C;min-width:42px">Tổng</th>';
+  if(dbmSoSanh) h+='<th rowspan="2" style="min-width:56px;background:#e3f2fd">Định biên</th><th rowspan="2" style="min-width:64px;background:#e3f2fd">Chênh lệch</th>';
   h+='<th rowspan="2" style="min-width:120px">Ghi chú</th>';
   h+='<th rowspan="2" style="min-width:160px">Báo cáo tổng hợp MMTB</th>';
   h+='</tr><tr>';
@@ -4979,6 +5012,7 @@ function mmtbRenderTable(){
       });
     });
     h+='<td id="mmtb-rt-'+m.k+'" style="background:#FCF3D9;font-weight:800">'+mmtbFmtN(rowTotal)+'</td>';
+    if(dbmSoSanh) h+='<td id="dbm-db-'+m.k+'" style="background:#f1f8ff;font-weight:700"></td><td id="dbm-cl-'+m.k+'" style="background:#f1f8ff;font-weight:800"></td>';
     var mmtbNoteVal=mmtbNotes[m.k]||'';
     h+='<td style="padding:4px 6px;vertical-align:top;background:#fffdf5;">'
       +'<textarea rows="1" style="width:100%;border:none;background:transparent;font-size:11px;font-family:inherit;outline:none;resize:none;overflow:hidden;line-height:1.3;min-height:22px;" '
@@ -5002,6 +5036,7 @@ function mmtbRenderTable(){
     });
   });
   h+='<td id="mmtb-tong-grand" style="background:#F7C31E;"></td>';
+  if(dbmSoSanh) h+='<td id="dbm-db-tong" style="background:#e3f2fd"></td><td id="dbm-cl-tong" style="background:#e3f2fd"></td>';
   h+='<td></td>';
   h+='</tr>';
   h+='</tbody>';
@@ -5038,6 +5073,7 @@ function mmtbCalcTotals(){
   });
   var elGrand=document.getElementById('mmtb-tong-grand');
   if(elGrand)elGrand.textContent=mmtbFmtN(grand);
+  dbmCapNhat();
 }
 
 // mmtbAddMachine/mmtbRenameMachine/mmtbDelMachine đã bỏ — Loại máy giờ quản lý 100% ở trang Quản
@@ -6268,7 +6304,7 @@ async function renderHomeThongBao(){
   if(true){
     var headerDiv = userSlot || document.querySelector('.hh-body');
 
-    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', dinh_bien_mmtb:'Định biên MMTB', danh_ba:'Danh bạ', ban_tin:'Bản tin' };
+    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', danh_ba:'Danh bạ', ban_tin:'Bản tin' };
     var overlay = document.createElement('div');
     overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5000;align-items:center;justify-content:center;padding:20px;';
     var quyenBadges = Object.keys(window.BCH_QUYEN).filter(function(k){return window.BCH_QUYEN[k];})
@@ -6454,6 +6490,180 @@ if('serviceWorker' in navigator){
     <button type="button" class="btn-ok" id="danhba-notice-ok">Đã hiểu</button>
   </div>
 </div>
+
+<script>
+/* ===== ĐỊNH BIÊN MMTB (tiền tố dbm) — chỉ phục vụ màn Định biên + so sánh trong báo cáo MMTB ===== */
+var dbmPass='', dbmRows=[], dbmCols=[], dbmVal={}, dbmNam=new Date().getFullYear(), dbmTab='1';
+var dbmSoSanh=false, dbmDB={}, dbmNgayTai='';
+function dbmEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function dbmNorm(s){return String(s||'').toLowerCase().replace(/\s+/g,' ').trim();}
+async function dbmRpc(name,p){
+  var dv=getDonViId()||'khanh_hoa';
+  var r=await sc.rpc(name,Object.assign({},p||{},{p_don_vi_id:dv}));
+  if(r.error&&dv==='khanh_hoa'&&(r.error.code==='PGRST202'||/Could not find the function/i.test(r.error.message||''))) r=await sc.rpc(name,p||{});
+  return r;
+}
+async function dbmXacThuc(p){
+  var r=await sc.rpc('dinhbien_dang_nhap',{p_pass:p,p_don_vi_id:getDonViId()||'khanh_hoa'});
+  return !r.error&&!!r.data;
+}
+/* ---------- Vào / ra màn Định biên ---------- */
+async function dbmMo(){
+  var p=prompt('🔒 Nhập mật khẩu vận hành để vào Định biên MMTB:');
+  if(p===null)return;
+  if(!(await dbmXacThuc(p))){alert('❌ Sai mật khẩu!');return;}
+  dbmPass=p;
+  var sel=document.getElementById('dbm-nam'),now=new Date().getFullYear();
+  sel.innerHTML='';
+  for(var y=now-1;y<=now+2;y++){var o=document.createElement('option');o.value=y;o.textContent='Năm '+y;if(y===dbmNam)o.selected=true;sel.appendChild(o);}
+  showScreen('dbm');
+  await dbmTai();
+}
+function dbmVe(){
+  dbmPass='';
+  showScreen('mmtb');
+  dbmNgayTai='';
+  dbmTaiSoSanh().then(function(){dbmRenderLai();});
+}
+function dbmRenderLai(){ mmtbRenderTable(); mmtbRenderCharts(); }
+/* ---------- Bảng Định biên ---------- */
+async function dbmTai(){
+  var rs=await Promise.all([
+    dbmRpc('dinhbien_mmtb_lay_danh_sach',{p_tab:dbmTab}),
+    dbmRpc('dinhbien_mmtb_lay_cot',{p_nam:dbmNam,p_tab:dbmTab}),
+    dbmRpc('dinhbien_mmtb_lay_gia_tri',{p_nam:dbmNam,p_tab:dbmTab})]);
+  if(rs[0].error) toast('❌ Không tải được Định biên MMTB: '+(rs[0].error.message||''));
+  var by=function(a,b){return (a.thu_tu||0)-(b.thu_tu||0);};
+  dbmRows=(rs[0].data||[]).slice().sort(by);
+  dbmCols=(rs[1].data||[]).slice().sort(by);
+  dbmVal={};
+  (rs[2].data||[]).forEach(function(v){dbmVal[v.loai_may_id+'_'+v.cot_id]=v.so_luong;});
+  dbmVeBang();
+}
+function dbmVeBang(){
+  var h='<thead><tr><th class="dbm-l">Loại máy</th>';
+  dbmCols.forEach(function(c){h+='<th><input class="dbm-in dbm-cn" data-c="'+c.id+'" value="'+dbmEsc(c.nhan)+'"><span class="dbm-x" data-xc="'+c.id+'">✕</span></th>';});
+  h+='</tr></thead><tbody>';
+  dbmRows.forEach(function(r,i){
+    h+='<tr><td class="dbm-l'+(r.an?' dbm-an':'')+'"><span class="dbm-ud"><button data-up="'+r.id+'"'+(i?'':' disabled')+'>▲</button><button data-dn="'+r.id+'"'+(i<dbmRows.length-1?'':' disabled')+'>▼</button></span>'
+      +'<input class="dbm-in dbm-rn" data-r="'+r.id+'" value="'+dbmEsc(r.ten)+'">'
+      +'<span class="dbm-x" data-an="'+r.id+'" title="'+(r.an?'Hiện lại':'Ẩn')+'">'+(r.an?'👁':'🚫')+'</span><span class="dbm-x" data-xr="'+r.id+'">✕</span></td>';
+    dbmCols.forEach(function(c){h+='<td><input class="dbm-in dbm-n" type="number" data-r="'+r.id+'" data-c="'+c.id+'" value="'+dbmEsc(dbmVal[r.id+'_'+c.id]==null?'':dbmVal[r.id+'_'+c.id])+'"></td>';});
+    h+='</tr>';
+  });
+  document.getElementById('dbm-tbl').innerHTML=h+'</tbody>';
+}
+async function dbmGoi(ham,p,okMsg){
+  var r=await dbmRpc(ham,Object.assign({p_pass:dbmPass,p_tab:dbmTab},p));
+  if(r.error){toast('❌ '+(r.error.message||'Không thực hiện được'));return false;}
+  if(okMsg)toast(okMsg);
+  return true;
+}
+(function(){
+  var tbl=document.getElementById('dbm-tbl');
+  tbl.addEventListener('change',async function(e){
+    var t=e.target,id,r;
+    if(t.classList.contains('dbm-n')){dbmVal[t.dataset.r+'_'+t.dataset.c]=t.value;}
+    else if(t.classList.contains('dbm-rn')){
+      id=parseInt(t.dataset.r); r=dbmRows.find(function(x){return x.id==id;});
+      if(await dbmGoi('dinhbien_mmtb_sua',{p_id:id,p_ten_moi:t.value,p_ten_tat_moi:(r&&r.ten_tat)||null},'✓ Đã lưu tên loại máy.')&&r) r.ten=t.value;
+    }else if(t.classList.contains('dbm-cn')){
+      id=parseInt(t.dataset.c);
+      await dbmGoi('dinhbien_mmtb_sua_cot',{p_id:id,p_nhan_moi:t.value},'✓ Đã đổi tên cột.');
+    }
+  });
+  tbl.addEventListener('click',async function(e){
+    var d=e.target.dataset||{},r;
+    if(d.xr){ r=dbmRows.find(function(x){return x.id==d.xr;}); if(!confirm('Xoá loại máy "'+(r?r.ten:'')+'"? Toàn bộ số liệu (mọi năm) sẽ mất luôn.'))return; if(await dbmGoi('dinhbien_mmtb_xoa',{p_id:parseInt(d.xr)},'✓ Đã xoá loại máy.'))await dbmTai(); }
+    else if(d.xc){ var c=dbmCols.find(function(x){return x.id==d.xc;}); if(!confirm('Xoá cột "'+(c?c.nhan:'')+'"? Số liệu trong cột này sẽ mất luôn.'))return; if(await dbmGoi('dinhbien_mmtb_xoa_cot',{p_id:parseInt(d.xc)},'✓ Đã xoá cột.'))await dbmTai(); }
+    else if(d.an){ r=dbmRows.find(function(x){return x.id==d.an;}); if(!r)return; var an=!r.an; if(an&&!confirm('Ẩn loại máy "'+r.ten+'" khỏi báo cáo MMTB? (số liệu đã nhập vẫn giữ)'))return; if(await dbmGoi('dinhbien_mmtb_an',{p_id:parseInt(d.an),p_an:an},an?'✓ Đã ẩn.':'✓ Đã hiện lại.')){r.an=an;dbmVeBang();} }
+    else if(d.up||d.dn){ var id=parseInt(d.up||d.dn),i=dbmRows.findIndex(function(x){return x.id===id;}),j=i+(d.up?-1:1); if(i<0||j<0||j>=dbmRows.length)return; if(await dbmGoi('dinhbien_mmtb_doi_thu_tu',{p_id1:dbmRows[i].id,p_id2:dbmRows[j].id},'✓ Đã đổi thứ tự.'))await dbmTai(); }
+  });
+  tbl.addEventListener('paste',function(e){
+    var t=e.target; if(!t.classList.contains('dbm-n'))return;
+    e.preventDefault();
+    var text=(e.clipboardData||window.clipboardData).getData('text'); if(!text)return;
+    var ri=dbmRows.findIndex(function(r){return String(r.id)===t.dataset.r;}), ci=dbmCols.findIndex(function(c){return String(c.id)===t.dataset.c;});
+    if(ri<0||ci<0)return;
+    var lines=text.replace(/\r/g,'').split('\n').filter(function(l,i,a){return !(i===a.length-1&&l==='');});
+    lines.forEach(function(line,li){ line.split('\t').forEach(function(val,k){
+      var R=dbmRows[ri+li],C=dbmCols[ci+k]; if(!R||!C)return;
+      var el=tbl.querySelector('input.dbm-n[data-r="'+R.id+'"][data-c="'+C.id+'"]');
+      if(el){el.value=val.trim();dbmVal[R.id+'_'+C.id]=val.trim();}
+    });});
+    toast('✓ Đã dán '+lines.length+' dòng. Bấm "Lưu tất cả" để ghi lại.');
+  });
+  document.querySelectorAll('#screen-dbm .dbm-tab').forEach(function(b){
+    b.addEventListener('click',async function(){
+      document.querySelectorAll('#screen-dbm .dbm-tab').forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active'); dbmTab=b.getAttribute('data-t'); await dbmTai();
+    });
+  });
+  document.getElementById('dbm-nam').addEventListener('change',async function(e){dbmNam=parseInt(e.target.value);await dbmTai();});
+})();
+async function dbmThemHang(){
+  var ten=prompt('Tên loại máy mới (viết đúng tên như trong báo cáo MMTB):');
+  if(!ten||!ten.trim())return;
+  if(await dbmGoi('dinhbien_mmtb_them',{p_ten:ten.trim(),p_ten_tat:null},'✓ Đã thêm loại máy "'+ten.trim()+'".'))await dbmTai();
+}
+async function dbmThemCot(){
+  var n=prompt('Ngày bắt đầu áp dụng (dd/mm, VD: 01/01):');
+  if(!n||!n.trim())return;
+  if(!/^\d{1,2}\/\d{1,2}$/.test(n.trim())){alert('Định dạng chưa đúng, cần kiểu dd/mm (VD: 01/01, 15/03).');return;}
+  if(await dbmGoi('dinhbien_mmtb_them_cot',{p_nhan:n.trim(),p_nam:dbmNam},'✓ Đã thêm cột "'+n.trim()+'".'))await dbmTai();
+}
+async function dbmLuu(){
+  var rows=[];
+  dbmRows.forEach(function(r){dbmCols.forEach(function(c){var v=dbmVal[r.id+'_'+c.id]; if(v!==undefined&&v!=='')rows.push({loai_may_id:r.id,cot_id:c.id,so_luong:v});});});
+  if(!rows.length){toast('❌ Chưa có ô số liệu nào để lưu.');return;}
+  await dbmGoi('dinhbien_mmtb_luu_gia_tri',{p_rows:rows},'✓ Đã lưu '+rows.length+' ô dữ liệu cho năm '+dbmNam+'.');
+}
+/* ---------- So sánh định biên trong báo cáo MMTB ---------- */
+async function dbmTaiSoSanh(){
+  var ymd=mmtbVDate||mmtbTkey();
+  dbmNgayTai=(getDonViId()||'')+'|'+ymd;
+  var truoc=dbmSoSanh;
+  try{ var r=await dbmRpc('dinhbien_mmtb_lay_so_sanh',{}); var d=r.error?false:r.data; dbmSoSanh=(d===true||!!(d&&d.bat===true)); }catch(e){dbmSoSanh=false;}
+  dbmDB={};
+  if(dbmSoSanh){ try{
+    var nam=+ymd.slice(0,4), md=(+ymd.slice(5,7))*100+(+ymd.slice(8,10));
+    for(var t=1;t<=2;t++){
+      var rs=await Promise.all([dbmRpc('dinhbien_mmtb_lay_danh_sach',{p_tab:String(t)}),dbmRpc('dinhbien_mmtb_lay_cot',{p_nam:nam,p_tab:String(t)}),dbmRpc('dinhbien_mmtb_lay_gia_tri',{p_nam:nam,p_tab:String(t)})]);
+      var best=null,bk=-1;
+      (rs[1].data||[]).forEach(function(c){var m=/^(\d{1,2})\/(\d{1,2})$/.exec(String(c.nhan).trim()); if(!m)return; var k=(+m[2])*100+(+m[1]); if(k<=md&&k>bk){bk=k;best=c;}});
+      if(!best)continue;
+      var vm={}; (rs[2].data||[]).forEach(function(v){if(String(v.cot_id)===String(best.id))vm[v.loai_may_id]=v.so_luong;});
+      (rs[0].data||[]).forEach(function(x){ if(vm[x.id]!==undefined&&vm[x.id]!=='')dbmDB[dbmNorm(x.ten)]=Number(vm[x.id])||0; });
+    }
+  }catch(e){} }
+  var b=document.getElementById('dbm-ss-btn'); if(b)b.textContent='⚖️ So sánh: '+(dbmSoSanh?'Bật':'Tắt');
+  return dbmSoSanh||truoc;
+}
+async function dbmDoiSoSanh(){
+  var bat=!dbmSoSanh;
+  var p=prompt('🔒 Mật khẩu vận hành để '+(bat?'BẬT':'TẮT')+' so sánh với định biên:');
+  if(p===null)return;
+  if(!(await dbmXacThuc(p))){alert('❌ Sai mật khẩu!');return;}
+  var r=await dbmRpc('dinhbien_mmtb_dat_so_sanh',{p_pass:p,p_bat:bat});
+  if(r.error){alert('Không đổi được chế độ so sánh: '+(r.error.message||'')+'\n(Cần chạy file SQL cài đặt so sánh trên Supabase.)');return;}
+  await dbmTaiSoSanh(); dbmRenderLai();
+  toast(dbmSoSanh?'✓ Đã BẬT so sánh với định biên.':'✓ Đã TẮT so sánh với định biên.');
+}
+function dbmCapNhat(){
+  if(!dbmSoSanh)return;
+  var tD=0,tT=0;
+  mmtbMachines.forEach(function(m){
+    var a=document.getElementById('dbm-db-'+m.k),c=document.getElementById('dbm-cl-'+m.k); if(!a||!c)return;
+    var t=0; mmtbProjects.forEach(function(p){MMTB_STATUS.forEach(function(s){t+=(mmtbData[p]&&mmtbData[p][s]&&mmtbData[p][s][m.k])||0;});});
+    var d=dbmDB[dbmNorm(m.n)];
+    if(d===undefined){a.textContent='—';c.textContent='—';c.style.color='';return;}
+    tD+=d;tT+=t; a.textContent=mmtbFmtN(d); dbmGhiCL(c,t-d);
+  });
+  var a2=document.getElementById('dbm-db-tong'),c2=document.getElementById('dbm-cl-tong');
+  if(a2){a2.textContent=mmtbFmtN(tD);} if(c2)dbmGhiCL(c2,tT-tD);
+}
+function dbmGhiCL(el,v){ el.textContent=v>0?'+'+v:(v<0?String(v):'0'); el.style.color=v===0?'#2e7d32':(v>0?'#1565c0':'#c62828'); }
+</script>
 
 </body>
 </html>
