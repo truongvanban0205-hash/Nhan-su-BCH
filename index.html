@@ -485,7 +485,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">📞</div>
         <div><div class="mod-title">Danh bạ</div><div class="mod-sub">Liên hệ nội bộ</div></div>
       </div>
-      <div class="mod-tile c-mmtb span2" data-quyen="dinh_bien" onclick="goModuleDinhBienMMTB()">
+      <div class="mod-tile c-mmtb span2" data-quyen="dinh_bien_mmtb" onclick="goModuleDinhBienMMTB()">
         <div class="mod-icon">🚜</div>
         <div><div class="mod-title">Định biên MMTB</div><div class="mod-sub">Định biên máy móc thiết bị</div></div>
       </div>
@@ -805,8 +805,8 @@ function goModuleDinhBien(){
 }
 
 function goModuleDinhBienMMTB(){
-  if(window.BCH_QUYEN && !window.BCH_QUYEN.dinh_bien){
-    toast('🔒 Bạn chưa được cấp quyền Định biên. Liên hệ Ban chỉ huy.');
+  if(window.BCH_QUYEN && !window.BCH_QUYEN.dinh_bien_mmtb){
+    toast('🔒 Bạn chưa được cấp quyền Định biên MMTB. Liên hệ Ban chỉ huy.');
     return;
   }
   try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN||{})); }catch(e){}
@@ -6268,7 +6268,7 @@ async function renderHomeThongBao(){
   if(true){
     var headerDiv = userSlot || document.querySelector('.hh-body');
 
-    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', danh_ba:'Danh bạ', ban_tin:'Bản tin' };
+    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', dinh_bien_mmtb:'Định biên MMTB', danh_ba:'Danh bạ', ban_tin:'Bản tin' };
     var overlay = document.createElement('div');
     overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5000;align-items:center;justify-content:center;padding:20px;';
     var quyenBadges = Object.keys(window.BCH_QUYEN).filter(function(k){return window.BCH_QUYEN[k];})
