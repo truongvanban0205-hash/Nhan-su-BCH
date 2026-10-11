@@ -575,7 +575,7 @@
 <div class="modal-overlay" id="modalCauHinh">
   <div class="modal" style="max-width:760px;">
     <h3>⚙️ Cấu hình chung</h3>
-    <p class="sub" style="margin-top:-6px;margin-bottom:12px;">Dự án · Ca · Loại máy — thay đổi áp dụng ngay cho báo cáo.</p>
+    <p class="sub" style="margin-top:-6px;margin-bottom:12px;">Dự án · Ca · Tên nhóm máy — thay đổi áp dụng ngay cho báo cáo.</p>
 
     <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:20px;">
       <div style="flex:1; min-width:260px;">
@@ -598,17 +598,17 @@
 
     <div style="margin-bottom:20px;">
     <div class="cfg-box">
-      <div class="cfg-box-title">🚜 Loại máy MMTB — 2 nhóm</div>
-      <p class="sub" style="margin:0 0 10px;font-size:12px;">Cột <b>SL.MMTB</b> chỉ tính <b>Máy thi công</b>. Tên nhóm sửa rồi bấm 💾.</p>
+      <div class="cfg-box-title">🚜 Tên nhóm máy MMTB</div>
+      <p class="sub" style="margin:0 0 10px;font-size:12px;">Cột <b>SL.MMTB</b> chỉ tính <b>Máy thi công</b>. Tên nhóm sửa rồi bấm 💾. Danh sách loại máy quản lý tại <b>Báo cáo MMTB › 📐 Định biên</b>.</p>
       <div class="cfg-grid">
         <div>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
             <input type="text" id="tenNhomThiCong" value="Máy thi công" style="margin:0;flex:1;font-weight:700;font-size:13px;">
             <button class="icon-btn" id="btnLuuTenNhomThiCong" title="Lưu tên nhóm">💾</button>
-            <span id="countMayThiCong" style="font-size:11px;color:var(--muted);">0</span>
+            <span id="countMayThiCong" style="display:none;font-size:11px;color:var(--muted);">0</span>
           </div>
-          <div id="listLoaiMayThiCong" class="cfg-list"></div>
-          <div class="cfg-add">
+          <div id="listLoaiMayThiCong" class="cfg-list" style="display:none;"></div>
+          <div class="cfg-add" style="display:none;">
             <input type="text" id="inputMayMoiThiCong" placeholder="Tên máy thi công mới" onkeydown="if(event.key==='Enter')document.getElementById('btnThemMayThiCong').click()">
             <button class="btn small" id="btnThemMayThiCong">+ Thêm</button>
           </div>
@@ -617,10 +617,10 @@
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
             <input type="text" id="tenNhomPhuTro" value="Máy phụ trợ" style="margin:0;flex:1;font-weight:700;font-size:13px;">
             <button class="icon-btn" id="btnLuuTenNhomPhuTro" title="Lưu tên nhóm">💾</button>
-            <span id="countMayPhuTro" style="font-size:11px;color:var(--muted);">0</span>
+            <span id="countMayPhuTro" style="display:none;font-size:11px;color:var(--muted);">0</span>
           </div>
-          <div id="listLoaiMayPhuTro" class="cfg-list"></div>
-          <div class="cfg-add">
+          <div id="listLoaiMayPhuTro" class="cfg-list" style="display:none;"></div>
+          <div class="cfg-add" style="display:none;">
             <input type="text" id="inputMayMoiPhuTro" placeholder="Tên máy phụ trợ mới" onkeydown="if(event.key==='Enter')document.getElementById('btnThemMayPhuTro').click()">
             <button class="btn small" id="btnThemMayPhuTro">+ Thêm</button>
           </div>
@@ -912,8 +912,6 @@ const MODULE_CATALOG = [
   { nhan: "Báo cáo Nhân sự", ma: "bao_cao_nhan_su" },
   { nhan: "Báo cáo MMTB", ma: "bao_cao_mmtb" },
   // Lịch nghiệm thu đã gỡ khỏi app
-  { nhan: "Định biên", ma: "dinh_bien" },
-  { nhan: "Định biên MMTB", ma: "dinh_bien_mmtb" },
   { nhan: "Danh bạ", ma: "danh_ba" },
   { nhan: "Bản tin", ma: "ban_tin" },
 ];

@@ -477,17 +477,13 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">🚜</div>
         <div><div class="mod-title">MMTB</div><div class="mod-sub">Máy móc thiết bị</div></div>
       </div>
-      <div class="mod-tile c-dinh" data-quyen="dinh_bien" onclick="goModuleDinhBien()">
-        <div class="mod-icon">📊</div>
-        <div><div class="mod-title">Định biên</div><div class="mod-sub">Biên chế theo dự án</div></div>
+      <div class="mod-tile c-ban" data-quyen="ban_tin" onclick="goModuleBanTin()">
+        <div class="mod-icon">📰</div>
+        <div><div class="mod-title">Bản tin</div><div class="mod-sub">Tin tức & thông báo dự án</div></div>
       </div>
       <div class="mod-tile c-hc" data-quyen="danh_ba" onclick="openDanhBa()">
         <div class="mod-icon">📞</div>
         <div><div class="mod-title">Danh bạ</div><div class="mod-sub">Liên hệ nội bộ</div></div>
-      </div>
-      <div class="mod-tile c-ban span2" data-quyen="ban_tin" onclick="goModuleBanTin()">
-        <div class="mod-icon">📰</div>
-        <div><div class="mod-title">Bản tin</div><div class="mod-sub">Tin tức & thông báo dự án</div></div>
       </div>
     </div>
     </div>
@@ -865,23 +861,6 @@ function goModuleBanTin(){
   }
   location.href = 'ban-tin.html';
 }
-function goModuleDinhBien(){
-  if(window.BCH_QUYEN && window.BCH_QUYEN.dinh_bien === false){
-    toast('🔒 Bạn chưa được cấp quyền Định biên. Liên hệ Ban chỉ huy.');
-    return;
-  }
-  if(window.BCH_QUYEN && !window.BCH_QUYEN.dinh_bien){
-    // quyen object có nhưng không tick Định biên
-    var el = document.querySelector('.mod-tile[data-quyen="dinh_bien"]');
-    if(el && el.classList.contains('locked')){
-      toast('🔒 Bạn chưa được cấp quyền Định biên. Liên hệ Ban chỉ huy.');
-      return;
-    }
-  }
-  try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN||{})); }catch(e){}
-  location.href = 'dinh-bien.html';
-}
-
 function showScreen(name){
   document.querySelectorAll('.app-screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-'+name).classList.add('active');
