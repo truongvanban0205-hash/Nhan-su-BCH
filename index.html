@@ -530,6 +530,8 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 <div id="screen-ns" class="app-screen">
   <div class="back-bar">
     <button class="back-btn" onclick="showScreen('home')">← Quay lại</button>
+    <button class="back-btn" id="dbn-ss-btn" style="margin-left:auto" onclick="dbnDoiSoSanh()">⚖️ So sánh: Tắt</button>
+    <button class="back-btn" onclick="dbnMo()">📐 Định biên</button>
   </div>
 
 
@@ -599,6 +601,42 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
 
 </div>
+<!-- ============ ĐỊNH BIÊN NHÂN SỰ (trong báo cáo Nhân sự) ============ -->
+<style>
+#screen-dbn .dbn-card{background:#fff;border:1px solid #d7dee6;border-radius:14px;padding:14px;margin-top:6px}
+#screen-dbn h2{font-size:16px;margin:0 0 4px;color:#1565c0;font-weight:800}
+#screen-dbn .dbn-sub{font-size:12px;color:#5b6b7d;margin:0 0 10px;line-height:1.5}
+#screen-dbn .dbn-tool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+#screen-dbn select{padding:7px 9px;border-radius:8px;border:1.5px solid #d7dee6;font-family:inherit;font-size:12.5px}
+#dbn-tbl{border-collapse:collapse;font-size:12.5px;width:100%}
+#dbn-tbl th,#dbn-tbl td{border:1px solid #d7dee6;padding:0;text-align:center;white-space:nowrap}
+#dbn-tbl th{background:#f0f3f7;padding:4px;position:sticky;top:0}
+#dbn-tbl .dbn-l{position:sticky;left:0;background:#f0f3f7;text-align:left;padding:4px 6px;min-width:240px;z-index:1}
+#dbn-tbl .dbn-an{opacity:.45}
+#dbn-tbl .dbn-in{border:1.5px solid #d7dee6;border-radius:6px;font-family:inherit;font-size:12.5px;padding:5px;background:#fff}
+#dbn-tbl .dbn-cn{width:62px;text-align:center;font-weight:700}
+#dbn-tbl .dbn-rn{width:calc(100% - 78px);font-weight:700}
+#dbn-tbl .dbn-rt{width:calc(100% - 64px);font-size:11.5px;padding:3px 5px}
+#dbn-tbl .dbn-n{width:66px;border:none;text-align:center;padding:8px 4px}
+#dbn-tbl .dbn-x{cursor:pointer;color:#c62828;font-weight:900;font-size:12px;margin-left:4px}
+#dbn-tbl .dbn-ud button{border:1px solid #d7dee6;background:#fff;border-radius:3px;width:20px;height:13px;padding:0;font-size:8px;font-weight:900;cursor:pointer;display:block}
+#dbn-tbl .dbn-ud{display:inline-flex;flex-direction:column;gap:1px;vertical-align:middle;margin-right:4px}
+</style>
+<div id="screen-dbn" class="app-screen">
+  <div class="back-bar"><button class="back-btn" onclick="dbnVe()">← Về báo cáo Nhân sự</button></div>
+  <div class="dbn-card">
+    <h2>📊 Định biên Nhân sự</h2>
+    <p class="dbn-sub">Cột = mốc <b>ngày bắt đầu áp dụng</b> (VD "01/01"). Báo cáo Nhân sự lấy chức danh và định biên ở đây — sửa ở đây, báo cáo tự cập nhật. Có thể copy vùng từ Excel rồi dán vào ô số.</p>
+    <div class="dbn-tool">
+      <select id="dbn-nam"></select>
+      <button class="btn btn-sm btn-or" onclick="dbnThemHang()">+ Thêm chức danh</button>
+      <button class="btn btn-sm btn-or" onclick="dbnThemCot()">+ Thêm cột ngày</button>
+      <button class="btn btn-sm btn-gr" onclick="dbnLuu()">💾 Lưu tất cả</button>
+    </div>
+    <div style="overflow-x:auto;border:1px solid #d7dee6;border-radius:10px"><table id="dbn-tbl"></table></div>
+  </div>
+</div>
+
 <!-- ============ ĐỊNH BIÊN MMTB (trong báo cáo MMTB) ============ -->
 <style>
 #screen-dbm .dbm-card{background:#fff;border:1px solid #d7dee6;border-radius:14px;padding:14px;margin-top:6px}
@@ -1478,6 +1516,9 @@ async function exportFullReport(){
     }
   }catch(e){}
 
+  // Công tắc so sánh (Nhân sự / MMTB) — ảnh xuất làm đúng theo chế độ đang bật/tắt
+  try{ var _oNs=await dbnLayDB(tk); dbnSoSanh=_oNs.bat; }catch(e){}
+  try{ dbmExp=await dbmLayDB(tk); }catch(e){ dbmExp=null; }
   var nsHist=await sHist();
   var mmtbHist=await mmtbSHist();
 
@@ -1778,7 +1819,7 @@ async function exportFullReport(){
 
   // Hàng Định biên (tháng hiện tại) + Chênh lệch — chỉ hiện khi đã có dữ liệu định biên
   var clByCol={}; // lưu lại Chênh lệch từng chức danh để tô màu header (đủ/thiếu/dư)
-  if(dinhBienThangNay && Object.keys(dinhBienThangNay).length){
+  if(dbnSoSanh && dinhBienThangNay && Object.keys(dinhBienThangNay).length){
     nsRows+='<tr><td colspan="2" style="border:2px solid #0F2A5C;padding:4px;background:#e3f2fd;font-weight:800;font-size:11px">Định biên</td>';
     var dbGrandTot=0;
     nsCols.forEach(function(c){
@@ -2162,6 +2203,7 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
       if(pdata.luukho)Object.values(pdata.luukho).forEach(function(v){totalLKy+=v||0;});
     });
   }
+  var _ss=(dbmExp&&dbmExp.bat)?dbmExp.map:null, ssDB=0, ssT=0;
   var changesM2=[]; // dùng cho mục "Ghi chú" — so sánh TOÀN BỘ loại máy với hôm qua, kể cả khi hôm nay = 0
   mList.forEach(function(m,i){
     var v=calcMachTotal(m.k,mProjs,dt);
@@ -2173,11 +2215,17 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
       if(v>pv)arrow='<span style="color:#1565c0;font-size:11px;font-weight:900">↑</span> ';
       else if(v<pv)arrow='<span style="color:#e53935;font-size:11px;font-weight:900">↓</span> ';
     }
+    var ssHtml='';
+    if(_ss){ var dd=_ss[dbmNorm(m.n)];
+      if(dd!==undefined){ ssDB+=dd; ssT+=v; var cc=v-dd; ssHtml=' <span style="font-size:9px;font-weight:800;color:'+(cc===0?'#2e7d32':(cc>0?'#1565c0':'#c62828'))+'">ĐB '+dd+' · '+(cc>0?'+'+cc:cc)+'</span>'; }
+      else ssHtml=' <span style="font-size:9px;color:#999">ĐB —</span>'; }
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:1px 0;">'
       +'<span style="display:flex;align-items:center;gap:4px;"><span style="width:7px;height:7px;border-radius:50%;background:'+palette[i%palette.length]+';flex-shrink:0"></span>'
       +'<span style="color:#1a1a1a">'+m.n+'</span></span>'
-      +'<span style="min-width:30px;text-align:right">'+arrow+fmtDL(hd,v)+'</span></div>';
+      +'<span style="min-width:30px;text-align:right">'+arrow+fmtDL(hd,v)+ssHtml+'</span></div>';
   });
+  if(_ss){ var cT=ssT-ssDB;
+    html+='<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;font-size:10px;"><span style="color:#1565c0;font-weight:700">Định biên: '+ssDB+'</span><span style="font-weight:800;color:'+(cT===0?'#2e7d32':(cT>0?'#1565c0':'#c62828'))+'">Chênh lệch: '+(cT>0?'+'+cT:cT)+'</span></div>'; }
   function totArrow(cur,prev){
     if(!ydt)return '';
     if(cur>prev)return '<span style="color:#1565c0;font-size:11px;font-weight:900">↑</span> ';
@@ -3407,6 +3455,7 @@ function renderLog(){
 }
 
 function renderTable(){
+  if(dbnKey!==(getDonViId()||'')+'|'+(vDate||tkey())){ dbnTaiSoSanh().then(function(ch){ if(ch)renderTable(); }); }
   var iv=!!vDate;
   var dis=(!isEdit)?'disabled':'';
   var h='<thead><tr>';
@@ -3425,7 +3474,7 @@ function renderTable(){
 
   var showBch = projects.filter(function(p){return !HO_TRO_PROJS[p];}).length > 1;
   // +1: dòng đệm cuối bảng, nhận phần chiều cao dư của khung tổng hợp để các dòng số liệu luôn cao bằng nhau
-  var chartRowspanTotal = (projects.length+(showBch?1:0))*(TYPES.length+1)+1;
+  var chartRowspanTotal = (projects.length+(showBch?1:0))*(TYPES.length+1)+1+(dbnSoSanh?2:0);
   var chartCellPlaced = false;
 
   projects.forEach(function(proj){
@@ -3488,6 +3537,14 @@ function renderTable(){
     h+='</tr>';
   });
   }
+  if(dbnSoSanh){
+    h+='<tr><td class="stk s0" style="background:#e3f2fd;font-weight:800">Định biên</td><td class="stk s1" style="background:#e3f2fd"></td>';
+    COLS.forEach(function(c){h+='<td id="dbn_db_'+c.k+'" style="background:#e3f2fd;font-weight:700"></td>';});
+    h+='<td id="dbn_db_t" style="background:#e3f2fd;font-weight:800"></td></tr>';
+    h+='<tr><td class="stk s0" style="background:#f5f5f5;font-weight:800">Chênh lệch</td><td class="stk s1" style="background:#f5f5f5"></td>';
+    COLS.forEach(function(c){h+='<td id="dbn_cl_'+c.k+'" style="background:#f5f5f5;font-weight:800"></td>';});
+    h+='<td id="dbn_cl_t" style="background:#f5f5f5;font-weight:800"></td></tr>';
+  }
   h+='<tr class="chart-spacer"><td colspan="'+(COLS.length+3)+'" style="padding:0;border:none;background:transparent;height:0;line-height:0;font-size:0;"></td></tr>';
   h+='</tbody>';
   document.getElementById('mt').innerHTML=h;
@@ -3549,6 +3606,7 @@ function calcTotals(){
   });
   var bgte=document.getElementById('b_bt_t');
   if(bgte)bgte.textContent=fmtN(bgt);
+  dbnCapNhat();
 }
 
 async function renderCharts(){
@@ -6626,13 +6684,10 @@ async function dbmLuu(){
   await dbmGoi('dinhbien_mmtb_luu_gia_tri',{p_rows:rows},'✓ Đã lưu '+rows.length+' ô dữ liệu cho năm '+dbmNam+'.');
 }
 /* ---------- So sánh định biên trong báo cáo MMTB ---------- */
-async function dbmTaiSoSanh(){
-  var ymd=mmtbVDate||mmtbTkey();
-  dbmNgayTai=(getDonViId()||'')+'|'+ymd;
-  var truoc=dbmSoSanh;
-  try{ var r=await dbmRpc('dinhbien_mmtb_lay_so_sanh',{}); var d=r.error?false:r.data; dbmSoSanh=(d===true||!!(d&&d.bat===true)); }catch(e){dbmSoSanh=false;}
-  dbmDB={};
-  if(dbmSoSanh){ try{
+async function dbmLayDB(ymd){
+  var o={bat:false,map:{}};
+  try{ var r=await dbmRpc('dinhbien_mmtb_lay_so_sanh',{}); var d=r.error?false:r.data; o.bat=(d===true||!!(d&&d.bat===true)); }catch(e){}
+  if(o.bat){ try{
     var nam=+ymd.slice(0,4), md=(+ymd.slice(5,7))*100+(+ymd.slice(8,10));
     for(var t=1;t<=2;t++){
       var rs=await Promise.all([dbmRpc('dinhbien_mmtb_lay_danh_sach',{p_tab:String(t)}),dbmRpc('dinhbien_mmtb_lay_cot',{p_nam:nam,p_tab:String(t)}),dbmRpc('dinhbien_mmtb_lay_gia_tri',{p_nam:nam,p_tab:String(t)})]);
@@ -6640,9 +6695,17 @@ async function dbmTaiSoSanh(){
       (rs[1].data||[]).forEach(function(c){var m=/^(\d{1,2})\/(\d{1,2})$/.exec(String(c.nhan).trim()); if(!m)return; var k=(+m[2])*100+(+m[1]); if(k<=md&&k>bk){bk=k;best=c;}});
       if(!best)continue;
       var vm={}; (rs[2].data||[]).forEach(function(v){if(String(v.cot_id)===String(best.id))vm[v.loai_may_id]=v.so_luong;});
-      (rs[0].data||[]).forEach(function(x){ if(vm[x.id]!==undefined&&vm[x.id]!=='')dbmDB[dbmNorm(x.ten)]=Number(vm[x.id])||0; });
+      (rs[0].data||[]).forEach(function(x){ if(vm[x.id]!==undefined&&vm[x.id]!=='')o.map[dbmNorm(x.ten)]=Number(vm[x.id])||0; });
     }
   }catch(e){} }
+  return o;
+}
+var dbmExp=null;
+async function dbmTaiSoSanh(){
+  var ymd=mmtbVDate||mmtbTkey();
+  dbmNgayTai=(getDonViId()||'')+'|'+ymd;
+  var truoc=dbmSoSanh;
+  var o=await dbmLayDB(ymd); dbmSoSanh=o.bat; dbmDB=o.map;
   var b=document.getElementById('dbm-ss-btn'); if(b)b.textContent='⚖️ So sánh: '+(dbmSoSanh?'Bật':'Tắt');
   return dbmSoSanh||truoc;
 }
@@ -6670,6 +6733,152 @@ function dbmCapNhat(){
   if(a2){a2.textContent=mmtbFmtN(tD);} if(c2)dbmGhiCL(c2,tT-tD);
 }
 function dbmGhiCL(el,v){ el.textContent=v>0?'+'+v:(v<0?String(v):'0'); el.style.color=v===0?'#2e7d32':(v>0?'#1565c0':'#c62828'); }
+/* ===== ĐỊNH BIÊN NHÂN SỰ (tiền tố dbn) + so sánh trong báo cáo Nhân sự ===== */
+var dbnPass='', dbnRows=[], dbnCols=[], dbnVal={}, dbnNam=new Date().getFullYear();
+var dbnSoSanh=false, dbnGia={}, dbnKey='';
+var DBN_CO_DV={dinhbien_lay_danh_sach_chuc_danh:1,dinhbien_lay_danh_sach_cot:1,dinhbien_lay_gia_tri_nam:1,dinhbien_lay_gia_tri_ngay:1,dinhbien_luu_gia_tri:1,dinhbien_them_chuc_danh:1,dinhbien_them_cot:1};
+async function dbnRpc(n,p){ p=p||{}; if(!DBN_CO_DV[n]) return sc.rpc(n,p); return rpcDinhBienDV(n,p); }
+async function dbnGoi(ham,p,okMsg){
+  var r=await dbnRpc(ham,Object.assign({p_pass:dbnPass},p));
+  if(r.error){toast('❌ '+(r.error.message||'Không thực hiện được'));return false;}
+  if(okMsg)toast(okMsg);
+  return true;
+}
+async function dbnMo(){
+  var p=prompt('🔒 Nhập mật khẩu vận hành để vào Định biên Nhân sự:');
+  if(p===null)return;
+  if(!(await dbmXacThuc(p))){alert('❌ Sai mật khẩu!');return;}
+  dbnPass=p;
+  var sel=document.getElementById('dbn-nam'),now=new Date().getFullYear();
+  sel.innerHTML='';
+  for(var y=now-1;y<=now+2;y++){var o=document.createElement('option');o.value=y;o.textContent='Năm '+y;if(y===dbnNam)o.selected=true;sel.appendChild(o);}
+  showScreen('dbn');
+  await dbnTai();
+}
+async function dbnVe(){
+  dbnPass='';
+  showScreen('ns');
+  dbnKey='';
+  try{ await taiDinhBienChucDanh(); }catch(e){ console.error(e); }
+  await dbnTaiSoSanh();
+  renderTable();
+}
+async function dbnTai(){
+  var rs=await Promise.all([dbnRpc('dinhbien_lay_danh_sach_chuc_danh'),dbnRpc('dinhbien_lay_danh_sach_cot',{p_nam:dbnNam}),dbnRpc('dinhbien_lay_gia_tri_nam',{p_nam:dbnNam})]);
+  if(rs[0].error) toast('❌ Không tải được Định biên: '+(rs[0].error.message||''));
+  var by=function(a,b){return (a.thu_tu||0)-(b.thu_tu||0);};
+  dbnRows=(rs[0].data||[]).slice().sort(by);
+  dbnCols=(rs[1].data||[]).slice().sort(by);
+  dbnVal={};
+  (rs[2].data||[]).forEach(function(v){dbnVal[v.chuc_danh_id+'_'+v.cot_id]=v.so_luong;});
+  dbnVeBang();
+}
+function dbnVeBang(){
+  var h='<thead><tr><th class="dbn-l">Chức danh</th>';
+  dbnCols.forEach(function(c){h+='<th><input class="dbn-in dbn-cn" data-c="'+c.id+'" value="'+dbmEsc(c.nhan)+'"><span class="dbn-x" data-xc="'+c.id+'">✕</span></th>';});
+  h+='</tr></thead><tbody>';
+  dbnRows.forEach(function(r,i){
+    h+='<tr><td class="dbn-l'+(r.an?' dbn-an':'')+'"><div><span class="dbn-ud"><button data-up="'+r.id+'"'+(i?'':' disabled')+'>▲</button><button data-dn="'+r.id+'"'+(i<dbnRows.length-1?'':' disabled')+'>▼</button></span>'
+      +'<input class="dbn-in dbn-rn" data-r="'+r.id+'" value="'+dbmEsc(r.ten)+'">'
+      +'<span class="dbn-x" data-an="'+r.id+'" title="'+(r.an?'Hiện lại':'Ẩn khỏi báo cáo')+'">'+(r.an?'👁':'🚫')+'</span><span class="dbn-x" data-xr="'+r.id+'">✕</span></div>'
+      +'<div style="margin-top:3px;font-size:11px;color:#5b6b7d">Viết tắt: <input class="dbn-in dbn-rt" data-rt="'+r.id+'" value="'+dbmEsc(r.ten_tat||'')+'" placeholder="VD: CV.NN"></div></td>';
+    dbnCols.forEach(function(c){var v=dbnVal[r.id+'_'+c.id];h+='<td><input class="dbn-in dbn-n" type="number" data-r="'+r.id+'" data-c="'+c.id+'" value="'+dbmEsc(v==null?'':v)+'"></td>';});
+    h+='</tr>';
+  });
+  document.getElementById('dbn-tbl').innerHTML=h+'</tbody>';
+}
+(function(){
+  var tbl=document.getElementById('dbn-tbl');
+  tbl.addEventListener('change',async function(e){
+    var t=e.target,id,r;
+    if(t.classList.contains('dbn-n')){dbnVal[t.dataset.r+'_'+t.dataset.c]=t.value;}
+    else if(t.classList.contains('dbn-rn')||t.classList.contains('dbn-rt')){
+      id=parseInt(t.dataset.r||t.dataset.rt); r=dbnRows.find(function(x){return x.id==id;});
+      var ni=tbl.querySelector('.dbn-rn[data-r="'+id+'"]'),ti=tbl.querySelector('.dbn-rt[data-rt="'+id+'"]');
+      if(await dbnGoi('dinhbien_sua_chuc_danh',{p_id:id,p_ten_moi:ni.value,p_ten_tat_moi:ti?ti.value:null},'✓ Đã lưu tên chức danh.')&&r){r.ten=ni.value;if(ti)r.ten_tat=ti.value;}
+    }else if(t.classList.contains('dbn-cn')){
+      await dbnGoi('dinhbien_sua_cot',{p_id:parseInt(t.dataset.c),p_nhan_moi:t.value},'✓ Đã đổi tên cột.');
+    }
+  });
+  tbl.addEventListener('click',async function(e){
+    var d=e.target.dataset||{},r;
+    if(d.xr){ r=dbnRows.find(function(x){return x.id==d.xr;}); if(!confirm('Xoá chức danh "'+(r?r.ten:'')+'"? Toàn bộ số liệu định biên của chức danh này (mọi năm) sẽ mất, và báo cáo Nhân sự mất cột này.'))return; if(await dbnGoi('dinhbien_xoa_chuc_danh',{p_id:parseInt(d.xr)},'✓ Đã xoá chức danh.'))await dbnTai(); }
+    else if(d.xc){ var c=dbnCols.find(function(x){return x.id==d.xc;}); if(!confirm('Xoá cột "'+(c?c.nhan:'')+'"? Số liệu định biên trong cột này sẽ mất.'))return; if(await dbnGoi('dinhbien_xoa_cot',{p_id:parseInt(d.xc)},'✓ Đã xoá cột.'))await dbnTai(); }
+    else if(d.an){ r=dbnRows.find(function(x){return x.id==d.an;}); if(!r)return; var an=!r.an; if(an&&!confirm('Ẩn chức danh "'+r.ten+'" khỏi báo cáo Nhân sự? (số liệu định biên vẫn giữ)'))return; if(await dbnGoi('dinhbien_an_chuc_danh',{p_id:parseInt(d.an),p_an:an},an?'✓ Đã ẩn.':'✓ Đã hiện lại.')){r.an=an;dbnVeBang();} }
+    else if(d.up||d.dn){ var id=parseInt(d.up||d.dn),i=dbnRows.findIndex(function(x){return x.id===id;}),j=i+(d.up?-1:1); if(i<0||j<0||j>=dbnRows.length)return; if(await dbnGoi('dinhbien_doi_thu_tu_chuc_danh',{p_id1:dbnRows[i].id,p_id2:dbnRows[j].id},'✓ Đã đổi thứ tự.'))await dbnTai(); }
+  });
+  tbl.addEventListener('paste',function(e){
+    var t=e.target; if(!t.classList.contains('dbn-n'))return;
+    e.preventDefault();
+    var text=(e.clipboardData||window.clipboardData).getData('text'); if(!text)return;
+    var ri=dbnRows.findIndex(function(r){return String(r.id)===t.dataset.r;}), ci=dbnCols.findIndex(function(c){return String(c.id)===t.dataset.c;});
+    if(ri<0||ci<0)return;
+    var lines=text.replace(/\r/g,'').split('\n').filter(function(l,i,a){return !(i===a.length-1&&l==='');});
+    lines.forEach(function(line,li){ line.split('\t').forEach(function(val,k){
+      var R=dbnRows[ri+li],C=dbnCols[ci+k]; if(!R||!C)return;
+      var el=tbl.querySelector('input.dbn-n[data-r="'+R.id+'"][data-c="'+C.id+'"]');
+      if(el){el.value=val.trim();dbnVal[R.id+'_'+C.id]=val.trim();}
+    });});
+    toast('✓ Đã dán '+lines.length+' dòng. Bấm "Lưu tất cả" để ghi lại.');
+  });
+  document.getElementById('dbn-nam').addEventListener('change',async function(e){dbnNam=parseInt(e.target.value);await dbnTai();});
+})();
+async function dbnThemHang(){
+  var ten=prompt('Tên đầy đủ chức danh mới:'); if(!ten||!ten.trim())return;
+  var tat=prompt('Tên viết tắt (hiện trong báo cáo Nhân sự — để trống thì dùng tên đầy đủ):','');
+  if(await dbnGoi('dinhbien_them_chuc_danh',{p_ten:ten.trim(),p_ten_tat:(tat||'').trim()||null},'✓ Đã thêm chức danh "'+ten.trim()+'".'))await dbnTai();
+}
+async function dbnThemCot(){
+  var n=prompt('Ngày bắt đầu áp dụng (dd/mm, VD: 01/01):'); if(!n||!n.trim())return;
+  if(!/^\d{1,2}\/\d{1,2}$/.test(n.trim())){alert('Định dạng chưa đúng, cần kiểu dd/mm (VD: 01/01, 15/03).');return;}
+  if(await dbnGoi('dinhbien_them_cot',{p_nhan:n.trim(),p_nam:dbnNam},'✓ Đã thêm cột "'+n.trim()+'".'))await dbnTai();
+}
+async function dbnLuu(){
+  var rows=[];
+  dbnRows.forEach(function(r){dbnCols.forEach(function(c){var v=dbnVal[r.id+'_'+c.id]; if(v!==undefined&&v!=='')rows.push({chuc_danh_id:r.id,cot_id:c.id,so_luong:v});});});
+  if(!rows.length){toast('❌ Chưa có ô số liệu nào để lưu.');return;}
+  await dbnGoi('dinhbien_luu_gia_tri',{p_rows:rows},'✓ Đã lưu '+rows.length+' ô dữ liệu cho năm '+dbnNam+'.');
+}
+/* ---------- So sánh định biên trong báo cáo Nhân sự ---------- */
+async function dbnLayDB(ymd){
+  var o={bat:false,map:{}};
+  try{ var r=await dbmRpc('dinhbien_ns_lay_so_sanh',{}); var d=r.error?false:r.data; o.bat=(d===true||!!(d&&d.bat===true)); }catch(e){}
+  if(o.bat){ try{ var g=await dbnRpc('dinhbien_lay_gia_tri_ngay',{p_ngay:ymd}); var a=g.data;
+    if(Array.isArray(a)) a.forEach(function(x){ if(x&&x.chuc_danh_id!=null)o.map['cd_'+x.chuc_danh_id]=Number(x.so_luong)||0; }); }catch(e){} }
+  return o;
+}
+async function dbnTaiSoSanh(){
+  var ymd=vDate||tkey();
+  dbnKey=(getDonViId()||'')+'|'+ymd;
+  var truoc=dbnSoSanh;
+  var o=await dbnLayDB(ymd); dbnSoSanh=o.bat; dbnGia=o.map;
+  var b=document.getElementById('dbn-ss-btn'); if(b)b.textContent='⚖️ So sánh: '+(dbnSoSanh?'Bật':'Tắt');
+  return dbnSoSanh||truoc;
+}
+async function dbnDoiSoSanh(){
+  var bat=!dbnSoSanh;
+  var p=prompt('🔒 Mật khẩu vận hành để '+(bat?'BẬT':'TẮT')+' so sánh Nhân sự với định biên:');
+  if(p===null)return;
+  if(!(await dbmXacThuc(p))){alert('❌ Sai mật khẩu!');return;}
+  var r=await dbmRpc('dinhbien_ns_dat_so_sanh',{p_pass:p,p_bat:bat});
+  if(r.error){alert('Không đổi được chế độ so sánh: '+(r.error.message||'')+'\n(Cần chạy file SQL cài đặt so sánh Nhân sự trên Supabase.)');return;}
+  await dbnTaiSoSanh(); renderTable();
+  toast(dbnSoSanh?'✓ Đã BẬT so sánh Nhân sự với định biên.':'✓ Đã TẮT so sánh Nhân sự với định biên.');
+}
+function dbnCapNhat(){
+  if(!dbnSoSanh)return;
+  var tong={}; COLS.forEach(function(c){tong[c.k]=0;});
+  projects.forEach(function(proj){ TYPES.forEach(function(t){ COLS.forEach(function(c){ tong[c.k]+=((data[proj]&&data[proj][t]&&data[proj][t][c.k])||0); }); }); });
+  var tD=0,tT=0;
+  COLS.forEach(function(c){
+    var a=document.getElementById('dbn_db_'+c.k),b=document.getElementById('dbn_cl_'+c.k); if(!a||!b)return;
+    var d=dbnGia[c.k];
+    if(d===undefined){a.textContent='—';b.textContent='—';b.style.color='';return;}
+    tD+=d; tT+=tong[c.k]; a.textContent=fmtN(d); dbmGhiCL(b,tong[c.k]-d);
+  });
+  var a2=document.getElementById('dbn_db_t'),b2=document.getElementById('dbn_cl_t');
+  if(a2)a2.textContent=fmtN(tD); if(b2)dbmGhiCL(b2,tT-tD);
+}
 </script>
 
 </body>
