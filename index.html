@@ -6519,11 +6519,18 @@ async function dbmMo(){
   showScreen('dbm');
   await dbmTai();
 }
-function dbmVe(){
+async function dbmVe(){
   dbmPass='';
   showScreen('mmtb');
   dbmNgayTai='';
-  dbmTaiSoSanh().then(function(){dbmRenderLai();});
+  try{
+    // Tải lại danh sách máy (tên/ẩn-hiện/thứ tự vừa sửa ở Định biên) rồi vẽ lại báo cáo
+    await taiCauHinhLoaiMayMMTB();
+    mmtbMachines=mmtbMergeMachines();
+    mmtbEnsureData();
+  }catch(e){ console.error(e); }
+  await dbmTaiSoSanh();
+  dbmRenderLai();
 }
 function dbmRenderLai(){ mmtbRenderTable(); mmtbRenderCharts(); }
 /* ---------- Bảng Định biên ---------- */
