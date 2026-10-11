@@ -485,6 +485,10 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="mod-icon">📞</div>
         <div><div class="mod-title">Danh bạ</div><div class="mod-sub">Liên hệ nội bộ</div></div>
       </div>
+      <div class="mod-tile c-mmtb span2" data-quyen="dinh_bien" onclick="goModuleDinhBienMMTB()">
+        <div class="mod-icon">🚜</div>
+        <div><div class="mod-title">Định biên MMTB</div><div class="mod-sub">Định biên máy móc thiết bị</div></div>
+      </div>
       <div class="mod-tile c-ban span2" data-quyen="ban_tin" onclick="goModuleBanTin()">
         <div class="mod-icon">📰</div>
         <div><div class="mod-title">Bản tin</div><div class="mod-sub">Tin tức & thông báo dự án</div></div>
@@ -798,6 +802,15 @@ function goModuleDinhBien(){
   }
   try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN||{})); }catch(e){}
   location.href = 'dinh-bien.html';
+}
+
+function goModuleDinhBienMMTB(){
+  if(window.BCH_QUYEN && !window.BCH_QUYEN.dinh_bien){
+    toast('🔒 Bạn chưa được cấp quyền Định biên. Liên hệ Ban chỉ huy.');
+    return;
+  }
+  try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN||{})); }catch(e){}
+  location.href = 'dinh-bien-mmtb.html';
 }
 
 function showScreen(name){
