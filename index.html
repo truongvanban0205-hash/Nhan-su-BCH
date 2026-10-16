@@ -6434,14 +6434,11 @@ async function renderHomeThongBao(){
       var truocTYPES=TYPES.join(','), truocProjects=projects.join(','), truocCOLS=COLS.map(function(c){return c.k;}).join(',');
       var truocMmtbMachines=mmtbMachines.map(function(m){return m.k;}).join(',');
       var truocMmtbProjects=mmtbProjects.join(',');
-      await taiCauHinhCaLamViec();
-      await taiCauHinhDuAn();
-      await taiDinhBienChucDanh();
-      await taiGioHan();
-      if(mmtbInited){
-        await taiCauHinhDuAnMMTB();
-        await taiCauHinhLoaiMayMMTB();
-      }
+      // Các hàm tải này độc lập nhau -> gọi SONG SONG (trước đây nối đuôi nhau). Số lệnh gọi lên máy chủ KHÔNG đổi,
+      // chỉ là mỗi lượt đồng bộ xong sớm hơn nhiều.
+      var dsTai=[taiCauHinhCaLamViec(), taiCauHinhDuAn(), taiDinhBienChucDanh(), taiGioHan()];
+      if(mmtbInited){ dsTai.push(taiCauHinhDuAnMMTB(), taiCauHinhLoaiMayMMTB()); }
+      await Promise.all(dsTai);
       LIVE_TYPES=TYPES.slice(); LIVE_TLABELS=TLABELS.slice(); // cập nhật lại bản sao lưu để xem lịch sử/quay về hôm nay vẫn đúng
       // Giờ khoá có thể vừa đổi trong Quản lý chung -> kiểm tra lại khoá/mở ngay, không chờ F5
       try{ if(nsInited && !vDate) checkTimeLock(); if(mmtbInited && !mmtbVDate) mmtbCheckTimeLock(); }catch(e){}
