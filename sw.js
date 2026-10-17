@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bch-app-v4';
+const CACHE_NAME = 'bch-app-v5';
 const urlsToCache = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(e){
