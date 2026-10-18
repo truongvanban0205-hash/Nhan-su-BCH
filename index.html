@@ -5097,6 +5097,8 @@ function mmtbRenderTable(){
     ta.style.height='auto';
     ta.style.height=ta.scrollHeight+'px';
   });
+  // Ô "Báo cáo tổng hợp MMTB" nằm TRONG bảng nên bị xoá mỗi lần bảng vẽ lại -> vẽ lại luôn cùng lúc (trước đây chỉ hiện sau khi sửa số)
+  try{ mmtbRenderCharts(); }catch(e){ console.error(e); }
 }
 
 function mmtbCalcTotals(){
