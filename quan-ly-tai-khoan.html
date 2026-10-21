@@ -763,6 +763,8 @@ document.getElementById("btnNv").addEventListener("click", async ()=>{
     renderPending(ten, pin);
   } else if(res.status === "sai_pin"){
     showMsg(nvMsg, "bad", "Sai mã PIN. Vui lòng thử lại hoặc liên hệ Ban chỉ huy đặt lại PIN.");
+  } else if(res.status === "tam_khoa"){
+    showMsg(nvMsg, "bad", "Bạn đã nhập sai quá nhiều lần nên tạm khoá. Vui lòng đợi 10 phút rồi thử lại.");
   } else if(res.status === "tu_choi"){
     showMsg(nvMsg, "bad", "Yêu cầu đăng ký của bạn đã bị từ chối. Vui lòng liên hệ Ban chỉ huy.");
   } else if(res.status === "khong_tim_thay"){
