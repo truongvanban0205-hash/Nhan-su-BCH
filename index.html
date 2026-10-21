@@ -3197,6 +3197,21 @@ async function setUser(){
   renderLog();
   renderTable();
   await mergeSave();
+  ghiNhanNguoiVao('nhansu', tkey(), 'login'); // ghi riêng lên server, không phụ thuộc mergeSave có chạy được hay không
+}
+
+// Ghi tên người vào / người sửa thẳng lên server (chỉ thêm 1 tên, không ghi đè cả bản) — tự thử lại nếu chưa được
+async function ghiNhanNguoiVao(bang, ngay, loai, lanThu){
+  lanThu = lanThu || 0;
+  var ok = false;
+  try{
+    var sv = JSON.parse(localStorage.getItem('bch_nv_login_v2') || '{}') || {};
+    if(!sv.ten || !sv.pin || !getDonViId()) return;
+    var r = await sc.rpc('ghi_nhan_nguoi_vao', {p_ten:sv.ten, p_pin:sv.pin, p_bang:bang, p_ngay:ngay, p_don_vi_id:getDonViId(), p_loai:loai});
+    if(r.error && /Could not find the function/i.test(r.error.message||'')) return; // chưa chạy SQL ghi-nhan-nguoi-vao
+    ok = !r.error && r.data === true;
+  }catch(e){}
+  if(!ok && lanThu < 4) setTimeout(function(){ ghiNhanNguoiVao(bang, ngay, loai, lanThu+1); }, [5000,15000,45000,120000][lanThu]);
 }
 
 function fmtN(v){return v===0?'-':(v<10?'0'+v:String(v));}
@@ -3265,9 +3280,13 @@ async function saveStructure(){
   setSS('⏳ Đang lưu...');
   try{
     data=donSoMoCoiNS(data);
-    var payload={projects:projects,cols:COLS,data:data,log:logItems,editors:editorsMap};
-    var ex=await sc.from('nhansu').select('id').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    var ex=await sc.from('nhansu').select('id,data').eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.error) throw ex.error;
+    // Giữ tên người vào/sửa đã có trên server — không xoá mất người khác khi lưu cấu trúc
+    var _ed=Object.assign({}, (ex.data&&ex.data.data&&ex.data.data.editors)||{});
+    Object.keys(editorsMap||{}).forEach(function(n){ if(_ed[n]!=='edit') _ed[n]=editorsMap[n]; });
+    editorsMap=_ed;
+    var payload={projects:projects,cols:COLS,data:data,log:logItems,editors:editorsMap};
     var wr;
     if(ex.data){
       wr=await sc.from('nhansu').update({data:payload}).eq('ngay',tkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
@@ -3366,6 +3385,7 @@ async function mergeSave(askReason){
     pendingBienDong={};
     setSS('✅ Đã cập nhật');
     renderLog();
+    if(curUser && editorsMap[curUser]==='edit') ghiNhanNguoiVao('nhansu', targetKey, 'edit');
   }catch(e){setSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));}
   finally{mergeSaveBusy=false;}
 }
@@ -4776,6 +4796,7 @@ async function mmtbSetUser(){
   mmtbRenderLog();
   mmtbRenderTable();
   await mmtbMergeSave();
+  ghiNhanNguoiVao('mmtb', mmtbTkey(), 'login');
 }
 
 function mmtbCheckTimeLock(){
@@ -4853,9 +4874,12 @@ async function mmtbSaveStructure(){
   mmtbSetSS('⏳ Đang lưu...');
   try{
     mmtbData=donSoMoCoiMMTB(mmtbData);
-    var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog,editors:mmtbEditorsMap};
-    var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    var ex=await sc.from('mmtb').select('id,data').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
     if(ex.error) throw ex.error;
+    var _edM=Object.assign({}, (ex.data&&ex.data.data&&ex.data.data.editors)||{});
+    Object.keys(mmtbEditorsMap||{}).forEach(function(n){ if(_edM[n]!=='edit') _edM[n]=mmtbEditorsMap[n]; });
+    mmtbEditorsMap=_edM;
+    var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog,editors:mmtbEditorsMap};
     var wr;
     if(ex.data){
       wr=await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
@@ -4878,6 +4902,7 @@ async function mmtbMergeSave(askReason){
   mmtbSetSS('⏳ Đang lưu...');
   try{
     var ex=await sc.from('mmtb').select('id,data').eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    if(ex.error) throw ex.error; // đọc lỗi -> DỪNG, không ghi đè/không tạo dòng trùng
     var serverData=(ex.data&&ex.data.data)?ex.data.data:null;
     var mergedMachines=mmtbMachines, mergedProjects=mmtbProjects, mergedData=mmtbData, mergedNotes=mmtbNotes, mergedLog=mmtbLog, mergedBienDong=mmtbBienDong;
     if(mmtbVDate){
@@ -4956,6 +4981,7 @@ async function mmtbMergeSave(askReason){
     mmtbPendingBienDong={};
     mmtbSetSS('✅ Đã cập nhật');
     mmtbRenderLog();
+    if(mmtbUser && mmtbEditorsMap[mmtbUser]==='edit') ghiNhanNguoiVao('mmtb', targetKey, 'edit');
   }catch(e){mmtbSetSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));}
   finally{mmtbMergeSaveBusy=false;}
 }
