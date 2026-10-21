@@ -247,6 +247,20 @@ async function dangBai(){
   document.getElementById('composerPanel').classList.remove('open');
 }
 
+// 1 tài khoản – 1 máy: máy đăng nhập sau đá máy trước ra
+async function kiemTraPhien(saved){
+  try{
+    var r = await sb.rpc('kiem_tra_phien', {p_ten: saved.ten, p_token: saved.token || ''});
+    if(!r.error && (r.data==='bi_da' || r.data==='can_dang_nhap_lai' || r.data==='khong_hop_le')){
+      localStorage.removeItem(LS_KEY);
+      if(r.data==='bi_da') alert('Tài khoản này vừa đăng nhập ở máy khác nên máy này đã bị đăng xuất.');
+      location.href = LOGIN_PAGE;
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
 async function boot(){
   var raw = localStorage.getItem(LS_KEY);
   if(!raw){ location.href = LOGIN_PAGE; return; }
@@ -256,6 +270,8 @@ async function boot(){
 
   var {data:res} = await sb.rpc('tra_cuu_pin', {p_ten: saved.ten, p_pin: saved.pin});
   if(!res || res.status!=='da_duyet'){ location.href = LOGIN_PAGE; return; }
+  if(await kiemTraPhien(saved)) return;
+  setInterval(function(){ if(!document.hidden) kiemTraPhien(saved); }, 60000);
   user = {
     ten: res.data.ten,
     msnv: res.data.msnv,

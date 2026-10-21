@@ -6343,11 +6343,10 @@ async function renderHomeThongBao(){
         location.href = LOGIN_PAGE; return;
       }
       if(rp.data === 'can_dang_nhap_lai' || rp.data === 'khong_hop_le'){
-        if(sessionStorage.getItem('bch_ph_lai') !== '1'){ // chỉ thử 1 lần mỗi phiên, tránh vòng lặp
-          sessionStorage.setItem('bch_ph_lai', '1');
-          location.href = LOGIN_PAGE; return;
-        }
-      } else { sessionStorage.removeItem('bch_ph_lai'); }
+        // Máy chưa có thẻ phiên (đăng nhập từ trước khi bật 1 máy) hoặc phiên không còn → bắt đăng nhập lại
+        localStorage.removeItem(LS_KEY);
+        location.href = LOGIN_PAGE; return;
+      }
     }
   }catch(e){}
   // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
@@ -6798,16 +6797,18 @@ function bchBiDaKhoiMay(){
 async function bchKiemTraPhienDinhKy(){
   try{
     var raw=localStorage.getItem('bch_nv_login_v2'); if(!raw) return false;
-    var sv=JSON.parse(raw); if(!sv.ten||!sv.token) return false;
+    var sv=JSON.parse(raw); if(!sv.ten) return false;
     bchPhienLanCuoi=Date.now();
-    var r=await sc.rpc('kiem_tra_phien',{p_ten:sv.ten,p_token:sv.token});
-    if(!r.error && r.data==='bi_da'){ bchBiDaKhoiMay(); return true; }
+    var r=await sc.rpc('kiem_tra_phien',{p_ten:sv.ten,p_token:sv.token||''});
+    if(!r.error && (r.data==='bi_da' || r.data==='can_dang_nhap_lai')){ bchBiDaKhoiMay(); return true; }
   }catch(e){}
   return false;
 }
 document.addEventListener('visibilitychange',function(){
   if(!document.hidden && Date.now()-bchPhienLanCuoi>20000) bchKiemTraPhienDinhKy();
 });
+// Máy đang mở app liên tục cũng bị đá ra trong vòng ~1 phút khi tài khoản đăng nhập ở máy khác
+setInterval(function(){ if(!document.hidden) bchKiemTraPhienDinhKy(); }, 60000);
 /* ===== ĐỊNH BIÊN NHÂN SỰ (tiền tố dbn) + so sánh trong báo cáo Nhân sự ===== */
 var dbnPass='', dbnRows=[], dbnCols=[], dbnVal={}, dbnNam=new Date().getFullYear();
 var dbnSoSanh=false, dbnGia={}, dbnKey='';
