@@ -677,7 +677,12 @@ const nvInfo = document.getElementById("nvInfo");
 let pendingNewReg = null; // {ten, pin} khi đăng ký mới
 
 async function traCuuPin(ten, pin, silent){
-  const { data, error } = await sb.rpc("tra_cuu_pin", { p_ten: ten, p_pin: pin });
+  // 1 tài khoản – 1 máy: đăng nhập qua dang_nhap_phien (cấp "thẻ phiên" cho máy này, đá máy cũ ra)
+  let r = await sb.rpc("dang_nhap_phien", { p_ten: ten, p_pin: pin, p_thiet_bi: (navigator.userAgent || "").slice(0, 120) });
+  if (r.error && (r.error.code === "PGRST202" || /Could not find the function/i.test(r.error.message || ""))){
+    r = await sb.rpc("tra_cuu_pin", { p_ten: ten, p_pin: pin }); // chưa chạy SQL 1 tài khoản 1 máy -> dùng cách cũ
+  }
+  const { data, error } = r;
   if (error){
     if(!silent) showMsg(nvMsg, "bad", "Có lỗi xảy ra, vui lòng thử lại. (Cần chạy SQL tra_cuu_pin)");
     return null;
@@ -704,7 +709,7 @@ function renderApproved(d, ten, pin, forceDoi){
     document.getElementById('modalForcePin').classList.add('show');
     return;
   }
-  localStorage.setItem(LS_KEY, JSON.stringify({ten: ten, pin: pin, msnv: (d && d.msnv) || "", lastStatus:"da_duyet"}));
+  localStorage.setItem(LS_KEY, JSON.stringify({ten: ten, pin: pin, msnv: (d && d.msnv) || "", lastStatus:"da_duyet", token: (d && d.token) || ""}));
   location.href = "index.html";
 }
 
@@ -734,7 +739,8 @@ document.getElementById('btnForcePinSave').addEventListener('click', async ()=>{
     ten: pendingForcePin.ten,
     pin: p1,
     msnv: d.msnv || '',
-    lastStatus: 'da_duyet'
+    lastStatus: 'da_duyet',
+    token: d.token || ''
   }));
   pendingForcePin = null;
   location.href = 'index.html';
@@ -916,6 +922,8 @@ const MODULE_CATALOG = [
   // Lịch nghiệm thu đã gỡ khỏi app
   { nhan: "Danh bạ", ma: "danh_ba" },
   { nhan: "Bản tin", ma: "ban_tin" },
+
+  { nhan: "Dùng nhiều máy", ma: "nhieu_may" }
 ];
 const modalPass = document.getElementById("modalPass");
 /* ================= CẤU HÌNH NHÂN SỰ: DỰ ÁN / LOẠI CA / TÊN RIÊNG ================= */

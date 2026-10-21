@@ -6314,6 +6314,23 @@ async function renderHomeThongBao(){
     location.href = LOGIN_PAGE;
     return;
   }
+  // 1 TÀI KHOẢN – 1 MÁY: máy đăng nhập sau đá máy trước. Lỗi mạng / chưa chạy SQL thì cho qua (không khoá nhầm người dùng).
+  try{
+    var rp = await sc.rpc('kiem_tra_phien', { p_ten: res.data.ten, p_token: saved.token || '' });
+    if(!rp.error){
+      if(rp.data === 'bi_da'){
+        localStorage.removeItem(LS_KEY);
+        alert('Tài khoản này vừa đăng nhập ở máy khác (hoặc trình duyệt khác) nên máy này đã bị đăng xuất.\nNếu muốn dùng ở máy này, hãy đăng nhập lại (máy kia sẽ bị đăng xuất).');
+        location.href = LOGIN_PAGE; return;
+      }
+      if(rp.data === 'can_dang_nhap_lai' || rp.data === 'khong_hop_le'){
+        if(sessionStorage.getItem('bch_ph_lai') !== '1'){ // chỉ thử 1 lần mỗi phiên, tránh vòng lặp
+          sessionStorage.setItem('bch_ph_lai', '1');
+          location.href = LOGIN_PAGE; return;
+        }
+      } else { sessionStorage.removeItem('bch_ph_lai'); }
+    }
+  }catch(e){}
   // Lưu quyền truy cập — mục nào KHÔNG có quyền thì làm MỜ đi (vẫn thấy tồn tại), không ẩn hẳn nữa
   window.BCH_QUYEN = res.data.quyen || {};
   try{ localStorage.setItem('bch_quyen_cache', JSON.stringify(window.BCH_QUYEN)); }catch(e){}
@@ -6381,7 +6398,7 @@ async function renderHomeThongBao(){
   if(true){
     var headerDiv = userSlot || document.querySelector('.hh-body');
 
-    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', danh_ba:'Danh bạ', ban_tin:'Bản tin' };
+    var mapLabel = { bao_cao_nhan_su:'Báo cáo Nhân sự', bao_cao_mmtb:'Báo cáo MMTB', bao_lich_nghiem_thu:'Báo Lịch nghiệm thu', dinh_bien:'Định biên', danh_ba:'Danh bạ', ban_tin:'Bản tin', nhieu_may:'Dùng nhiều máy' };
     var overlay = document.createElement('div');
     overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5000;align-items:center;justify-content:center;padding:20px;';
     var quyenBadges = Object.keys(window.BCH_QUYEN).filter(function(k){return window.BCH_QUYEN[k];})
@@ -6471,6 +6488,7 @@ async function renderHomeThongBao(){
     try{
       await kiemTraPhienBan(); // kiểm tra phiên bản TRƯỚC — nếu đã bị khoá thì không cần đồng bộ gì thêm
       if(dangBiKhoaCapNhat) return;
+      if(await bchKiemTraPhienDinhKy()) return; // đã bị máy khác đá ra -> dừng
       var truocTYPES=TYPES.join(','), truocProjects=projects.join(','), truocCOLS=COLS.map(function(c){return c.k;}).join(',');
       var truocMmtbMachines=mmtbMachines.map(function(m){return m.k;}).join(',');
       var truocMmtbProjects=mmtbProjects.join(',');
@@ -6749,6 +6767,28 @@ function dbmCapNhat(){
   if(a2){a2.textContent=mmtbFmtN(tD);} if(c2)dbmGhiCL(c2,tT-tD);
 }
 function dbmGhiCL(el,v){ el.textContent=v>0?'+'+v:(v<0?String(v):'0'); el.style.color=v===0?'#2e7d32':(v>0?'#1565c0':'#c62828'); }
+/* ===== 1 TÀI KHOẢN – 1 MÁY ===== */
+var bchPhienLanCuoi=0;
+function bchBiDaKhoiMay(){
+  if(window.__bchKicked) return;
+  window.__bchKicked=true;
+  try{ localStorage.removeItem('bch_nv_login_v2'); }catch(e){}
+  alert('Tài khoản này vừa đăng nhập ở máy khác (hoặc trình duyệt khác) nên máy này đã bị đăng xuất.\nNếu muốn dùng ở máy này, hãy đăng nhập lại (máy kia sẽ bị đăng xuất).');
+  location.href='quan-ly-tai-khoan.html';
+}
+async function bchKiemTraPhienDinhKy(){
+  try{
+    var raw=localStorage.getItem('bch_nv_login_v2'); if(!raw) return false;
+    var sv=JSON.parse(raw); if(!sv.ten||!sv.token) return false;
+    bchPhienLanCuoi=Date.now();
+    var r=await sc.rpc('kiem_tra_phien',{p_ten:sv.ten,p_token:sv.token});
+    if(!r.error && r.data==='bi_da'){ bchBiDaKhoiMay(); return true; }
+  }catch(e){}
+  return false;
+}
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden && Date.now()-bchPhienLanCuoi>20000) bchKiemTraPhienDinhKy();
+});
 /* ===== ĐỊNH BIÊN NHÂN SỰ (tiền tố dbn) + so sánh trong báo cáo Nhân sự ===== */
 var dbnPass='', dbnRows=[], dbnCols=[], dbnVal={}, dbnNam=new Date().getFullYear();
 var dbnSoSanh=false, dbnGia={}, dbnKey='';
