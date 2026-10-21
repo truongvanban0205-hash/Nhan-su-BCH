@@ -24,7 +24,7 @@
   var chatUploading=false;
 
   function esc(s){
-    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
   function p2(n){ return n<10?'0'+n:''+n; }
   function fmtTime(ts){

@@ -2388,7 +2388,7 @@ function applyHomeBrand(){
   if(lab) lab.textContent = ten || '—';
 }
 function escHtmlHub(s){
-  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function showDonViHub(){
@@ -3073,7 +3073,7 @@ async function sSave(pay){
     }
     if(wr.error) throw wr.error;
     setSS('✅ Đã cập nhật');
-  }catch(e){setSS('⚠️ Lỗi: '+e.message);}
+  }catch(e){setSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));}
 }
 
 async function sHist(){
@@ -3277,7 +3277,7 @@ async function saveStructure(){
     if(wr.error) throw wr.error;
     setSS('✅ Đã cập nhật');
     renderTable();renderLog();
-  }catch(e){setSS('⚠️ Lỗi: '+e.message);alert('Lỗi lưu: '+e.message);}
+  }catch(e){setSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));alert('Lỗi lưu: '+e.message);}
 }
 
 var mergeSaveBusy=false;
@@ -3366,7 +3366,7 @@ async function mergeSave(askReason){
     pendingBienDong={};
     setSS('✅ Đã cập nhật');
     renderLog();
-  }catch(e){setSS('⚠️ Lỗi: '+e.message);}
+  }catch(e){setSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));}
   finally{mergeSaveBusy=false;}
 }
 
@@ -4666,13 +4666,16 @@ async function mmtbSSave(pay){
   mmtbSetSS('⏳ Đang lưu...');
   try{
     var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    if(ex.error) throw ex.error;
+    var wr;
     if(ex.data){
-      await sc.from('mmtb').update({data:pay}).eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
+      wr=await sc.from('mmtb').update({data:pay}).eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:pay,don_vi_id:getDonViId()||'khanh_hoa'});
+      wr=await sc.from('mmtb').insert({ngay:mmtbTkey(),data:pay,don_vi_id:getDonViId()||'khanh_hoa'});
     }
+    if(wr.error) throw wr.error;
     mmtbSetSS('✅ Đã cập nhật');
-  }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);}
+  }catch(e){mmtbSetSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));}
 }
 
 async function mmtbSHist(){
@@ -4852,14 +4855,17 @@ async function mmtbSaveStructure(){
     mmtbData=donSoMoCoiMMTB(mmtbData);
     var payload={machines:mmtbMachines,projects:mmtbProjects,data:mmtbData,notes:mmtbNotes,log:mmtbLog,editors:mmtbEditorsMap};
     var ex=await sc.from('mmtb').select('id').eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
+    if(ex.error) throw ex.error;
+    var wr;
     if(ex.data){
-      await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
+      wr=await sc.from('mmtb').update({data:payload}).eq('ngay',mmtbTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('mmtb').insert({ngay:mmtbTkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
+      wr=await sc.from('mmtb').insert({ngay:mmtbTkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
+    if(wr.error) throw wr.error;
     mmtbSetSS('✅ Đã cập nhật');
     mmtbRenderTable();mmtbRenderLog();mmtbRenderCharts();
-  }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);alert('Lỗi lưu: '+e.message);}
+  }catch(e){mmtbSetSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));alert('Lỗi lưu: '+e.message);}
 }
 
 var mmtbMergeSaveBusy=false;
@@ -4937,18 +4943,20 @@ async function mmtbMergeSave(askReason){
     Object.keys(mmtbEditorsMap||{}).forEach(function(n){ if(mergedEditors[n]!=='edit') mergedEditors[n]=mmtbEditorsMap[n]; });
     if(!mmtbVDate) mergedData=donSoMoCoiMMTB(mergedData); // chỉ ngày đang nhập, không đụng lịch sử
     var payload={machines:mergedMachines,projects:mergedProjects,data:mergedData,notes:mergedNotes,log:mergedLog,bienDong:mergedBienDong,ghiChuTuyChinh:mmtbGhiChuTuyChinh,editors:mergedEditors};
+    var wr;
     if(ex.data){
-      await sc.from('mmtb').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
+      wr=await sc.from('mmtb').update({data:payload}).eq('ngay',targetKey).eq('don_vi_id',getDonViId()||'khanh_hoa');
     }else{
-      await sc.from('mmtb').insert({ngay:targetKey,data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
+      wr=await sc.from('mmtb').insert({ngay:targetKey,data:payload,don_vi_id:getDonViId()||'khanh_hoa'});
     }
+    if(wr.error) throw wr.error; // lỗi -> giữ pending, không báo "đã cập nhật"
     mmtbMachines=mergedMachines;mmtbProjects=mergedProjects;mmtbData=mergedData;mmtbNotes=mergedNotes;mmtbLog=mergedLog;mmtbBienDong=mergedBienDong;mmtbEditorsMap=mergedEditors;
     mmtbPendingChanges={};
     mmtbPendingNotesChanges={};
     mmtbPendingBienDong={};
     mmtbSetSS('✅ Đã cập nhật');
     mmtbRenderLog();
-  }catch(e){mmtbSetSS('⚠️ Lỗi: '+e.message);}
+  }catch(e){mmtbSetSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));}
   finally{mmtbMergeSaveBusy=false;}
 }
 
@@ -5523,10 +5531,13 @@ async function ldtSSave(pay){
   ldtSetSS('⏳ Đang lưu...');
   try{
     var ex=await sc.from('ldt').select('id').eq('ngay',ldtTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa').maybeSingle();
-    if(ex.data){await sc.from('ldt').update({data:pay}).eq('ngay',ldtTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');}
-    else{await sc.from('ldt').insert({ngay:ldtTkey(),data:pay,don_vi_id:getDonViId()||'khanh_hoa'});}
+    if(ex.error) throw ex.error;
+    var wr;
+    if(ex.data){wr=await sc.from('ldt').update({data:pay}).eq('ngay',ldtTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');}
+    else{wr=await sc.from('ldt').insert({ngay:ldtTkey(),data:pay,don_vi_id:getDonViId()||'khanh_hoa'});}
+    if(wr.error) throw wr.error;
     ldtSetSS('✅ Đã cập nhật');
-  }catch(e){ldtSetSS('⚠️ Lỗi: '+e.message);}
+  }catch(e){ldtSetSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));}
 }
 async function ldtSHist(){
   try{
@@ -5576,12 +5587,14 @@ async function ldtSchSave(){
       mergedLog=newLogs.concat(serverLog).slice(0,100);
     }
     var payload={schedules:mergedSchedules,log:mergedLog};
-    if(ex.data){await sc.from('ldt').update({data:payload}).eq('ngay',ldtTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');}
-    else{await sc.from('ldt').insert({ngay:ldtTkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});}
+    var wr;
+    if(ex.data){wr=await sc.from('ldt').update({data:payload}).eq('ngay',ldtTkey()).eq('don_vi_id',getDonViId()||'khanh_hoa');}
+    else{wr=await sc.from('ldt').insert({ngay:ldtTkey(),data:payload,don_vi_id:getDonViId()||'khanh_hoa'});}
+    if(wr.error) throw wr.error;
     ldtSchedules=mergedSchedules;ldtLog=mergedLog;
     ldtSetSS('✅ Đã cập nhật');
     ldtRenderTable();ldtRenderLog();
-  }catch(e){ldtSetSS('⚠️ Lỗi: '+e.message);}
+  }catch(e){ldtSetSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));}
 }
 
 function ldtSearchPerson(query){
@@ -6068,7 +6081,13 @@ function dbTelHref(s){
 async function loadDanhBa(force){
   if(danhBaLoaded && !force) return danhBaCache;
   try{
-    var r = await sc.rpc('danh_ba_lay_danh_sach',{p_don_vi_id:getDonViId()||'khanh_hoa'});
+    var svDb = {};
+    try{ svDb = JSON.parse(localStorage.getItem('bch_nv_login_v2')||'{}')||{}; }catch(e){}
+    var r = await sc.rpc('danh_ba_lay_danh_sach_v2',{p_ten:svDb.ten||'',p_pin:svDb.pin||'',p_don_vi_id:getDonViId()||''});
+    if(r.error && /Could not find the function/i.test(r.error.message||'')){
+      r = await sc.rpc('danh_ba_lay_danh_sach',{p_don_vi_id:getDonViId()||'khanh_hoa'}); // chưa chạy SQL giai đoạn 1
+    }
+    if(r.error) throw r.error;
     danhBaCache = r.data || [];
     danhBaLoaded = true;
   }catch(e){
@@ -6120,7 +6139,7 @@ function renderDanhBaList(q){
   });
 }
 function escHtmlDb(s){
-  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function openDanhBaDetail(x){
   var phone = dbNormPhone(x.sdt);
@@ -6298,11 +6317,11 @@ async function renderHomeThongBao(){
   var saved;
   try{ saved = JSON.parse(raw); } catch(e){ location.href = LOGIN_PAGE; return; }
 
+  // Bắt buộc có PIN: không còn đăng nhập bằng Họ tên + MSNV (tra_cuu đã bị khoá phía server)
+  if(!saved.ten || !saved.pin){ localStorage.removeItem(LS_KEY); location.href = LOGIN_PAGE; return; }
   var res;
   try{
-    var r = saved.pin
-      ? await sc.rpc('tra_cuu_pin', { p_ten: saved.ten, p_pin: saved.pin })
-      : await sc.rpc('tra_cuu', { p_ten: saved.ten, p_msnv: saved.msnv });
+    var r = await sc.rpc('tra_cuu_pin', { p_ten: saved.ten, p_pin: saved.pin });
     res = r.data;
   }catch(e){ res = null; }
 
@@ -6393,7 +6412,7 @@ async function renderHomeThongBao(){
   // Dòng tên + đăng xuất (slot cố định)
   var userSlot = document.getElementById('home-user-slot');
   if(userSlot){
-    userSlot.innerHTML = '<a href="#" id="bch-profile-link">' + res.data.ten + '</a> · <a href="#" class="logout" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
+    userSlot.innerHTML = '<a href="#" id="bch-profile-link">' + escHtmlHub(res.data.ten) + '</a> · <a href="#" class="logout" onclick="localStorage.removeItem(\'' + LS_KEY + '\');location.href=\'' + LOGIN_PAGE + '\';return false;">Đăng xuất</a>';
   }
   if(true){
     var headerDiv = userSlot || document.querySelector('.hh-body');

@@ -804,7 +804,7 @@ document.getElementById("btnBackStep1").addEventListener("click", ()=>{
     const list = (r && r.data) || [];
     const sel = document.getElementById("nvDonViReg");
     if(sel && list.length){
-      sel.innerHTML = list.map(d=>'<option value="'+String(d.id).replace(/"/g,'')+'">'+String(d.ten||d.id).replace(/</g,'&lt;')+'</option>').join("");
+      sel.innerHTML = list.map(d=>'<option value="'+escapeHtml(d.id)+'">'+escapeHtml(d.ten||d.id)+'</option>').join("");
     }
   }catch(e){}
 })();
@@ -1001,7 +1001,7 @@ function renameTextModal(title, defaultText){
   });
 }
 // Hiển thị tên có xuống dòng (\n) thành <br> khi render ra danh sách
-function nl2br(s){ return String(s==null?"":s).split("\n").join("<br>"); }
+function nl2br(s){ return escapeHtml(s).split("\n").join("<br>"); }
 
 // Đổi vị trí 2 dự án liền kề — chỉ đổi thu_tu, không đụng dữ liệu báo cáo
 async function doiViTriDuAn(id, huong){
@@ -1199,16 +1199,16 @@ function renderListLoaiCa(){
 
 function renderTenCaRieng(){
   const head = document.getElementById("cauHinhHeadRow");
-  head.innerHTML = `<th>Dự án</th>` + loaiCaCache.map(c=>`<th>${c.ten_mac_dinh}</th>`).join("");
+  head.innerHTML = `<th>Dự án</th>` + loaiCaCache.map(c=>`<th>${escapeHtml(c.ten_mac_dinh)}</th>`).join("");
   const body = document.getElementById("cauHinhBodyRows");
   body.innerHTML = duAnCache.map(d=>{
     const cells = loaiCaCache.map(c=>{
       const found = tenCaRiengCache.find(t=>t.du_an===d.ten && t.ma_ca===c.ma);
       const val = found ? found.ten_rieng : "";
-      return `<td><input type="text" data-duan="${d.ten}" data-ma="${c.ma}" class="ten-rieng-input"
-        placeholder="${c.ten_mac_dinh}" value="${val}" style="margin:0;padding:6px 8px;font-size:12px;width:110px;"></td>`;
+      return `<td><input type="text" data-duan="${escapeHtml(d.ten)}" data-ma="${escapeHtml(c.ma)}" class="ten-rieng-input"
+        placeholder="${escapeHtml(c.ten_mac_dinh)}" value="${escapeHtml(val)}" style="margin:0;padding:6px 8px;font-size:12px;width:110px;"></td>`;
     }).join("");
-    return `<tr><td>${d.ten}</td>${cells}</tr>`;
+    return `<tr><td>${escapeHtml(d.ten)}</td>${cells}</tr>`;
   }).join("");
 
   body.querySelectorAll(".ten-rieng-input").forEach(inp=>{
@@ -1396,7 +1396,7 @@ async function loadThongBaoHienTai(){
     const han = tb.het_han ? (' · hết ' + new Date(tb.het_han).toLocaleDateString("vi-VN")) : '';
     return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">
       <div style="flex:1;font-size:12px;line-height:1.4;">
-        <b>[${muc}]</b> ${String(tb.noi_dung||'').replace(/</g,'&lt;')}
+        <b>[${escapeHtml(muc)}]</b> ${escapeHtml(tb.noi_dung||'')}
         <div style="opacity:.7;margin-top:2px;">${when}${han}</div>
       </div>
       <button type="button" class="icon-btn reject" data-xoa-tb="${tb.id}" style="flex-shrink:0;">Xoá</button>
@@ -1548,7 +1548,7 @@ function renderAdminTable(){
   const head = document.getElementById("tableHeadRow");
   head.innerHTML =
     `<th class="col-freeze1">STT</th><th class="col-freeze2">MSNV</th><th class="col-freeze3">Tên nhân viên</th><th>Chức vụ</th><th>Đơn vị</th><th>SĐT</th>` +
-    modulesCache.map(m=>`<th>${m.nhan} <span class="icon-btn reject" style="padding:1px 6px; margin-left:4px;" data-remove-module="${m.id}" title="Xoá quyền này">✕</span></th>`).join("") +
+    modulesCache.map(m=>`<th>${escapeHtml(m.nhan)} <span class="icon-btn reject" style="padding:1px 6px; margin-left:4px;" data-remove-module="${m.id}" title="Xoá quyền này">✕</span></th>`).join("") +
     `<th>Trạng thái</th><th>Thao tác</th>`;
 
   const list = getFilteredSorted();
@@ -1566,7 +1566,7 @@ function renderAdminTable(){
     const quyen = emp.quyen || {};
     const moduleCells = modulesCache.map(m=>{
       const checked = quyen[m.ma] ? "checked" : "";
-      return `<td style="text-align:center"><input type="checkbox" data-id="${emp.id}" data-ma="${m.ma}" class="quyen-check" ${checked}></td>`;
+      return `<td style="text-align:center"><input type="checkbox" data-id="${emp.id}" data-ma="${escapeHtml(m.ma)}" class="quyen-check" ${checked}></td>`;
     }).join("");
 
     let actionCell = "";
@@ -1580,13 +1580,13 @@ function renderAdminTable(){
 
     tr.innerHTML = `
       <td class="col-freeze1">${idx+1}</td>
-      <td class="col-freeze2">${emp.msnv}</td>
-      <td class="col-freeze3">${emp.ten}</td>
-      <td>${emp.chuc_vu || "—"}</td>
-      <td style="font-size:11px;color:var(--muted);">${emp.don_vi_id || "khanh_hoa"}</td>
-      <td>${emp.sdt || "—"}</td>
+      <td class="col-freeze2">${escapeHtml(emp.msnv)}</td>
+      <td class="col-freeze3">${escapeHtml(emp.ten)}</td>
+      <td>${escapeHtml(emp.chuc_vu || "—")}</td>
+      <td style="font-size:11px;color:var(--muted);">${escapeHtml(emp.don_vi_id || "—")}</td>
+      <td>${escapeHtml(emp.sdt || "—")}</td>
       ${moduleCells}
-      <td><span class="status-pill ${emp.trang_thai}">${statusLabel(emp.trang_thai)}</span></td>
+      <td><span class="status-pill ${escapeHtml(emp.trang_thai)}">${statusLabel(emp.trang_thai)}</span></td>
       <td>${actionCell}</td>
     `;
     body.appendChild(tr);
@@ -1637,18 +1637,21 @@ async function handleAction(action, id){
       p_pass: currentAdminPass, p_id: id, p_ten: null, p_msnv: null,
       p_chuc_vu: null, p_sdt: null, p_quyen: null, p_trang_thai: "da_duyet", p_don_vi_id: window.currentAdminDonVi || null
     });
-    if(!error) loadAdminData();
+    if(error) showToast("Không duyệt được: " + (error.message||""));
+    else loadAdminData();
   } else if(action === "reject"){
     if(!confirm(`Từ chối tài khoản của ${emp.ten}?`)) return;
     const { error } = await sb.rpc("admin_cap_nhat", {
       p_pass: currentAdminPass, p_id: id, p_ten: null, p_msnv: null,
       p_chuc_vu: null, p_sdt: null, p_quyen: null, p_trang_thai: "tu_choi", p_don_vi_id: window.currentAdminDonVi || null
     });
-    if(!error) loadAdminData();
+    if(error) showToast("Không từ chối được: " + (error.message||""));
+    else loadAdminData();
   } else if(action === "delete"){
     if(!confirm(`Gỡ ${emp.ten} khỏi đơn vị này? (Nếu người này còn thuộc đơn vị khác thì ở đó vẫn giữ nguyên.)`)) return;
     const { error } = await sb.rpc("admin_xoa", { p_pass: currentAdminPass, p_id: id, p_don_vi_id: window.currentAdminDonVi || null });
-    if(!error) loadAdminData();
+    if(error) showToast("Không xoá được: " + (error.message||""));
+    else loadAdminData();
   } else if(action === "edit"){
     openEmpModal(emp);
   }
@@ -1680,8 +1683,8 @@ async function fillEmpDonViOptions(selected){
   box.innerHTML = list.map(d=>{
     const ck = selectedIds.indexOf(String(d.id))>=0 ? 'checked' : '';
     return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-      <input type="checkbox" class="emp-dv-check" value="${d.id}" ${ck}>
-      <span>${(d.ten||d.id).replace(/</g,'&lt;')}</span>
+      <input type="checkbox" class="emp-dv-check" value="${escapeHtml(d.id)}" ${ck}>
+      <span>${escapeHtml(d.ten||d.id)}</span>
     </label>`;
   }).join('') || '<span style="color:var(--muted);font-size:12px;">Chưa có đơn vị</span>';
 }
@@ -1750,7 +1753,7 @@ document.getElementById("btnAddModule").addEventListener("click", ()=>{
     alert("Tất cả các mục lớn có trong app chính đã được thêm đủ.");
     return;
   }
-  sel.innerHTML = available.map(c=>`<option value="${c.ma}">${c.nhan}</option>`).join("");
+  sel.innerHTML = available.map(c=>`<option value="${escapeHtml(c.ma)}">${escapeHtml(c.nhan)}</option>`).join("");
   modalModule.classList.add("show");
 });
 document.getElementById("btnCancelModule").addEventListener("click", ()=> modalModule.classList.remove("show"));
@@ -1905,11 +1908,11 @@ document.getElementById("fileImport").addEventListener("change", (e)=>{
       `Đọc được ${importRows.length} dòng — ${hopLe.length} dòng hợp lệ sẽ được thêm, ${importRows.length-hopLe.length} dòng có vấn đề (xem bên dưới).`;
     document.getElementById("importPreviewBody").innerHTML = importRows.map(r=>`
       <tr style="${r.loi?'background:#fdecea;':''}border-top:1px solid var(--border);">
-        <td style="padding:7px 8px;">${r.ten||"—"}</td>
-        <td style="padding:7px 8px;">${r.msnv||"—"}</td>
-        <td style="padding:7px 8px;">${r.chuc_vu||""}</td>
-        <td style="padding:7px 8px;">${r.sdt||""}</td>
-        <td style="padding:7px 8px;font-weight:700;${r.loi?'color:#c62828;':'color:#2e7d32;'}">${r.trangThai}</td>
+        <td style="padding:7px 8px;">${escapeHtml(r.ten||"—")}</td>
+        <td style="padding:7px 8px;">${escapeHtml(r.msnv||"—")}</td>
+        <td style="padding:7px 8px;">${escapeHtml(r.chuc_vu||"")}</td>
+        <td style="padding:7px 8px;">${escapeHtml(r.sdt||"")}</td>
+        <td style="padding:7px 8px;font-weight:700;${r.loi?'color:#c62828;':'color:#2e7d32;'}">${escapeHtml(r.trangThai)}</td>
       </tr>`).join("");
     document.getElementById("importPreviewBox").style.display = "block";
     document.getElementById("btnConfirmImport").disabled = hopLe.length === 0;
@@ -2051,10 +2054,10 @@ document.getElementById('fileImportDanhBa').addEventListener('change', (e)=>{
       const prev = document.getElementById('dbImportPreview');
       prev.style.display = 'block';
       if(!dbImportRows.length){
-        prev.innerHTML = `<b style="color:#c62828;">Không đọc được danh sách tên.</b><br>Sheet đang xét: <b>${sheetName}</b> (${best.names} dòng).<br>Các sheet trong file: ${wb.SheetNames.join(' · ')}<br>Hãy chọn đúng file có sheet "Danh Sách Nhân Sự".`;
+        prev.innerHTML = `<b style="color:#c62828;">Không đọc được danh sách tên.</b><br>Sheet đang xét: <b>${escapeHtml(sheetName)}</b> (${best.names} dòng).<br>Các sheet trong file: ${escapeHtml(wb.SheetNames.join(' · '))}<br>Hãy chọn đúng file có sheet "Danh Sách Nhân Sự".`;
       } else {
-        prev.innerHTML = `<b>Sheet:</b> ${sheetName} · <b>${dbImportRows.length}</b> dòng có tên<br>` +
-          dbImportRows.slice(0,8).map(r=>`• ${r.ten} — ${r.chuc_vu||'—'} — ${r.sdt||'không SĐT'}`).join('<br>') +
+        prev.innerHTML = `<b>Sheet:</b> ${escapeHtml(sheetName)} · <b>${dbImportRows.length}</b> dòng có tên<br>` +
+          dbImportRows.slice(0,8).map(r=>`• ${escapeHtml(r.ten)} — ${escapeHtml(r.chuc_vu||'—')} — ${escapeHtml(r.sdt||'không SĐT')}`).join('<br>') +
           (dbImportRows.length>8?`<br>… và ${dbImportRows.length-8} dòng khác`:'');
       }
       document.getElementById('btnConfirmImportDanhBa').disabled = dbImportRows.length===0;
@@ -2145,9 +2148,9 @@ async function renderAdminUnitGrid(){
   // Admin (mật khẩu quản lý) mở được tất cả đơn vị. Khóa chỉ dùng nếu sau này có phân quyền admin theo ĐV.
   grid.innerHTML = list.map(function(d){
     const n = counts[d.id]||0;
-    return '<button type="button" class="admin-unit-card" data-id="'+d.id+'">'
+    return '<button type="button" class="admin-unit-card" data-id="'+escapeHtml(d.id)+'">'
       +'<div class="lbl">Đơn vị</div>'
-      +'<div class="name">'+(d.ten||d.id).replace(/</g,'&lt;')+'</div>'
+      +'<div class="name">'+escapeHtml(d.ten||d.id)+'</div>'
       +'<div class="meta">'+(n? (n+' nhân viên') : 'Chưa có danh sách — trống')+'</div>'
       +'</button>';
   }).join('');
@@ -2162,7 +2165,7 @@ async function enterAdminUnit(id){
   localStorage.setItem('bch_admin_don_vi', id);
   const sel = document.getElementById('adminDonViSelect');
   if(sel){
-    sel.innerHTML = '<option value="'+id+'">'+(row?(row.ten||id):id)+'</option>';
+    sel.innerHTML = '<option value="'+escapeHtml(id)+'">'+escapeHtml(row?(row.ten||id):id)+'</option>';
     sel.value = id;
   }
   document.getElementById('adminUnitPick').style.display = 'none';
@@ -2186,7 +2189,7 @@ async function fillAdminDonViSelect(){
   }catch(e){}
   const cur = sel.value;
   sel.innerHTML = '<option value="">Tất cả đơn vị</option>' +
-    (donViCache||[]).map(d=>`<option value="${d.id}">${(d.ten||d.id).replace(/</g,'&lt;')}</option>`).join('');
+    (donViCache||[]).map(d=>`<option value="${escapeHtml(d.id)}">${escapeHtml(d.ten||d.id)}</option>`).join('');
   if(cur) sel.value = cur;
 }
 if(document.getElementById('adminDonViSelect')){
@@ -2232,10 +2235,10 @@ function renderDonViList(){
         <div style="font-weight:800;font-size:13px;">${escapeHtml(d.ten||d.id)}${badge}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">mã: ${escapeHtml(d.id)}${mods?(' · module: '+escapeHtml(mods)):''}</div>
       </div>
-      <button type="button" class="icon-btn" data-dv-up="${d.id}" title="Lên" ${i===0?'disabled':''}>↑</button>
-      <button type="button" class="icon-btn" data-dv-down="${d.id}" title="Xuống" ${i===donViCache.length-1?'disabled':''}>↓</button>
-      <button type="button" class="icon-btn" data-dv-rename="${d.id}">Sửa</button>
-      <button type="button" class="icon-btn reject" data-dv-toggle="${d.id}">${d.an?'Hiện':'Ẩn'}</button>
+      <button type="button" class="icon-btn" data-dv-up="${escapeHtml(d.id)}" title="Lên" ${i===0?'disabled':''}>↑</button>
+      <button type="button" class="icon-btn" data-dv-down="${escapeHtml(d.id)}" title="Xuống" ${i===donViCache.length-1?'disabled':''}>↓</button>
+      <button type="button" class="icon-btn" data-dv-rename="${escapeHtml(d.id)}">Sửa</button>
+      <button type="button" class="icon-btn reject" data-dv-toggle="${escapeHtml(d.id)}">${d.an?'Hiện':'Ẩn'}</button>
     </div>`;
   }).join('');
 
@@ -2279,7 +2282,7 @@ function renderDonViList(){
 }
 
 function escapeHtml(s){
-  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 document.getElementById('btnDonVi').addEventListener('click', async ()=>{

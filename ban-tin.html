@@ -107,7 +107,7 @@ let selectedIcon = '📢';
 let posts = [];
 
 function esc(s){
-  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function initials(ten){
   ten = String(ten||'').trim();
@@ -178,7 +178,10 @@ function renderFeed(){
     btn.onclick = async ()=>{
       if(!confirm('Xoá bản tin này?')) return;
       var id = parseInt(btn.getAttribute('data-del'),10);
-      var {error} = await sb.rpc('ban_tin_xoa', {p_id: id, p_ten: user.ten});
+      var {error} = await sb.rpc('ban_tin_xoa_v2', {p_id: id, p_ten: user.ten, p_pin: user.pin});
+      if(error && /Could not find the function/i.test(error.message||'')){
+        ({error} = await sb.rpc('ban_tin_xoa', {p_id: id, p_ten: user.ten})); // chưa chạy SQL giai đoạn 1
+      }
       if(error){ alert('Không xoá được: '+(error.message||'')); return; }
       posts = posts.filter(x=>x.id!==id);
       renderFeed();
@@ -213,15 +216,21 @@ async function dangBai(){
   var btn = document.getElementById('btnPost');
   var st = document.getElementById('postStatus');
   btn.disabled = true; st.textContent = 'Đang đăng...';
-  var {data, error} = await sb.rpc('ban_tin_dang', {
+  var {data, error} = await sb.rpc('ban_tin_dang_v2', {
     p_ten: user.ten,
-    p_msnv: user.msnv || '',
+    p_pin: user.pin,
     p_tieu_de: title || null,
     p_noi_dung: body,
     p_mau: selectedTheme,
     p_icon: selectedIcon,
     p_don_vi_id: getBanTinDonVi()
   });
+  if(error && /Could not find the function/i.test(error.message||'')){ // chưa chạy SQL giai đoạn 1
+    ({data, error} = await sb.rpc('ban_tin_dang', {
+      p_ten: user.ten, p_msnv: user.msnv || '', p_tieu_de: title || null,
+      p_noi_dung: body, p_mau: selectedTheme, p_icon: selectedIcon, p_don_vi_id: getBanTinDonVi()
+    }));
+  }
   if(error && /p_don_vi_id|Could not find the function/i.test(error.message||'')){
     var r2 = await sb.rpc('ban_tin_dang', {
       p_ten: user.ten, p_msnv: user.msnv || '', p_tieu_de: title || null,
@@ -250,6 +259,7 @@ async function boot(){
   user = {
     ten: res.data.ten,
     msnv: res.data.msnv,
+    pin: saved.pin,
     quyen: res.data.quyen || {}
   };
   if(!user.quyen || !user.quyen.ban_tin){

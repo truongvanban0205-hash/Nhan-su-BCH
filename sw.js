@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bch-app-v5';
+const CACHE_NAME = 'bch-app-v6';
 const urlsToCache = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(e){
@@ -16,10 +16,14 @@ self.addEventListener('activate', function(e){
 
 self.addEventListener('fetch', function(e){
   if(e.request.method !== 'GET') return; // Không cache POST (vd: gọi Supabase) — tránh lỗi Console vô hại
+  // Chỉ cache file của chính app (cùng domain). Dữ liệu Supabase (báo cáo, chat, ảnh) không lưu vào máy.
+  if(new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request).then(function(r){
-      var copy=r.clone();
-      caches.open(CACHE_NAME).then(function(c){c.put(e.request,copy);});
+      if(r.ok){
+        var copy=r.clone();
+        caches.open(CACHE_NAME).then(function(c){c.put(e.request,copy);});
+      }
       return r;
     }).catch(function(){
       return caches.match(e.request);
