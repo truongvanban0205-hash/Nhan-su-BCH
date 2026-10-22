@@ -2080,7 +2080,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
     var nghiTotal=0;
     (nsCols&&nsCols.length?nsCols:DEF_COLS).forEach(function(c){ nghiTotal+=calcColNghi(c.k,nsProjsSum,nsData); });
     var diLamTotal=grandTotal-nghiTotal;
-    html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#555;">Đi làm</span><span style="font-weight:700;color:#1a1a1a">'+diLamTotal+'</span></div>';
+    html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#2e7d32;">Đi làm</span><span style="font-weight:700;color:#2e7d32">'+diLamTotal+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;padding-top:2px;"><span style="color:#e53935;">Nghỉ</span><span style="font-weight:700;color:#e53935">'+nghiTotal+'</span></div>';
   }
   // Nhân sự hỗ trợ dự án khác: KHÔNG gộp vào Tổng/Đi làm/Nghỉ ở trên, hiện riêng 1 dòng gọn cho rõ.
@@ -2243,7 +2243,7 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
     return '';
   }
   html+='<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;">'
-    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#2e7d32;font-size:10px;">Hoạt động</span><span style="font-weight:600;font-size:10px;">'+totArrow(mTotal.hd,totalHDy)+mTotal.hd+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#2e7d32;font-size:10px;">Hoạt động</span><span style="font-weight:600;font-size:10px;color:#2e7d32;">'+totArrow(mTotal.hd,totalHDy)+mTotal.hd+'</span></div>'
     +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#e53935;font-size:10px;">Hư hỏng</span><span style="font-weight:600;font-size:10px;color:#e53935;">'+totArrow(mTotal.hh,totalHHy)+mTotal.hh+'</span></div>'
     +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#888;font-size:10px;">Lưu kho</span><span style="font-weight:600;font-size:10px;">'+totArrow(mTotal.lk,totalLKy)+mTotal.lk+'</span></div>'
     +'</div>';
@@ -3275,10 +3275,10 @@ function nsBpTaiNeuDoiNgay(){ if(getDonViId() && nsBpKey!==getDonViId()+'|'+(vDa
 // cam: mới vào, chưa sửa · xám: chưa vào
 function nsBpMau(t){
   t=t||{};
-  if(t.sua || (t.thay && t.dn)) return {m:'#2e7d32', ok:true, g:'Đã chỉnh sửa'};
-  if(t.thay) return {m:'#c62828', ok:true, g:'Người khác nhập thay'+(t.thay_boi?' ('+t.thay_boi+')':'')};
-  if(t.dn) return {m:'#ef6c00', ok:true, g:'Đã vào, chưa chỉnh sửa'};
-  return {m:'#9e9e9e', ok:false, g:'Chưa vào báo cáo'};
+  if(t.sua || (t.thay && t.dn)) return {m:'#2e7d32', ok:true, g:'Đã báo cáo (Có chỉnh sửa)'};
+  if(t.thay) return {m:'#c62828', ok:true, g:'Đã báo cáo (Người khác nhập thay'+(t.thay_boi?': '+t.thay_boi:'')+')'};
+  if(t.dn) return {m:'#ef6c00', ok:true, g:'Đã kiểm tra (Không thay đổi)'};
+  return {m:'#9e9e9e', ok:false, g:'Chưa báo cáo'};
 }
 function nsBpVe(){
   var el=document.getElementById('ns-bp-panel'); if(!el) return;
@@ -3296,7 +3296,7 @@ function nsBpVe(){
   }).join('');
   el.innerHTML='<div class="bp-hd" onclick="nsBpGon()"><span>🧩 Bộ phận '+(vDate?'(ngày này)':'hôm nay')+'</span><span>'+xong+'/'+ds.length+'</span></div>'
     +'<div class="bp-body">'+rows
-    +'<div class="bp-note"><span style="color:#ef6c00">●</span> đã vào, chưa sửa<br><span style="color:#2e7d32">●</span> đã sửa<br><span style="color:#c62828">●</span> người khác nhập thay<br><span style="color:#9e9e9e">●</span> chưa vào</div></div>';
+    +'<div class="bp-note"><span style="color:#ef6c00">●</span> Đã kiểm tra (Không thay đổi)<br><span style="color:#2e7d32">●</span> Đã báo cáo (Có chỉnh sửa)<br><span style="color:#c62828">●</span> Đã báo cáo (Người khác nhập thay)<br><span style="color:#9e9e9e">●</span> Chưa báo cáo</div></div>';
 }
 function nsBpGon(){ var el=document.getElementById('ns-bp-panel'); if(el) el.classList.toggle('bp-gon'); }
 async function nsBpKhongDoi(){
@@ -3815,8 +3815,8 @@ async function renderCharts(){
     });
     var tongDiLam=grandTotal-tongNghi;
     html+='<div style="display:flex;justify-content:space-between;padding:2px 0;">'
-      +'<span style="color:#333;font-size:10px;">Đi làm</span>'
-      +'<span style="font-weight:600;color:#1a1a1a;font-size:10px;">'+tongDiLam+'</span>'
+      +'<span style="color:#2e7d32;font-size:10px;">Đi làm</span>'
+      +'<span style="font-weight:600;color:#2e7d32;font-size:10px;">'+tongDiLam+'</span>'
       +'</div>';
     html+='<div style="display:flex;justify-content:space-between;padding:2px 0;">'
       +'<span style="color:#e53935;font-size:10px;">Nghỉ</span>'
@@ -5415,7 +5415,7 @@ function mmtbRenderCharts(){
       +'</div>';
   });
   html+='<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;">'
-    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#2e7d32;font-size:10px;">Hoạt động</span><span style="font-weight:600;font-size:10px;">'+totalHD+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#2e7d32;font-size:10px;">Hoạt động</span><span style="font-weight:600;font-size:10px;color:#2e7d32;">'+totalHD+'</span></div>'
     +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#e53935;font-size:10px;">Hư hỏng</span><span style="font-weight:600;font-size:10px;color:#e53935;">'+totalHH+'</span></div>'
     +'<div style="display:flex;justify-content:space-between;padding:1px 0;"><span style="color:#888;font-size:10px;">Lưu kho</span><span style="font-weight:600;font-size:10px;">'+totalLK+'</span></div>'
     +'</div>';
