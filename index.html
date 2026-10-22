@@ -562,7 +562,26 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
   <button onclick="backToday()" class="btn btn-bl btn-sm">← Về hôm nay</button>
 </div>
 
+<style>
+/* Bảng theo dõi bộ phận: dọc bên phải bảng Nhân sự; màn hẹp thì lên trên, thu gọn được. Chỉ hiển thị trên màn hình, không vào ảnh xuất. */
+.ns-bp-flex{display:flex;gap:10px;align-items:flex-start}
+.ns-bp-flex>.tbl-wrap{flex:0 1 auto;min-width:0}
+#ns-bp-panel{flex:0 0 210px;background:#fff;border:1px solid #d7dee6;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);font-size:12px;overflow:hidden}
+#ns-bp-panel .bp-hd{background:#1565c0;color:#fff;font-weight:800;padding:7px 10px;cursor:pointer;display:flex;justify-content:space-between}
+#ns-bp-panel .bp-row{display:flex;align-items:center;gap:6px;padding:5px 8px;border-top:1px solid #eef1f5}
+#ns-bp-panel .bp-dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px}
+#ns-bp-panel .bp-ten{flex:1;font-weight:700}
+#ns-bp-panel .bp-note{padding:6px 8px;color:#888;font-size:10.5px;border-top:1px solid #eef1f5;line-height:1.6}
+@media (max-width:899px){
+  .ns-bp-flex{flex-direction:column;align-items:stretch}
+  #ns-bp-panel{order:-1;flex:none}
+  #ns-bp-panel.bp-gon .bp-body{display:none}
+}
+</style>
+<div class="ns-bp-flex">
 <div class="tbl-wrap" style="margin-bottom:10px;"><div class="tbl-outer"><table id="mt"></table></div></div>
+<div id="ns-bp-panel" style="display:none"></div>
+</div>
 
 <div class="action-bar">
   <button class="btn btn-gr" onclick="saveData()">💾 Lưu ngay</button>
@@ -630,6 +649,12 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       <button class="btn btn-sm btn-gr" onclick="dbnLuu()">💾 Lưu tất cả</button>
     </div>
     <div style="overflow-x:auto;border:1px solid #d7dee6;border-radius:10px"><table id="dbn-tbl"></table></div>
+  </div>
+  <div class="dbn-card" id="dbn-bp-card" style="display:none">
+    <h2>🧩 Bộ phận</h2>
+    <p class="dbn-sub">Dùng cho bảng theo dõi bộ phận trong báo cáo Nhân sự. Gán bộ phận cho từng chức danh ở bảng trên (ô "Bộ phận"); gán người vào bộ phận ở trang Quản lý tài khoản.</p>
+    <div class="dbn-tool"><button class="btn btn-sm btn-or" onclick="dbnBpThem()">+ Thêm bộ phận</button></div>
+    <div id="dbn-bp-list"></div>
   </div>
 </div>
 
@@ -3176,6 +3201,7 @@ async function setUser(){
   curUser=n;
   if(vDate){
     document.getElementById('ust').textContent='✅ '+n;
+    nsBpTai();
     return; // Đang xem/sửa ngày cũ — không đụng tới trạng thái khoá/mở đang có (do unlockHistEdit quản lý)
   }
   if(isAfterCutoff()&&!unlockedThisSession){
@@ -3198,6 +3224,7 @@ async function setUser(){
   renderTable();
   await mergeSave();
   ghiNhanNguoiVao('nhansu', tkey(), 'login'); // ghi riêng lên server, không phụ thuộc mergeSave có chạy được hay không
+  nsBpGhi('login', tkey()).then(nsBpTai);
 }
 
 // Ghi tên người vào / người sửa thẳng lên server (chỉ thêm 1 tên, không ghi đè cả bản) — tự thử lại nếu chưa được
@@ -3213,6 +3240,74 @@ async function ghiNhanNguoiVao(bang, ngay, loai, lanThu){
   }catch(e){}
   if(!ok && lanThu < 4) setTimeout(function(){ ghiNhanNguoiVao(bang, ngay, loai, lanThu+1); }, [5000,15000,45000,120000][lanThu]);
 }
+
+/* ============ BẢNG THEO DÕI BỘ PHẬN (chỉ trên màn hình báo cáo Nhân sự) ============
+   Trạng thái lưu ở bảng riêng nhansu_bo_phan trên server (không nằm trong dữ liệu báo cáo).
+   Server tự biết người đăng nhập thuộc bộ phận nào; máy chỉ báo "đã vào" / "đã sửa cột nào" / "không đổi". */
+var nsBpCotSua={};   // cột (cd_<id>) mình vừa sửa, chờ báo lên server sau khi lưu xong
+var nsBpData=null;   // {cua_toi, bo_phan:[...], trang_thai:{id:{dn,sua,thay,thay_boi}}}
+var nsBpKey='', nsBpTre=null, nsBpTat=false;
+function nsBpTk(){ try{ return JSON.parse(localStorage.getItem('bch_nv_login_v2')||'{}')||{}; }catch(e){ return {}; } }
+async function nsBpGhi(loai, ngay, cot){
+  if(nsBpTat) return false;
+  var sv=nsBpTk(); if(!sv.ten||!sv.pin||!getDonViId()) return false;
+  try{
+    var r=await sc.rpc('nhansu_ghi_bo_phan',{p_ten:sv.ten,p_pin:sv.pin,p_ngay:ngay,p_don_vi_id:getDonViId(),p_loai:loai,p_cot:cot||[]});
+    if(r.error && /Could not find the function/i.test(r.error.message||'')){ nsBpTat=true; return false; }
+    return !r.error;
+  }catch(e){ return false; }
+}
+async function nsBpTai(){
+  if(nsBpTat) return;
+  var sv=nsBpTk(); if(!sv.ten||!sv.pin||!getDonViId()) return;
+  var ngay=vDate||tkey();
+  nsBpKey=getDonViId()+'|'+ngay;
+  try{
+    var r=await sc.rpc('nhansu_lay_bo_phan',{p_ten:sv.ten,p_pin:sv.pin,p_ngay:ngay,p_don_vi_id:getDonViId()});
+    if(r.error){ if(/Could not find the function/i.test(r.error.message||'')){ nsBpTat=true; nsBpData=null; nsBpVe(); } return; }
+    if(nsBpKey!==getDonViId()+'|'+(vDate||tkey())) return; // đã chuyển ngày/đơn vị trong lúc chờ
+    nsBpData=r.data; nsBpVe();
+  }catch(e){}
+}
+function nsBpTaiTre(){ clearTimeout(nsBpTre); nsBpTre=setTimeout(nsBpTai,1500); }
+function nsBpTaiNeuDoiNgay(){ if(getDonViId() && nsBpKey!==getDonViId()+'|'+(vDate||tkey())) nsBpTai(); }
+// xanh: đã sửa, hoặc có người nhập thay nhưng người của bộ phận cũng đã vào · đỏ: chỉ có người khác nhập thay
+// cam: mới vào, chưa sửa · xám: chưa vào
+function nsBpMau(t){
+  t=t||{};
+  if(t.sua || (t.thay && t.dn)) return {m:'#2e7d32', ok:true, g:'Đã chỉnh sửa'};
+  if(t.thay) return {m:'#c62828', ok:true, g:'Người khác nhập thay'+(t.thay_boi?' ('+t.thay_boi+')':'')};
+  if(t.dn) return {m:'#ef6c00', ok:true, g:'Đã vào, chưa chỉnh sửa'};
+  return {m:'#9e9e9e', ok:false, g:'Chưa vào báo cáo'};
+}
+function nsBpVe(){
+  var el=document.getElementById('ns-bp-panel'); if(!el) return;
+  var ds=nsBpData&&Array.isArray(nsBpData.bo_phan)?nsBpData.bo_phan:[];
+  if(!nsBpData||!ds.length){ el.style.display='none'; return; }
+  el.style.display='';
+  var tt=nsBpData.trang_thai||{}, xong=0;
+  var rows=ds.map(function(b){
+    var t=tt[String(b.id)], s=nsBpMau(t); if(s.ok) xong++;
+    var nut=(!vDate && String(nsBpData.cua_toi)===String(b.id) && !(t&&t.sua))
+      ? '<button type="button" class="btn btn-sm" style="font-size:10px;padding:2px 6px" onclick="nsBpKhongDoi()">Không đổi</button>' : '';
+    return '<div class="bp-row" title="'+nsEsc(s.g)+'"><span class="bp-dot" style="background:'+s.m+'"></span>'
+      +'<span class="bp-ten" style="color:'+s.m+'">'+nsEsc(b.ten)+'</span>'+nut
+      +'<b style="color:'+(s.ok?'#2e7d32':'#c62828')+'">'+(s.ok?'✓':'✗')+'</b></div>';
+  }).join('');
+  el.innerHTML='<div class="bp-hd" onclick="nsBpGon()"><span>🧩 Bộ phận '+(vDate?'(ngày này)':'hôm nay')+'</span><span>'+xong+'/'+ds.length+'</span></div>'
+    +'<div class="bp-body">'+rows
+    +'<div class="bp-note"><span style="color:#ef6c00">●</span> đã vào, chưa sửa<br><span style="color:#2e7d32">●</span> đã sửa<br><span style="color:#c62828">●</span> người khác nhập thay<br><span style="color:#9e9e9e">●</span> chưa vào</div></div>';
+}
+function nsBpGon(){ var el=document.getElementById('ns-bp-panel'); if(el) el.classList.toggle('bp-gon'); }
+async function nsBpKhongDoi(){
+  if(!confirm('Xác nhận số liệu bộ phận của bạn hôm nay KHÔNG thay đổi?')) return;
+  if(await nsBpGhi('khong_doi', tkey())){ toast('✓ Đã ghi nhận: bộ phận không đổi'); nsBpTai(); }
+  else toast('❌ Chưa ghi nhận được, thử lại.');
+}
+setInterval(function(){
+  var sc_=document.getElementById('screen-ns');
+  if(!document.hidden && curUser && sc_ && sc_.classList.contains('active')) nsBpTai();
+}, 60000);
 
 function fmtN(v){return v===0?'-':(v<10?'0'+v:String(v));}
 
@@ -3386,6 +3481,14 @@ async function mergeSave(askReason){
     setSS('✅ Đã cập nhật');
     renderLog();
     if(curUser && editorsMap[curUser]==='edit') ghiNhanNguoiVao('nhansu', targetKey, 'edit');
+    var _bpCot=Object.keys(nsBpCotSua);
+    if(_bpCot.length){
+      nsBpCotSua={};
+      nsBpGhi('edit', targetKey, _bpCot).then(function(ok){
+        if(!ok) _bpCot.forEach(function(k){ nsBpCotSua[k]=1; }); // lỗi → gửi lại ở lần lưu sau
+        nsBpTai();
+      });
+    }
   }catch(e){setSS('⚠️ Lỗi: '+escHtmlHub(e&&e.message));}
   finally{mergeSaveBusy=false;}
 }
@@ -3417,6 +3520,7 @@ function addLog(proj,info){
     it.pn=String(projName(proj)).split('\n').join(' ');
     it.t=info.t; it.tn=(ti>=0&&TLABELS[ti])?TLABELS[ti]:info.t;
     it.c=info.c; it.cn=cn;
+    if(info.c) nsBpCotSua[info.c]=1; // báo bộ phận sau khi lưu xong
     it.o=(firstOld!==null&&firstOld!==undefined)?firstOld:info.o;
     it.n=info.n;
   }
@@ -3429,6 +3533,7 @@ function addLog(proj,info){
 function nsEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function renderLog(){
+  if(curUser) nsBpTaiNeuDoiNgay(); // chuyển ngày cũ / về hôm nay / đổi đơn vị → nạp lại bảng bộ phận
   var el=document.getElementById('logList');
   var names=Object.keys(editorsMap||{});
   var top='';
@@ -4497,6 +4602,7 @@ function applyNSRealtimeUpdate(incoming){
   });
   if(incoming.log) logItems = incoming.log;
   if(incoming.editors){ Object.keys(incoming.editors).forEach(function(n){ if(editorsMap[n]!=='edit') editorsMap[n]=incoming.editors[n]; }); }
+  nsBpTaiTre(); // có người vừa lưu → làm mới bảng bộ phận
 
   var activeInMt = document.activeElement && document.activeElement.closest && document.activeElement.closest('#mt');
   if(activeInMt){
@@ -6873,8 +6979,45 @@ async function dbnTai(){
   dbnCols=(rs[1].data||[]).slice().sort(by);
   dbnVal={};
   (rs[2].data||[]).forEach(function(v){dbnVal[v.chuc_danh_id+'_'+v.cot_id]=v.so_luong;});
+  await dbnTaiBoPhan();
   dbnVeBang();
 }
+/* ---------- Bộ phận (dùng cho bảng theo dõi bộ phận ở báo cáo Nhân sự) ---------- */
+var dbnBoPhan=null; // null = chưa chạy SQL bo-phan → ẩn hết phần bộ phận
+async function dbnTaiBoPhan(){
+  dbnBoPhan=null;
+  try{ var r=await sc.rpc('bo_phan_lay_danh_sach',{p_don_vi_id:getDonViId()}); if(!r.error&&Array.isArray(r.data)) dbnBoPhan=r.data; }catch(e){}
+  dbnVeBoPhan();
+}
+function dbnVeBoPhan(){
+  var card=document.getElementById('dbn-bp-card'); if(!card)return;
+  card.style.display=dbnBoPhan?'':'none';
+  if(!dbnBoPhan)return;
+  var el=document.getElementById('dbn-bp-list');
+  if(!dbnBoPhan.length){el.innerHTML='<div style="font-size:12px;color:#888">Chưa có bộ phận nào.</div>';return;}
+  el.innerHTML=dbnBoPhan.map(function(b,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eef1f5;font-size:12.5px">'
+      +'<span class="dbn-ud" style="display:inline-flex;flex-direction:column;gap:1px"><button data-bpup="'+b.id+'"'+(i?'':' disabled')+' style="border:1px solid #d7dee6;background:#fff;border-radius:3px;width:20px;height:13px;padding:0;font-size:8px">▲</button><button data-bpdn="'+b.id+'"'+(i<dbnBoPhan.length-1?'':' disabled')+' style="border:1px solid #d7dee6;background:#fff;border-radius:3px;width:20px;height:13px;padding:0;font-size:8px">▼</button></span>'
+      +'<b style="flex:1">'+dbmEsc(b.ten)+'</b>'
+      +'<span style="color:#5b6b7d;font-size:11px">'+(b.so_chuc_danh||0)+' chức danh · '+(b.so_tai_khoan||0)+' người</span>'
+      +'<button class="btn btn-sm" data-bpten="'+b.id+'">✏️</button>'
+      +'<button class="btn btn-sm btn-re" data-bpxoa="'+b.id+'">✕</button></div>';
+  }).join('');
+}
+async function dbnBpThem(){
+  var ten=prompt('Tên bộ phận mới:'); if(!ten||!ten.trim())return;
+  if(await dbnGoi('bo_phan_them',{p_don_vi_id:getDonViId(),p_ten:ten.trim()},'✓ Đã thêm bộ phận "'+ten.trim()+'".')) await dbnTai();
+}
+document.getElementById('dbn-bp-list').addEventListener('click',async function(e){
+  var d=(e.target.closest('button')||{}).dataset||{}, b;
+  if(d.bpten){ b=dbnBoPhan.find(function(x){return x.id==d.bpten;}); var ten=prompt('Đổi tên bộ phận:',b?b.ten:''); if(!ten||!ten.trim())return;
+    if(await dbnGoi('bo_phan_doi_ten',{p_id:parseInt(d.bpten),p_ten:ten.trim()},'✓ Đã đổi tên.')) await dbnTai(); }
+  else if(d.bpxoa){ b=dbnBoPhan.find(function(x){return x.id==d.bpxoa;}); if(!b)return;
+    if(!confirm('Xoá bộ phận "'+b.ten+'"?\nĐang có '+(b.so_chuc_danh||0)+' chức danh và '+(b.so_tai_khoan||0)+' người thuộc bộ phận này — sẽ về "Chưa gán".'))return;
+    if(await dbnGoi('bo_phan_xoa',{p_id:parseInt(d.bpxoa)},'✓ Đã xoá bộ phận.')) await dbnTai(); }
+  else if(d.bpup||d.bpdn){ var id=parseInt(d.bpup||d.bpdn),i=dbnBoPhan.findIndex(function(x){return x.id===id;}),j=i+(d.bpup?-1:1); if(i<0||j<0||j>=dbnBoPhan.length)return;
+    if(await dbnGoi('bo_phan_doi_thu_tu',{p_id1:dbnBoPhan[i].id,p_id2:dbnBoPhan[j].id},'✓ Đã đổi thứ tự.')) await dbnTai(); }
+});
 function dbnVeBang(){
   var h='<thead><tr><th class="dbn-l">Chức danh</th>';
   dbnCols.forEach(function(c){h+='<th><input class="dbn-in dbn-cn" data-c="'+c.id+'" value="'+dbmEsc(c.nhan)+'"><span class="dbn-x" data-xc="'+c.id+'">✕</span></th>';});
@@ -6883,7 +7026,10 @@ function dbnVeBang(){
     h+='<tr><td class="dbn-l'+(r.an?' dbn-an':'')+'"><div><span class="dbn-ud"><button data-up="'+r.id+'"'+(i?'':' disabled')+'>▲</button><button data-dn="'+r.id+'"'+(i<dbnRows.length-1?'':' disabled')+'>▼</button></span>'
       +'<input class="dbn-in dbn-rn" data-r="'+r.id+'" value="'+dbmEsc(r.ten)+'">'
       +'<span class="dbn-x" data-an="'+r.id+'" title="'+(r.an?'Hiện lại':'Ẩn khỏi báo cáo')+'">'+(r.an?'👁':'🚫')+'</span><span class="dbn-x" data-xr="'+r.id+'">✕</span></div>'
-      +'<div style="margin-top:3px;font-size:11px;color:#5b6b7d">Viết tắt: <input class="dbn-in dbn-rt" data-rt="'+r.id+'" value="'+dbmEsc(r.ten_tat||'')+'" placeholder="VD: CV.NN"></div></td>';
+      +'<div style="margin-top:3px;font-size:11px;color:#5b6b7d">Viết tắt: <input class="dbn-in dbn-rt" data-rt="'+r.id+'" value="'+dbmEsc(r.ten_tat||'')+'" placeholder="VD: CV.NN"></div>'
+      +(dbnBoPhan?'<div style="margin-top:3px;font-size:11px;color:#5b6b7d">Bộ phận: <select class="dbn-in dbn-bp" data-bp="'+r.id+'" style="font-size:11.5px;padding:3px 5px"><option value="">— Chưa gán —</option>'
+        +dbnBoPhan.map(function(b){return '<option value="'+b.id+'"'+(String(r.bo_phan_id)===String(b.id)?' selected':'')+'>'+dbmEsc(b.ten)+'</option>';}).join('')+'</select></div>':'')
+      +'</td>';
     dbnCols.forEach(function(c){var v=dbnVal[r.id+'_'+c.id];h+='<td><input class="dbn-in dbn-n" type="number" data-r="'+r.id+'" data-c="'+c.id+'" value="'+dbmEsc(v==null?'':v)+'"></td>';});
     h+='</tr>';
   });
@@ -6894,6 +7040,12 @@ function dbnVeBang(){
   tbl.addEventListener('change',async function(e){
     var t=e.target,id,r;
     if(t.classList.contains('dbn-n')){dbnVal[t.dataset.r+'_'+t.dataset.c]=t.value;}
+    else if(t.classList.contains('dbn-bp')){
+      id=parseInt(t.dataset.bp); r=dbnRows.find(function(x){return x.id==id;});
+      var bp=t.value?parseInt(t.value):null;
+      if(await dbnGoi('dinhbien_gan_bo_phan',{p_chuc_danh_id:id,p_bo_phan_id:bp},'✓ Đã gán bộ phận.')){ if(r)r.bo_phan_id=bp; await dbnTaiBoPhan(); }
+      else { t.value=(r&&r.bo_phan_id)?String(r.bo_phan_id):''; }
+    }
     else if(t.classList.contains('dbn-rn')||t.classList.contains('dbn-rt')){
       id=parseInt(t.dataset.r||t.dataset.rt); r=dbnRows.find(function(x){return x.id==id;});
       var ni=tbl.querySelector('.dbn-rn[data-r="'+id+'"]'),ti=tbl.querySelector('.dbn-rt[data-rt="'+id+'"]');

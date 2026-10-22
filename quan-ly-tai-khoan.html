@@ -1516,6 +1516,28 @@ async function loadModules(){
   if(!error && data) modulesCache = data;
 }
 
+// Bộ phận của đơn vị đang mở + tài khoản nào thuộc bộ phận nào (chưa chạy SQL bo-phan → bỏ qua, ẩn cột)
+let boPhanCache = null, boPhanMap = {};
+async function loadBoPhanAdmin(){
+  boPhanCache = null; boPhanMap = {};
+  try{
+    const r1 = await sb.rpc("bo_phan_lay_danh_sach", { p_don_vi_id: window.currentAdminDonVi });
+    if(r1.error) return;
+    const r2 = await sb.rpc("admin_lay_bo_phan_tai_khoan", { p_pass: currentAdminPass, p_don_vi_id: window.currentAdminDonVi });
+    if(r2.error) return;
+    boPhanCache = r1.data || [];
+    boPhanMap = r2.data || {};
+  }catch(e){}
+}
+function boPhanCell(emp){
+  if(!boPhanCache) return "";
+  const cur = boPhanMap[String(emp.id)];
+  return `<td><select class="bo-phan-select" data-id="${emp.id}" style="font-size:12px;padding:4px 6px;border-radius:6px;">
+    <option value="">— Chưa gán —</option>
+    ${boPhanCache.map(b=>`<option value="${b.id}" ${String(cur)===String(b.id)?"selected":""}>${escapeHtml(b.ten)}</option>`).join("")}
+  </select></td>`;
+}
+
 async function loadAdminData(){
   if(!window.currentAdminDonVi){
     showAdminUnitPick();
@@ -1527,6 +1549,7 @@ async function loadAdminData(){
     if(loading) loading.style.display = "block";
     if(wrap) wrap.style.display = "none";
     await loadModules();
+    await loadBoPhanAdmin();
     const { data, error } = await sb.rpc("admin_lay_danh_sach", { p_pass: currentAdminPass, p_don_vi_id: window.currentAdminDonVi || null });
     if(error){
       showToast("Không tải được danh sách: " + (error.message||"thử lại"));
@@ -1547,7 +1570,7 @@ async function loadAdminData(){
 function renderAdminTable(){
   const head = document.getElementById("tableHeadRow");
   head.innerHTML =
-    `<th class="col-freeze1">STT</th><th class="col-freeze2">MSNV</th><th class="col-freeze3">Tên nhân viên</th><th>Chức vụ</th><th>Đơn vị</th><th>SĐT</th>` +
+    `<th class="col-freeze1">STT</th><th class="col-freeze2">MSNV</th><th class="col-freeze3">Tên nhân viên</th><th>Chức vụ</th>` + (boPhanCache ? `<th>Bộ phận</th>` : ``) + `<th>Đơn vị</th><th>SĐT</th>` +
     modulesCache.map(m=>`<th>${escapeHtml(m.nhan)} <span class="icon-btn reject" style="padding:1px 6px; margin-left:4px;" data-remove-module="${m.id}" title="Xoá quyền này">✕</span></th>`).join("") +
     `<th>Trạng thái</th><th>Thao tác</th>`;
 
@@ -1583,6 +1606,7 @@ function renderAdminTable(){
       <td class="col-freeze2">${escapeHtml(emp.msnv)}</td>
       <td class="col-freeze3">${escapeHtml(emp.ten)}</td>
       <td>${escapeHtml(emp.chuc_vu || "—")}</td>
+      ${boPhanCell(emp)}
       <td style="font-size:11px;color:var(--muted);">${escapeHtml(emp.don_vi_id || "—")}</td>
       <td>${escapeHtml(emp.sdt || "—")}</td>
       ${moduleCells}
@@ -1604,6 +1628,20 @@ function renderAdminTable(){
       });
       if(error){ showToast("Không lưu được thay đổi."); e.target.checked = !e.target.checked; }
       else emp.quyen = newQuyen;
+    });
+  });
+
+  document.querySelectorAll(".bo-phan-select").forEach(sel=>{
+    sel.addEventListener("change", async ()=>{
+      const id = parseInt(sel.dataset.id);
+      const truoc = boPhanMap[String(id)];
+      const bp = sel.value ? parseInt(sel.value) : null;
+      const { error } = await sb.rpc("admin_gan_bo_phan", {
+        p_pass: currentAdminPass, p_employee_id: id, p_don_vi_id: window.currentAdminDonVi, p_bo_phan_id: bp
+      });
+      if(error){ showToast("Không gán được bộ phận: " + (error.message||"")); sel.value = truoc ? String(truoc) : ""; return; }
+      if(bp) boPhanMap[String(id)] = bp; else delete boPhanMap[String(id)];
+      showToast("✓ Đã gán bộ phận");
     });
   });
 
