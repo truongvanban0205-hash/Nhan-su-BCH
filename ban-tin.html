@@ -253,7 +253,7 @@ async function kiemTraPhien(saved){
     var r = await sb.rpc('kiem_tra_phien', {p_ten: saved.ten, p_token: saved.token || ''});
     if(!r.error && (r.data==='bi_da' || r.data==='can_dang_nhap_lai' || r.data==='khong_hop_le')){
       localStorage.removeItem(LS_KEY);
-      if(r.data==='bi_da') alert('Tài khoản này vừa đăng nhập ở máy khác nên máy này đã bị đăng xuất.');
+      if(r.data==='bi_da') alert('Tài khoản này vừa đăng nhập ở một '+(/mobi|android|iphone|ipad|ipod/i.test(navigator.userAgent)?'điện thoại':'máy tính')+' khác nên máy này đã bị đăng xuất. (Mỗi tài khoản: 1 điện thoại + 1 máy tính.)');
       location.href = LOGIN_PAGE;
       return true;
     }

@@ -6472,7 +6472,7 @@ async function renderHomeThongBao(){
     if(!rp.error){
       if(rp.data === 'bi_da'){
         localStorage.removeItem(LS_KEY);
-        alert('Tài khoản này vừa đăng nhập ở máy khác (hoặc trình duyệt khác) nên máy này đã bị đăng xuất.\nNếu muốn dùng ở máy này, hãy đăng nhập lại (máy kia sẽ bị đăng xuất).');
+        alert('Tài khoản này vừa đăng nhập ở một '+(/mobi|android|iphone|ipad|ipod/i.test(navigator.userAgent)?'điện thoại':'máy tính')+' khác (hoặc trình duyệt khác) nên máy này đã bị đăng xuất.\nMỗi tài khoản dùng được 1 điện thoại + 1 máy tính cùng lúc. Muốn dùng ở máy này thì đăng nhập lại (máy kia sẽ bị đăng xuất).');
         location.href = LOGIN_PAGE; return;
       }
       if(rp.data === 'can_dang_nhap_lai' || rp.data === 'khong_hop_le'){
@@ -6924,7 +6924,7 @@ function bchBiDaKhoiMay(){
   if(window.__bchKicked) return;
   window.__bchKicked=true;
   try{ localStorage.removeItem('bch_nv_login_v2'); }catch(e){}
-  alert('Tài khoản này vừa đăng nhập ở máy khác (hoặc trình duyệt khác) nên máy này đã bị đăng xuất.\nNếu muốn dùng ở máy này, hãy đăng nhập lại (máy kia sẽ bị đăng xuất).');
+  alert('Tài khoản này vừa đăng nhập ở một '+(/mobi|android|iphone|ipad|ipod/i.test(navigator.userAgent)?'điện thoại':'máy tính')+' khác (hoặc trình duyệt khác) nên máy này đã bị đăng xuất.\nMỗi tài khoản dùng được 1 điện thoại + 1 máy tính cùng lúc. Muốn dùng ở máy này thì đăng nhập lại (máy kia sẽ bị đăng xuất).');
   location.href='quan-ly-tai-khoan.html';
 }
 async function bchKiemTraPhienDinhKy(){
