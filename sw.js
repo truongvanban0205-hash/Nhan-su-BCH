@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bch-app-v6';
+const CACHE_NAME = 'bch-app-v7';
 const urlsToCache = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(e){
@@ -18,8 +18,9 @@ self.addEventListener('fetch', function(e){
   if(e.request.method !== 'GET') return; // Không cache POST (vd: gọi Supabase) — tránh lỗi Console vô hại
   // Chỉ cache file của chính app (cùng domain). Dữ liệu Supabase (báo cáo, chat, ảnh) không lưu vào máy.
   if(new URL(e.request.url).origin !== self.location.origin) return;
+  // Luôn hỏi lại máy chủ (no-cache) để vừa up GitHub là máy người dùng nhận bản mới, không kẹt bản cũ
   e.respondWith(
-    fetch(e.request).then(function(r){
+    fetch(e.request.url, {cache:'no-cache', credentials:'same-origin'}).then(function(r){
       if(r.ok){
         var copy=r.clone();
         caches.open(CACHE_NAME).then(function(c){c.put(e.request,copy);});
