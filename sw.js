@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bch-app-v8';
+const CACHE_NAME = 'bch-app-v9';
 const urlsToCache = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(e){
@@ -45,21 +45,70 @@ self.addEventListener('push', function(e){
         if(c.visibilityState==='visible' && c.url.indexOf('chat.html')>=0 && m && Number(m[1])===Number(data.ht)) return;
       }
     }
-    return self.registration.showNotification(data.title || 'Tin nhắn', {
+    var tb = {
       body: data.body || '',
       icon: './icon.png',
       badge: './icon.png',
       tag: data.tag || undefined,          // cùng hội thoại → gộp thành 1 thông báo, tin mới thay tin cũ
       renotify: !!data.tag,                // nhưng vẫn rung/kêu lại
       requireInteraction: !!data.goi,      // cuộc gọi: giữ trên màn hình tới khi bấm
-      vibrate: data.goi ? [400,200,400,200,400,200,400] : [200,100,200],
-      data: { url: data.url || './chat.html' }
+      vibrate: data.goi ? [700,400,700,400,700,400,700] : [200,100,200],
+      data: { url: data.url || './chat.html', goi: data.goi ? goiId(data.url) : null }
+    };
+    if(data.goi) tb.actions = [{action:'nghe', title:'Nghe'}, {action:'tu_choi', title:'Từ chối'}];
+    return self.registration.showNotification(data.title || 'Tin nhắn', tb).then(function(){
+      if(data.goi) return doChuongLap(data.title, tb); // cuộc gọi: kêu + rung lại mỗi 5 giây tới khi bắt máy / hết 45 giây
     });
   }));
 });
 
+/* ----- cuộc gọi khi app đang đóng ----- */
+var SB_URL = 'https://jqwjzvucwvlwbcgxhath.supabase.co', SB_KEY = 'sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv';
+function goiId(url){ var m = String(url || '').match(/goi=(\d+)/); return m ? Number(m[1]) : null; }
+function layThe(){ // thẻ phiên do trang chat lưu vào IndexedDB
+  return new Promise(function(ok){
+    try{
+      var rq = indexedDB.open('bch-chat', 1);
+      rq.onupgradeneeded = function(){ rq.result.createObjectStore('kv'); };
+      rq.onsuccess = function(){ try{ var g = rq.result.transaction('kv').objectStore('kv').get('token'); g.onsuccess = function(){ ok(g.result || ''); }; g.onerror = function(){ ok(''); }; }catch(e){ ok(''); } };
+      rq.onerror = function(){ ok(''); };
+    }catch(e){ ok(''); }
+  });
+}
+function goiRpc(ten, p){
+  return layThe().then(function(t){
+    if(!t) return null;
+    p.p_token = t;
+    return fetch(SB_URL + '/rest/v1/rpc/' + ten, { method:'POST', headers:{ 'Content-Type':'application/json', apikey:SB_KEY }, body:JSON.stringify(p) })
+      .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+  });
+}
+function doChuongLap(title, tb){
+  var id = tb.data.goi, lan = 0;
+  return new Promise(function(xong){
+    function vong(){
+      if(++lan > 8) return xong();
+      setTimeout(function(){
+        goiRpc('ht_xem_goi', { p_goi:id }).then(function(g){
+          if(!g || g.trang_thai !== 'do_chuong'){ // đã nghe / từ chối / nhỡ → bỏ thông báo đổ chuông
+            self.registration.getNotifications({ tag:tb.tag }).then(function(ds){ ds.forEach(function(n){ n.close(); }); });
+            return xong();
+          }
+          self.registration.showNotification(title, tb).then(vong, vong);
+        });
+      }, 5000);
+    }
+    vong();
+  });
+}
+
 self.addEventListener('notificationclick', function(e){
   e.notification.close();
+  var d = e.notification.data || {};
+  if(e.action === 'tu_choi' && d.goi){ // từ chối ngay trên thông báo, không cần mở app
+    e.waitUntil(goiRpc('ht_tra_loi_goi', { p_goi:d.goi, p_nghe:false }));
+    return;
+  }
   var targetUrl = new URL((e.notification.data && e.notification.data.url) || './chat.html', self.registration.scope).href;
   e.waitUntil(
     self.clients.matchAll({type:'window', includeUncontrolled:true}).then(function(list){
