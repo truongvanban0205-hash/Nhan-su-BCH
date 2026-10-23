@@ -11,7 +11,7 @@
 <style>
 :root{--xanh:#0068ff;--nen:#eef0f1;--chu:#081c36;--mo:#7589a3;--vien:#e1e4ea;--toi:#e5efff;--do:#e53935}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;font-family:-apple-system,'Segoe UI',Roboto,'Be Vietnam Pro',sans-serif;color:var(--chu);background:#fff}
+html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,'Segoe UI',Roboto,'Be Vietnam Pro',sans-serif;color:var(--chu);background:#fff}
 button{font-family:inherit;cursor:pointer}
 #app{display:flex;height:100vh;height:100dvh}
 /* ---- danh sách ---- */
@@ -45,7 +45,10 @@ button{font-family:inherit;cursor:pointer}
 #chat .hd .ib:hover{background:#eef0f1}
 #ghim{display:none;background:#fff;border-bottom:1px solid var(--vien);padding:7px 12px;font-size:13px;cursor:pointer;gap:8px;align-items:center}
 #ghim b{color:var(--xanh)}
-#tn{flex:1;overflow-y:auto;padding:10px 10px 4px}
+/* min-height:0 bắt buộc: không có thì khung tin dài ra theo nội dung, cả trang cuộn và thanh tên trôi mất */
+#tn{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:10px 10px 4px}
+#chat .hd,#ghim,#soan,#dangsoan{flex-shrink:0}
+#ds{min-height:0}
 .ngay{text-align:center;margin:12px 0 8px}
 .ngay span{background:rgba(0,0,0,.25);color:#fff;font-size:11.5px;padding:3px 10px;border-radius:10px}
 .ht-sys{text-align:center;font-size:12px;color:var(--mo);margin:8px 0}
@@ -83,6 +86,17 @@ button{font-family:inherit;cursor:pointer}
 #goiy{display:none;max-height:180px;overflow-y:auto;border-bottom:1px solid var(--vien);margin-bottom:4px}
 #goiy div{padding:7px 10px;font-size:14px;cursor:pointer;display:flex;gap:8px;align-items:center}
 #goiy div:hover,#goiy div.on{background:#eef4ff}
+.av.lon{width:110px;height:110px;flex-basis:110px;font-size:36px;margin:0 auto}
+.av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.bong.co-anh{padding:3px}
+.bong.co-anh .tg,.bong.co-anh .nguoi{padding:0 6px}
+.bong img.anh{display:block;max-width:min(260px,62vw);max-height:340px;width:auto;height:auto;border-radius:9px;cursor:zoom-in;background:#dde3ea}
+.anh-het{padding:18px 14px;color:var(--mo);font-size:13px;text-align:center}
+#nutAnh{background:none;border:none;font-size:22px;padding:4px 6px;color:var(--xanh)}
+#xemAnh{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:80;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+#xemAnh img{max-width:96vw;max-height:84vh;object-fit:contain}
+#xemAnh a{color:#fff;font-size:14px}
+#tn.keo{outline:3px dashed var(--xanh);outline-offset:-6px}
 #trong-chat{flex:1;display:flex;align-items:center;justify-content:center;color:var(--mo);text-align:center;padding:30px;font-size:15px;line-height:1.7}
 /* ---- menu, hộp thoại ---- */
 #menu{display:none;position:fixed;z-index:50;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);min-width:200px;overflow:hidden}
@@ -131,6 +145,7 @@ button{font-family:inherit;cursor:pointer}
   <div id="list">
     <div class="hd">
       <button class="ib" onclick="location.href='index.html'" title="Về trang chủ">←</button>
+      <div id="avToi" onclick="moToi()" style="cursor:pointer" title="Ảnh đại diện của bạn"></div>
       <h1>Tin nhắn</h1>
       <button class="ib" onclick="moDanhBa()" title="Nhắn tin mới">✎</button>
       <button class="ib" onclick="moTaoNhom()" title="Tạo nhóm">👥</button>
@@ -157,6 +172,8 @@ button{font-family:inherit;cursor:pointer}
         <div id="traloi"><span>↩</span><div class="x" id="traloiNd"></div><button class="ib" style="font-size:14px;color:var(--mo)" onclick="boTraLoi()">✕</button></div>
         <div id="goiy"></div>
         <div class="o-soan">
+          <button id="nutAnh" onclick="document.getElementById('chonAnh').click()" title="Gửi ảnh">🖼</button>
+          <input type="file" id="chonAnh" accept="image/*" multiple style="display:none" onchange="guiAnh(this.files);this.value=''">
           <textarea id="nhap" rows="1" placeholder="Nhập tin nhắn..." oninput="khiGo()" onkeydown="phimNhap(event)"></textarea>
           <button id="gui" onclick="gui()" disabled title="Gửi">➤</button>
         </div>
@@ -167,6 +184,8 @@ button{font-family:inherit;cursor:pointer}
 
 <div id="menu"></div>
 <div id="mo" onclick="if(event.target===this)dongHop()"><div id="hop"></div></div>
+<div id="xemAnh" onclick="if(event.target.tagName!=='A')this.style.display='none'"><img id="xemAnhImg" alt=""><a id="xemAnhLink" href="#" target="_blank" rel="noopener">Mở ảnh gốc / Tải về</a></div>
+<input type="file" id="chonAv" accept="image/*" style="display:none" onchange="doiAnhDaiDien(this.files[0]);this.value=''">
 <div id="loi"></div>
 <div id="toast"></div>
 
@@ -192,10 +211,31 @@ function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,
 function p2(n){ return n<10?'0'+n:''+n; }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',2600); }
 const MAU = ['#f08c00','#2f9e44','#1971c2','#c2255c','#7048e8','#0c8599','#e8590c','#5c940d','#9c36b5','#d6336c'];
+const ANH = {};   // ảnh đại diện: {employee_id: đường dẫn trong kho} ('' = không có)
+function anhUrl(path){ return SUPABASE_URL+'/storage/v1/object/public/ht-anh/'+String(path).split('/').map(encodeURIComponent).join('/'); }
 function avatar(id, ten, lop, online){
   const p=String(ten||'?').trim().split(/\s+/);
   const chu=(p.length>1?p[0][0]+p[p.length-1][0]:String(ten||'?').slice(0,2)).toUpperCase();
-  return '<div class="av '+(lop||'')+'" style="background:'+MAU[Math.abs(Number(id)||0)%MAU.length]+'">'+esc(chu)+(online?'<span class="onl"></span>':'')+'</div>';
+  const anh=ANH[id]?'<img src="'+esc(anhUrl(ANH[id]))+'" alt="" loading="lazy">':esc(chu);
+  return '<div class="av '+(lop||'')+'" style="background:'+MAU[Math.abs(Number(id)||0)%MAU.length]+'">'+anh+(online?'<span class="onl"></span>':'')+'</div>';
+}
+// Hỏi ảnh đại diện của những người chưa biết (1 lượt cho nhiều người), xong vẽ lại
+const daHoiAnh = {};
+let treVeAnh=null;
+async function taiAnhDD(ids){
+  const can=[...new Set(ids.filter(id=>id && !(id in daHoiAnh)))];
+  if(!can.length) return;
+  can.forEach(id=>daHoiAnh[id]=1);
+  const r=await rpc('ht_anh_dai_dien',{p_ids:can});
+  if(r.error) return; // chưa chạy SQL phần 3 → dùng chữ cái đầu
+  let doi=false;
+  can.forEach(id=>{ const v=(r.data||{})[String(id)]||''; if((ANH[id]||'')!==v){ ANH[id]=v; doi=true; } });
+  if(doi){ clearTimeout(treVeAnh); treVeAnh=setTimeout(veLaiAnh, 50); }
+}
+function veLaiAnh(){
+  veDanhSach(); if(htMo){ veTieuDe(); veTin(); }
+  if(toi) document.getElementById('avToi').innerHTML=avatar(toi.id,toi.ten,'nho');
+  if(document.getElementById('dbDs')) veDanhBa();
 }
 function avNhom(){ return '<div class="av" style="background:#4c6ef5;font-size:20px">👥</div>'; }
 function laOnline(t){ return t && (Date.now()-new Date(t).getTime()) < 3*60*1000; }
@@ -250,8 +290,11 @@ async function batDau(){
   const r = await rpc('ht_toi');
   if(r.error){ if(!/CHUA_DANG_NHAP|CHUA_DUOC_DUYET/.test(r.error.message||'')){ document.getElementById('ds').innerHTML='<div class="trong">Không tải được tin nhắn.<br><small>'+esc(r.error.message)+'</small></div>'; } return; }
   toi = r.data;
+  document.getElementById('avToi').innerHTML=avatar(toi.id,toi.ten,'nho');
+  taiAnhDD([toi.id]);
   ketNoiRealtime();
   await taiDanhSach();
+  setTimeout(donTep, 20000);
   const m = location.hash.match(/ht=(\d+)/);
   if(m) moHt(parseInt(m[1]));
   setInterval(()=>{ if(!document.hidden) rpc('ht_online'); }, 60000);
@@ -314,6 +357,7 @@ async function taiDanhSach(){
   dsHt = r.data || [];
   if(htMo){ const m=dsHt.find(x=>x.id===htMo.id); if(m){ htMo=m; veTieuDe(); } }
   veDanhSach();
+  taiAnhDD(dsHt.map(h=>h.doi_phuong));
 }
 function veDanhSach(){
   const q=(document.getElementById('timHt').value||'').trim().toLowerCase();
@@ -375,6 +419,7 @@ async function taiThongTin(){
   if(r.error || !htMo || htMo.id!==id) return;
   ttMo=r.data;
   if(htMo.loai!==ttMo.loai){ htMo.loai=ttMo.loai; }
+  taiAnhDD((ttMo.thanh_vien||[]).map(t=>t.id));
   ghimId = ttMo.ghim ? ttMo.ghim.id : null;
   const g=document.getElementById('ghim');
   if(ttMo.ghim){ g.style.display='flex'; document.getElementById('ghimNd').innerHTML='<b>'+esc(ttMo.ghim.ten_gui||'')+':</b> '+esc(moTaTin(ttMo.ghim)); }
@@ -391,6 +436,7 @@ async function taiTinMoi(dau){
   const tn=document.getElementById('tn');
   const sapCuoi = dau || (tn.scrollHeight-tn.scrollTop-tn.clientHeight<120);
   const moi = r.data||[];
+  taiAnhDD(moi.map(m=>m.nguoi_gui));
   const map={}; tinMo.forEach(m=>map[m.id]=m); moi.forEach(m=>map[m.id]=m);
   const cuTruoc = tinMo.length ? tinMo[tinMo.length-1].id : 0;
   tinMo = Object.values(map).sort((a,b)=>a.id-b.id);
@@ -462,7 +508,13 @@ function veTin(){
     if(m.tra_loi && !m.thu_hoi) b+='<div class="trich" onclick="event.stopPropagation();denTin('+m.tra_loi.id+')"><b>'+esc(m.tra_loi.ten_gui||'')+'</b>'+esc(moTaTin(m.tra_loi))+'</div>';
     if(m.thu_hoi) b+='<div class="nd">Tin nhắn đã được thu hồi</div>';
     else if(m.loai==='chu') b+='<div class="nd">'+veNoiDung(m.noi_dung,m)+'</div>';
-    else b+='<div class="nd">'+esc(moTaTin(m))+(m.tep_het_han?' (đã hết hạn sau 30 ngày)':'')+'</div>';
+    else if(m.loai==='anh' && m.tep && m.tep.path){
+      const u=anhUrl(m.tep.path), kt=(m.tep.rong&&m.tep.cao)?' width="'+m.tep.rong+'" height="'+m.tep.cao+'"':'';
+      b+='<img class="anh" src="'+esc(u)+'"'+kt+' loading="lazy" alt="Ảnh" onclick="event.stopPropagation();xemAnh(\''+esc(u)+'\')">';
+      if(m.noi_dung) b+='<div class="nd" style="padding:4px 6px 0">'+veNoiDung(m.noi_dung,m)+'</div>';
+    }
+    else if(m.loai==='anh') b+='<div class="anh-het">🖼 Ảnh đã hết hạn<br><small>(tự xoá sau 30 ngày)</small></div>';
+    else b+='<div class="nd">'+esc(moTaTin(m))+'</div>';
     if(cuoiNhom) b+='<div class="tg">'+p2(new Date(m.tao_luc).getHours())+':'+p2(new Date(m.tao_luc).getMinutes())+'</div>';
     let cx='';
     if(m.cam_xuc && m.cam_xuc.length && !m.thu_hoi){
@@ -471,7 +523,7 @@ function veTin(){
     }
     h+='<div class="dong'+(laToi?' toi':'')+(dau?' dau':'')+(cx?' cocx':'')+'" id="m'+m.id+'" data-id="'+m.id+'">'
       +(laToi?'':avatar(m.nguoi_gui,m.ten_gui,'nho'))
-      +'<div class="bong'+(m.thu_hoi?' thuhoi':'')+'">'+b+cx+'</div>'
+      +'<div class="bong'+(m.thu_hoi?' thuhoi':'')+(m.loai==='anh'&&!m.thu_hoi?' co-anh':'')+'">'+b+cx+'</div>'
       +(m.thu_hoi?'':'<button class="them" onclick="event.stopPropagation();moMenu('+m.id+',this)" title="Thả cảm xúc, trả lời...">☺</button>')
       +'</div>';
     truoc=m;
@@ -617,6 +669,114 @@ async function gui(){
   await taiTinMoi(); cuonXuong(true); taiDanhSach();
 }
 
+/* ---------- ảnh: nén, tải lên, gửi, xem lớn ---------- */
+// Nén ảnh: cạnh dài tối đa `canh` px, JPEG ~82% (ảnh điện thoại 3–5 MB còn ~200–400 KB). `vuong`: cắt vuông (ảnh đại diện)
+function nenAnh(file, canh, vuong){
+  return new Promise((ok, loi)=>{
+    if(file.type==='image/gif' && file.size<3*1024*1024 && !vuong){ // giữ ảnh động
+      const im=new Image(); im.onload=()=>{ ok({blob:file, duoi:'gif', rong:im.naturalWidth, cao:im.naturalHeight}); URL.revokeObjectURL(im.src); };
+      im.onerror=()=>loi(new Error('Không đọc được ảnh')); im.src=URL.createObjectURL(file); return;
+    }
+    const im=new Image();
+    im.onload=()=>{
+      let w=im.naturalWidth, h=im.naturalHeight, sx=0, sy=0, sw=w, sh=h;
+      if(vuong){ const c=Math.min(w,h); sx=(w-c)/2; sy=(h-c)/2; sw=sh=c; w=h=Math.min(c,canh); }
+      else { const k=Math.min(1, canh/Math.max(w,h)); w=Math.round(w*k); h=Math.round(h*k); }
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      const cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,w,h);
+      cx.drawImage(im, sx, sy, sw, sh, 0, 0, w, h);
+      URL.revokeObjectURL(im.src);
+      cv.toBlob(b=>b?ok({blob:b, duoi:'jpg', rong:w, cao:h}):loi(new Error('Không nén được ảnh')), 'image/jpeg', 0.82);
+    };
+    im.onerror=()=>loi(new Error('Không đọc được ảnh (định dạng không hỗ trợ)'));
+    im.src=URL.createObjectURL(file);
+  });
+}
+async function taiLenAnh(mucDich, file, canh, vuong){
+  const a=await nenAnh(file, canh, vuong);
+  if(a.blob.size>5*1024*1024) throw new Error('Ảnh quá lớn (tối đa 5 MB)');
+  const v=await rpc('ht_xin_ve',{p_muc_dich:mucDich, p_ht:mucDich==='anh'?htMo.id:null, p_duoi:a.duoi});
+  if(v.error) throw new Error(v.error.message);
+  const up=await sc.storage.from('ht-anh').upload(v.data, a.blob, {contentType:a.duoi==='gif'?'image/gif':'image/jpeg', cacheControl:'31536000', upsert:false});
+  if(up.error) throw new Error(up.error.message);
+  return {path:v.data, rong:a.rong, cao:a.cao};
+}
+let dangGuiAnh=false;
+async function guiAnh(files){
+  files=[...(files||[])].filter(f=>/^image\//.test(f.type));
+  if(!files.length || !htMo) return;
+  if(dangGuiAnh){ toast('Đang gửi ảnh, đợi chút...'); return; }
+  if(files.length>10){ toast('Mỗi lần gửi tối đa 10 ảnh'); files=files.slice(0,10); }
+  dangGuiAnh=true;
+  const ht=htMo.id, tl=traLoi?traLoi.id:null; boTraLoi();
+  let loi=0;
+  for(let i=0;i<files.length;i++){
+    toast('📤 Đang gửi ảnh '+(i+1)+'/'+files.length+'...');
+    try{
+      const a=await taiLenAnh('anh', files[i], 1600, false);
+      const r=await rpc('ht_gui',{p_ht:ht, p_noi_dung:null, p_loai:'anh', p_tep:a, p_tra_loi:i===0?tl:null});
+      if(r.error) throw new Error(r.error.message);
+    }catch(e){ loi++; console.error(e); toast('❌ Ảnh '+(i+1)+': '+e.message); }
+  }
+  dangGuiAnh=false;
+  if(!loi) toast('✓ Đã gửi '+files.length+' ảnh');
+  if(htMo && htMo.id===ht){ await taiTinMoi(); cuonXuong(true); }
+  taiDanhSach();
+}
+function xemAnh(u){
+  document.getElementById('xemAnhImg').src=u;
+  document.getElementById('xemAnhLink').href=u;
+  document.getElementById('xemAnh').style.display='flex';
+}
+// dán ảnh (Ctrl+V) vào ô soạn, kéo-thả ảnh vào khung chat
+document.getElementById('nhap').addEventListener('paste', e=>{
+  const fs=[...((e.clipboardData||{}).files||[])].filter(f=>/^image\//.test(f.type));
+  if(fs.length){ e.preventDefault(); guiAnh(fs); }
+});
+(function(){
+  const tn=document.getElementById('tn');
+  tn.addEventListener('dragover', e=>{ if([...(e.dataTransfer.types||[])].indexOf('Files')>=0){ e.preventDefault(); tn.classList.add('keo'); } });
+  tn.addEventListener('dragleave', ()=>tn.classList.remove('keo'));
+  tn.addEventListener('drop', e=>{ e.preventDefault(); tn.classList.remove('keo'); guiAnh(e.dataTransfer.files); });
+  // ảnh tải xong làm khung cao lên → nếu đang ở cuối thì giữ ở cuối
+  tn.addEventListener('load', e=>{ if(e.target.tagName==='IMG' && tn.scrollHeight-tn.scrollTop-tn.clientHeight<e.target.clientHeight+150) tn.scrollTop=tn.scrollHeight; }, true);
+})();
+
+/* ---------- ảnh đại diện của tôi ---------- */
+function moToi(){
+  if(!toi) return;
+  moHop('Tài khoản của bạn',
+    '<div style="text-align:center;padding:10px 0">'+avatar(toi.id,toi.ten,'lon')
+    +'<div style="font-weight:700;font-size:17px;margin-top:10px">'+esc(toi.ten)+'</div><div style="color:var(--mo);font-size:13px">'+esc(toi.chuc_vu||'')+'</div></div>',
+    (ANH[toi.id]?'<button class="nut d" onclick="xoaAnhDaiDien()">Xoá ảnh</button>':'')
+    +'<button class="nut c" onclick="document.getElementById(\'chonAv\').click()">📷 Đổi ảnh đại diện</button>');
+}
+async function doiAnhDaiDien(file){
+  if(!file) return;
+  toast('📤 Đang tải ảnh đại diện...');
+  try{
+    const a=await taiLenAnh('av', file, 400, true);
+    const r=await rpc('ht_doi_anh_dai_dien',{p_path:a.path});
+    if(r.error) throw new Error(r.error.message);
+    ANH[toi.id]=a.path; veLaiAnh(); dongHop(); toast('✓ Đã đổi ảnh đại diện');
+  }catch(e){ toast('❌ '+e.message); }
+}
+async function xoaAnhDaiDien(){
+  if(!confirm('Xoá ảnh đại diện?')) return;
+  const r=await rpc('ht_doi_anh_dai_dien',{p_path:null});
+  if(r.error){ toast('❌ '+r.error.message); return; }
+  ANH[toi.id]=''; veLaiAnh(); dongHop(); toast('Đã xoá ảnh đại diện');
+}
+
+/* ---------- dọn ảnh quá 30 ngày (máy nào đang mở chat cũng góp sức, server giới hạn 1 lần/giờ) ---------- */
+async function donTep(){
+  try{
+    const r=await rpc('ht_don_tep'); if(r.error || !r.data || !r.data.length) return;
+    const xoa=await sc.storage.from('ht-anh').remove(r.data);
+    if(!xoa.error) await rpc('ht_don_tep_xong',{p_paths:r.data});
+  }catch(e){}
+}
+
 /* ---------- hộp thoại chung ---------- */
 function moHop(tieuDe, than, chan){
   document.getElementById('hop').innerHTML='<div class="hhd"><span>'+tieuDe+'</span><button class="ib" style="color:var(--mo)" onclick="dongHop()">✕</button></div><div class="hbd">'+than+'</div>'+(chan?'<div class="hft">'+chan+'</div>':'');
@@ -630,6 +790,7 @@ async function taiDanhBa(){
   if(dbCache) return dbCache;
   const r=await rpc('ht_danh_ba',{p_tim:''});
   dbCache=r.error?[]:(r.data||[]);
+  taiAnhDD(dbCache.map(n=>n.id));
   return dbCache;
 }
 function veDanhBa(){
