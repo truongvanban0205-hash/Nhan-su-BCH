@@ -3,6 +3,7 @@
   "short_name": "Nhân sự VB",
   "description": "Báo cáo nhân sự BCH CL-CR/VAL hàng ngày",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0d47a1",
   "theme_color": "#1565c0",

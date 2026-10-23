@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bch-app-v7';
+const CACHE_NAME = 'bch-app-v8';
 const urlsToCache = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(e){
@@ -32,27 +32,42 @@ self.addEventListener('fetch', function(e){
   );
 });
 
-// ============ THÔNG BÁO ĐẨY (PUSH) — Chat BCH, chỉ khi bị @ nhắc tên ============
+// ============ THÔNG BÁO ĐẨY (PUSH) — Tin nhắn nội bộ & cuộc gọi ============
+// Dữ liệu từ Edge Function gui-push: {title, body, url, tag, goi, ht}
 self.addEventListener('push', function(e){
   var data={};
-  try{ data=e.data ? e.data.json() : {}; }catch(err){ data={title:'Chat BCH', body:'Có tin nhắn mới'}; }
-  var title=data.title || 'Chat BCH';
-  var options={
-    body: data.body || '',
-    icon: './icon.png',
-    badge: './icon.png',
-    data: { url: './index.html' }
-  };
-  e.waitUntil(self.registration.showNotification(title, options));
+  try{ data=e.data ? e.data.json() : {}; }catch(err){ data={title:'Tin nhắn', body:'Có tin nhắn mới'}; }
+  e.waitUntil(self.clients.matchAll({type:'window', includeUncontrolled:true}).then(function(list){
+    // Đang mở đúng hội thoại đó trên màn hình → không cần báo (tin đã hiện ngay trong app)
+    if(!data.goi && data.ht){
+      for(var i=0;i<list.length;i++){
+        var c=list[i], m=c.url.match(/[#&]ht=(\d+)/);
+        if(c.visibilityState==='visible' && c.url.indexOf('chat.html')>=0 && m && Number(m[1])===Number(data.ht)) return;
+      }
+    }
+    return self.registration.showNotification(data.title || 'Tin nhắn', {
+      body: data.body || '',
+      icon: './icon.png',
+      badge: './icon.png',
+      tag: data.tag || undefined,          // cùng hội thoại → gộp thành 1 thông báo, tin mới thay tin cũ
+      renotify: !!data.tag,                // nhưng vẫn rung/kêu lại
+      requireInteraction: !!data.goi,      // cuộc gọi: giữ trên màn hình tới khi bấm
+      vibrate: data.goi ? [400,200,400,200,400,200,400] : [200,100,200],
+      data: { url: data.url || './chat.html' }
+    });
+  }));
 });
 
 self.addEventListener('notificationclick', function(e){
   e.notification.close();
-  var targetUrl = (e.notification.data && e.notification.data.url) || './index.html';
+  var targetUrl = new URL((e.notification.data && e.notification.data.url) || './chat.html', self.registration.scope).href;
   e.waitUntil(
     self.clients.matchAll({type:'window', includeUncontrolled:true}).then(function(list){
+      // Ưu tiên tab chat đang mở: chuyển nó tới đúng hội thoại / cuộc gọi
       for(var i=0;i<list.length;i++){
-        if('focus' in list[i]) return list[i].focus();
+        if(list[i].url.indexOf('chat.html')>=0 && 'navigate' in list[i]){
+          return list[i].navigate(targetUrl).then(function(c){ return c && c.focus(); });
+        }
       }
       if(self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })

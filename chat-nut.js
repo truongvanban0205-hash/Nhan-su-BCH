@@ -31,13 +31,48 @@
     try{
       var r = await sb.rpc('ht_toi', { p_token: t });
       if(r.error || !r.data || !r.data.kenh) return;
-      var tre = null;
+      var tre = null, toiId = r.data.id;
       sb.channel('u:' + r.data.kenh, { config: { broadcast: { self: false } } })
         .on('broadcast', { event: 'tin' }, function(){ clearTimeout(tre); tre = setTimeout(demChuaDoc, 500); })
         .on('broadcast', { event: 'xem' }, function(){ clearTimeout(tre); tre = setTimeout(demChuaDoc, 500); })
+        .on('broadcast', { event: 'goi' }, function(m){ if(m.payload && m.payload.nguoi_nghe === toiId) goiDen(m.payload); })
+        .on('broadcast', { event: 'goi_kt' }, function(m){ if(m.payload && dangDo && m.payload.id === dangDo.id) dongGoi(); })
         .subscribe();
     }catch(e){}
   }
+  // Cuộc gọi đến khi đang ở trang chủ: hiện khung đổ chuông → Nghe thì mở trang chat để bắt máy
+  var dangDo = null, chuong = null;
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function goiDen(g){
+    if(dangDo) return;
+    dangDo = g;
+    var d = document.createElement('div');
+    d.id = 'cn-goi';
+    d.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;background:#081c36;color:#fff;border-radius:16px;'
+      + 'padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.4);width:min(360px,calc(100vw - 24px));font-family:sans-serif';
+    d.innerHTML = '<div style="font-size:13px;opacity:.8">📞 Cuộc gọi ' + (g.loai === 'video' ? 'video' : 'thoại') + ' đến</div>'
+      + '<div style="font-size:18px;font-weight:700;margin:4px 0 12px">' + esc(g.ten_goi) + '</div>'
+      + '<div style="display:flex;gap:10px"><button id="cn-tc" style="flex:1;border:none;border-radius:10px;padding:10px;background:#e53935;color:#fff;font-weight:700;font-size:14px">Từ chối</button>'
+      + '<button id="cn-ng" style="flex:1;border:none;border-radius:10px;padding:10px;background:#2dc653;color:#fff;font-weight:700;font-size:14px">Nghe</button></div>';
+    document.body.appendChild(d);
+    document.getElementById('cn-ng').onclick = function(){ location.href = 'chat.html#ht=' + g.ht + '&goi=' + g.id; };
+    document.getElementById('cn-tc').onclick = function(){ sb.rpc('ht_tra_loi_goi', { p_token: the(), p_goi: g.id, p_nghe: false }); dongGoi(); };
+    try{
+      var ac = new (window.AudioContext || window.webkitAudioContext)();
+      var keu = function(){ var t = ac.currentTime; [0, 0.5].forEach(function(x){ var o = ac.createOscillator(), gn = ac.createGain(); o.frequency.value = 880;
+        gn.gain.setValueAtTime(0, t + x); gn.gain.linearRampToValueAtTime(0.3, t + x + 0.05); gn.gain.linearRampToValueAtTime(0, t + x + 0.4);
+        o.connect(gn); gn.connect(ac.destination); o.start(t + x); o.stop(t + x + 0.45); }); };
+      keu(); chuong = { ac: ac, h: setInterval(keu, 2000) };
+    }catch(e){}
+    if(navigator.vibrate) navigator.vibrate([500, 300, 500, 300, 500]);
+    setTimeout(function(){ if(dangDo && dangDo.id === g.id) dongGoi(); }, 60000);
+  }
+  function dongGoi(){
+    dangDo = null;
+    if(chuong){ clearInterval(chuong.h); try{ chuong.ac.close(); }catch(e){} chuong = null; }
+    var d = document.getElementById('cn-goi'); if(d) d.remove();
+  }
+
   demChuaDoc(); nghe();
   setInterval(function(){ if(!document.hidden) demChuaDoc(); }, 60000);
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) demChuaDoc(); });

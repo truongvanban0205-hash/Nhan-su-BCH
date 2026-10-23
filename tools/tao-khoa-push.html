@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tạo khoá thông báo đẩy</title>
+<style>
+body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;max-width:760px;margin:0 auto;padding:20px 16px;color:#081c36;background:#f6f8fb;line-height:1.55}
+h1{font-size:20px;margin:0 0 6px}
+.the{background:#fff;border:1px solid #e1e4ea;border-radius:12px;padding:14px 16px;margin:14px 0}
+.the h2{font-size:15px;margin:0 0 8px;color:#0068ff}
+label{display:block;font-size:12.5px;color:#5b6b7d;margin:8px 0 3px;font-weight:600}
+input,textarea{width:100%;box-sizing:border-box;font-family:Consolas,monospace;font-size:12.5px;padding:8px;border:1px solid #d7dee6;border-radius:8px}
+textarea{min-height:120px}
+button{background:#0068ff;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer}
+button.phu{background:#eaedf0;color:#081c36;font-size:12px;padding:5px 10px;margin-top:4px}
+.canh{background:#fff6e0;border:1px solid #f5c56b;border-radius:8px;padding:10px 12px;font-size:13px}
+.dong{display:flex;gap:6px;align-items:flex-end}
+.dong>div{flex:1}
+</style>
+</head>
+<body>
+<h1>🔑 Tạo khoá thông báo đẩy cho Chat</h1>
+<div class="canh">Trang này chạy <b>hoàn toàn trên máy bạn</b>, không gửi đi đâu cả. Chỉ cần làm <b>1 lần</b>.
+Khoá bí mật (Private key, Mã bí mật) <b>không đưa cho ai</b> — chỉ dán vào Supabase. Tạo xong nên lưu lại ở chỗ an toàn.</div>
+
+<div class="the">
+  <h2>Bước A — Tạo khoá</h2>
+  <label>Email của bạn (Google/Apple dùng để liên hệ nếu có sự cố gửi thông báo)</label>
+  <input id="email" placeholder="vd: ten@congty.vn">
+  <div style="margin-top:10px"><button onclick="tao()">Tạo khoá</button></div>
+</div>
+
+<div class="the" id="kq" style="display:none">
+  <h2>Bước B — Dán 4 Secret vào Supabase</h2>
+  <p style="font-size:13px;margin:0">Supabase → <b>Edge Functions</b> → <b>Secrets</b> (hoặc Project Settings → Edge Functions) → <b>Add new secret</b>, thêm lần lượt:</p>
+  <div id="ds"></div>
+</div>
+
+<div class="the" id="kq2" style="display:none">
+  <h2>Bước C (tuỳ chọn) — Máy chủ chuyển tiếp cuộc gọi (TURN)</h2>
+  <p style="font-size:13px;margin:0">Không có cũng gọi được, nhưng ~10–20% cuộc gọi qua 4G có thể không nối được. Đăng ký miễn phí ở
+  <b>metered.ca</b> (mục TURN Server → lấy URL, Username, Credential) rồi dán vào đây, sau đó bấm "Cập nhật SQL".</p>
+  <div class="dong"><div><label>TURN URL (vd: turn:a.relay.metered.ca:443)</label><input id="turnUrl"></div></div>
+  <div class="dong"><div><label>Username</label><input id="turnUser"></div><div><label>Credential</label><input id="turnPass"></div></div>
+  <div style="margin-top:8px"><button class="phu" onclick="veSql()">Cập nhật SQL</button></div>
+</div>
+
+<div class="the" id="kq3" style="display:none">
+  <h2>Bước D — Chạy đoạn SQL này trong Supabase → SQL Editor</h2>
+  <textarea id="sql" readonly></textarea>
+  <button class="phu" onclick="chep('sql')">📋 Sao chép SQL</button>
+</div>
+
+<script>
+const URL_PUSH = 'https://jqwjzvucwvlwbcgxhath.supabase.co/functions/v1/gui-push';
+let K = null;
+function b64u(buf){ let s=''; new Uint8Array(buf).forEach(b=>s+=String.fromCharCode(b)); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+async function tao(){
+  const email=document.getElementById('email').value.trim();
+  if(!/^[^@\s]+@[^@\s]+$/.test(email)){ alert('Nhập email hợp lệ.'); return; }
+  const cap=await crypto.subtle.generateKey({name:'ECDSA', namedCurve:'P-256'}, true, ['sign','verify']);
+  const pub=await crypto.subtle.exportKey('raw', cap.publicKey);
+  const jwk=await crypto.subtle.exportKey('jwk', cap.privateKey);
+  const bm=new Uint8Array(32); crypto.getRandomValues(bm);
+  K={pub:b64u(pub), priv:jwk.d, sub:'mailto:'+email, bm:[...bm].map(b=>b.toString(16).padStart(2,'0')).join('')};
+  const muc=[['VAPID_PUBLIC_KEY',K.pub],['VAPID_PRIVATE_KEY',K.priv],['VAPID_SUBJECT',K.sub],['PUSH_BI_MAT',K.bm]];
+  document.getElementById('ds').innerHTML=muc.map(([t,v],i)=>'<label>Name: <b style="color:#081c36">'+t+'</b> — Value:</label><input id="v'+i+'" readonly value="'+v+'"><button class="phu" onclick="chep(\'v'+i+'\')">📋 Sao chép</button>').join('');
+  ['kq','kq2','kq3'].forEach(id=>document.getElementById(id).style.display='');
+  veSql();
+}
+function q(s){ return "'"+String(s).replace(/'/g,"''")+"'"; }
+function veSql(){
+  if(!K) return;
+  const u=document.getElementById('turnUrl').value.trim(), us=document.getElementById('turnUser').value.trim(), pw=document.getElementById('turnPass').value.trim();
+  const ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}];
+  if(u){ const ds=[u]; if(/^turn:/.test(u)&&!/transport=/.test(u)) ds.push(u+'?transport=tcp'); ice.push({urls:ds, username:us, credential:pw}); }
+  document.getElementById('sql').value =
+"insert into public.ht_cai_dat (khoa, gia_tri) values\n"+
+"  ('vapid_public', "+q(K.pub)+"),\n"+
+"  ('push_url', "+q(URL_PUSH)+"),\n"+
+"  ('push_bi_mat', "+q(K.bm)+"),\n"+
+"  ('ice', "+q(JSON.stringify(ice))+")\n"+
+"on conflict (khoa) do update set gia_tri = excluded.gia_tri;";
+}
+function chep(id){ const el=document.getElementById(id); el.select(); navigator.clipboard.writeText(el.value).then(()=>{}, ()=>document.execCommand('copy')); }
+</script>
+</body>
+</html>
