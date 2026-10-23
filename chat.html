@@ -937,7 +937,15 @@ async function taoKetNoi(){
       GOI.dongHo=setInterval(()=>{ const s=Math.floor((Date.now()-GOI.batDau)/1000); document.getElementById('goiTt').textContent=p2(Math.floor(s/60))+':'+p2(s%60); },1000);
       veGoi('00:00', nutDangGoi());
     }
-    if(pc.connectionState==='failed') ketThucGoi(true, 'Không kết nối được (mạng chặn cuộc gọi). Thử lại hoặc chuyển Wi-Fi/4G.');
+    if(pc.connectionState==='failed') ketThucGoi(true, 'Không nối được cuộc gọi: mạng đang chặn kết nối trực tiếp. Cần bật máy chủ chuyển tiếp (TURN).');
+    // mất sóng giữa chừng: chờ 10 giây xem có nối lại được không
+    if(pc.connectionState==='disconnected' && GOI.batDau){
+      document.getElementById('goiTt').textContent='Mất kết nối, đang thử lại...';
+      clearTimeout(GOI.matSong); GOI.matSong=setTimeout(()=>{ if(GOI && GOI.pc && GOI.pc.connectionState!=='connected') ketThucGoi(true, 'Cuộc gọi bị ngắt do mạng yếu'); }, 10000);
+    }
+  };
+  pc.oniceconnectionstatechange=()=>{ // hiện tiến trình để biết kẹt ở đâu
+    if(GOI && !GOI.batDau){ const t={checking:'Đang kết nối...', failed:'Không nối được'}[pc.iceConnectionState]; if(t) document.getElementById('goiTt').textContent=t; }
   };
   return pc;
 }
@@ -994,7 +1002,13 @@ async function batDauGoi(loai){
 function khiTraLoiGoi(g){
   if(!GOI || !g || g.id!==GOI.id) return;
   if(g.trang_thai==='tu_choi') ketThucGoi(false, (GOI.ten||'')+' đang bận');
-  else if(g.trang_thai==='dang_goi'){ dungChuong(); document.getElementById('goiTt').textContent='Đang kết nối...'; }
+  else if(g.trang_thai==='dang_goi'){ dungChuong(); document.getElementById('goiTt').textContent='Đang kết nối...'; choKetNoi(); }
+}
+// Đã bắt máy → bỏ hẹn giờ "không ai nghe", chờ tối đa 30 giây để 2 máy nối được với nhau
+function choKetNoi(){
+  if(!GOI) return;
+  clearTimeout(GOI.het);
+  GOI.het=setTimeout(()=>{ if(GOI && !GOI.batDau) ketThucGoi(true, 'Không nối được cuộc gọi: mạng 4G/Wi-Fi đang chặn kết nối trực tiếp. Cần bật máy chủ chuyển tiếp (TURN).'); }, 30000);
 }
 // Người NGHE
 function coCuocGoiDen(g){
@@ -1022,6 +1036,7 @@ async function ngheGoi(){
   GOI.local=local; hienHinhMinh();
   const r=await rpc('ht_tra_loi_goi',{p_goi:GOI.id, p_nghe:true});
   if(r.error){ ketThucGoi(false, 'Cuộc gọi đã kết thúc'); return; }
+  choKetNoi();
   veGoi('Đang kết nối...', nutDangGoi());
   await taoKetNoi(); await moKenhGoi();
   // báo "sẵn sàng" vài lần cho chắc (người gọi có thể vào kênh chậm hơn)
@@ -1055,7 +1070,7 @@ async function doiCam(){
 function donGoi(){
   dungChuong();
   if(!GOI) return;
-  clearTimeout(GOI.het); clearInterval(GOI.dongHo); clearInterval(GOI.sanSang);
+  clearTimeout(GOI.het); clearTimeout(GOI.matSong); clearInterval(GOI.dongHo); clearInterval(GOI.sanSang);
   if(GOI.pc){ try{ GOI.pc.close(); }catch(e){} }
   if(GOI.local) GOI.local.getTracks().forEach(t=>t.stop());
   if(GOI.ch){ try{ sc.removeChannel(GOI.ch); }catch(e){} }
