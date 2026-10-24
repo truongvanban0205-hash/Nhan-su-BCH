@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bch-app-v9';
+const CACHE_NAME = 'bch-app-v10';
 const urlsToCache = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(e){
@@ -47,7 +47,7 @@ self.addEventListener('push', function(e){
     }
     var tb = {
       body: data.body || '',
-      icon: './icon.png',
+      icon: data.icon || './icon.png',     // ảnh đại diện người gửi / người gọi
       badge: './icon.png',
       tag: data.tag || undefined,          // cùng hội thoại → gộp thành 1 thông báo, tin mới thay tin cũ
       renotify: !!data.tag,                // nhưng vẫn rung/kêu lại
@@ -55,9 +55,19 @@ self.addEventListener('push', function(e){
       vibrate: data.goi ? [700,400,700,400,700,400,700] : [200,100,200],
       data: { url: data.url || './chat.html', goi: data.goi ? goiId(data.url) : null }
     };
-    if(data.goi) tb.actions = [{action:'nghe', title:'Nghe'}, {action:'tu_choi', title:'Từ chối'}];
-    return self.registration.showNotification(data.title || 'Tin nhắn', tb).then(function(){
-      if(data.goi) return doChuongLap(data.title, tb); // cuộc gọi: kêu + rung lại mỗi 5 giây tới khi bắt máy / hết 45 giây
+    if(!data.goi) return self.registration.showNotification(data.title || 'Tin nhắn', tb);
+    tb.actions = [{action:'nghe', title:'Nghe'}, {action:'tu_choi', title:'Từ chối'}];
+    // Cuộc gọi: hỏi lại server trước — thông báo đến trễ (máy vừa có mạng lại) mà cuộc gọi đã xong thì KHÔNG đổ chuông
+    return goiRpc('ht_xem_goi', { p_goi: tb.data.goi }).then(function(g){
+      if(g && g.trang_thai && g.trang_thai !== 'do_chuong'){
+        return self.registration.showNotification('Cuộc gọi đã kết thúc', { tag: tb.tag, silent: true, icon: tb.icon, badge: './icon.png', data: tb.data })
+          .then(function(){ return new Promise(function(ok){ setTimeout(function(){
+            self.registration.getNotifications({ tag: tb.tag }).then(function(ds){ ds.forEach(function(n){ n.close(); }); ok(); });
+          }, 1500); }); });
+      }
+      return self.registration.showNotification(data.title || 'Cuộc gọi đến', tb).then(function(){
+        return doChuongLap(data.title, tb); // kêu + rung lại mỗi 5 giây tới khi bắt máy / từ chối / hết giờ
+      });
     });
   }));
 });

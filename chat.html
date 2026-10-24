@@ -1300,7 +1300,7 @@ async function batDauGoi(loai){
   let local;
   try{ local=await layMicCam(loai); }catch(e){ alert(e.message); return; }
   const r=await rpc('ht_goi',{p_ht:htMo.id, p_loai:loai});
-  if(r.error){ local.getTracks().forEach(t=>t.stop()); toast('❌ Không gọi được: '+r.error.message); return; }
+  if(r.error){ local.getTracks().forEach(t=>t.stop()); toast(/NGUOI_NHAN_DANG_BAN/.test(r.error.message||'')?'Người này đang trong một cuộc gọi khác':'❌ Không gọi được: '+r.error.message); return; }
   const g=r.data;
   GOI={id:g.id, ht:g.ht, kenh:g.kenh, loai:g.loai, laNguoiGoi:true, ten:g.ten_nghe, doiPhuong:g.nguoi_nghe, local:local};
   hienHinhMinh();
@@ -1312,6 +1312,10 @@ async function batDauGoi(loai){
 }
 function khiTraLoiGoi(g){
   if(!GOI || !g || g.id!==GOI.id) return;
+  if(!GOI.laNguoiGoi){ // mình là người nghe: thiết bị KHÁC của mình vừa nghe/từ chối → máy này ngừng đổ chuông
+    if(!GOI.daTraLoi){ donGoi(); toast(g.trang_thai==='dang_goi'?'Đã nghe máy trên thiết bị khác':'Đã từ chối cuộc gọi'); }
+    return;
+  }
   if(g.trang_thai==='tu_choi') ketThucGoi(false, (GOI.ten||'')+' đang bận');
   else if(g.trang_thai==='dang_goi'){ dungChuong(); document.getElementById('goiTt').textContent='Đang kết nối...'; choKetNoi(); }
 }
@@ -1322,9 +1326,15 @@ function choKetNoi(){
   GOI.het=setTimeout(()=>{ if(GOI && !GOI.batDau) ketThucGoi(true, 'Không nối được cuộc gọi: mạng 4G/Wi-Fi đang chặn kết nối trực tiếp. Cần bật máy chủ chuyển tiếp (TURN).'); }, 30000);
 }
 // Người NGHE
+const daXuLyGoi={}; // chống nhận lại cùng 1 cuộc gọi (sự kiện lặp khi mạng chập chờn)
 function coCuocGoiDen(g){
   if(!g || g.nguoi_nghe!==toi.id) return;
   if(GOI){ return; } // đang trong cuộc gọi khác → để người kia tự hết giờ
+  if(daXuLyGoi[g.id]) return;
+  if(g.trang_thai && g.trang_thai!=='do_chuong') return;
+  if(g.tao_luc && Date.now()-new Date(g.tao_luc).getTime()>58000) return; // sự kiện cũ (đồng hồ máy lệch nhiều thì vẫn có server chặn)
+  daXuLyGoi[g.id]=1;
+  taiAnhDD([g.nguoi_goi]).then(()=>{ if(GOI && GOI.id===g.id) document.getElementById('goiAv').innerHTML=avatar(GOI.doiPhuong, GOI.ten, ''); });
   GOI={id:g.id, ht:g.ht, kenh:g.kenh, loai:g.loai, laNguoiGoi:false, ten:g.ten_goi, doiPhuong:g.nguoi_goi};
   veGoi('Cuộc gọi '+(g.loai==='video'?'video':'thoại')+' đến...',
     nutGoi('goi','Từ chối','do xoay','tuChoiGoi()')
@@ -1344,13 +1354,14 @@ async function moCuocGoiTuLink(id){ // bấm thông báo "cuộc gọi đến"
   else toast(r.data.trang_thai==='nho'?'📞 Cuộc gọi nhỡ từ '+(r.data.ten_goi||''):'Cuộc gọi đã kết thúc');
 }
 async function ngheGoi(){
-  if(!GOI) return;
-  dungChuong();
+  if(!GOI || GOI.daTraLoi) return; // bấm Nghe 2 lần
+  GOI.daTraLoi=true;
+  dungChuong(); dongThongBaoGoi(GOI.id);
   let local;
   try{ local=await layMicCam(GOI.loai); }catch(e){ alert(e.message); tuChoiGoi(); return; }
   GOI.local=local; hienHinhMinh();
   const r=await rpc('ht_tra_loi_goi',{p_goi:GOI.id, p_nghe:true});
-  if(r.error){ ketThucGoi(false, 'Cuộc gọi đã kết thúc'); return; }
+  if(r.error){ donGoi(); toast('Cuộc gọi đã kết thúc hoặc đã được nghe trên thiết bị khác'); return; }
   choKetNoi();
   veGoi('Đang kết nối...', nutDangGoi());
   await taoKetNoi(); await moKenhGoi();

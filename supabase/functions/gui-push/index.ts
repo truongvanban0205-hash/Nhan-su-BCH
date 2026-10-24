@@ -13,7 +13,14 @@ webpush.setVapidDetails(
   Deno.env.get("VAPID_PRIVATE_KEY")!,
 );
 
-type ThongBao = { title: string; body: string; url: string; tag: string; goi?: boolean; ht?: number };
+type ThongBao = { title: string; body: string; url: string; tag: string; goi?: boolean; ht?: number; icon?: string };
+
+// Ảnh đại diện người gửi/người gọi → hiện trên thông báo (không có thì dùng logo app)
+async function anhDaiDien(id: number) {
+  const { data } = await db.from("ht_nguoi").select("anh").eq("employee_id", id).maybeSingle();
+  if (!data?.anh) return undefined;
+  return Deno.env.get("SUPABASE_URL") + "/storage/v1/object/public/ht-anh/" + data.anh.split("/").map(encodeURIComponent).join("/");
+}
 
 function moTa(m: { loai: string; noi_dung: string | null }) {
   if (m.loai === "anh") return "📷 Hình ảnh";
@@ -49,6 +56,7 @@ async function tinMoi(id: number) {
     db.from("ht_thanh_vien").select("employee_id,tat_tb").eq("hoi_thoai_id", m.hoi_thoai_id),
   ]);
   const ten = gui?.ten || "Tin nhắn";
+  const icon = await anhDaiDien(m.nguoi_gui);
   const nhac: number[] = m.nhac || [];
   // người tắt thông báo vẫn nhận khi bị @nhắc tên (giống Zalo)
   const nhan = (tvs || []).filter((t) => t.employee_id !== m.nguoi_gui && (!t.tat_tb || nhac.includes(t.employee_id)));
@@ -56,18 +64,19 @@ async function tinMoi(id: number) {
   if (h?.loai === "nhom") {
     const bth = nhan.filter((t) => !nhac.includes(t.employee_id)).map((t) => t.employee_id);
     const bn = nhan.filter((t) => nhac.includes(t.employee_id)).map((t) => t.employee_id);
-    const a = await guiCho(bth, { title: h.ten || "Nhóm", body: ten + ": " + moTa(m), url, tag: "ht-" + m.hoi_thoai_id, ht: m.hoi_thoai_id });
-    const b = await guiCho(bn, { title: h.ten || "Nhóm", body: ten + " đã nhắc đến bạn: " + moTa(m), url, tag: "ht-" + m.hoi_thoai_id, ht: m.hoi_thoai_id });
+    const a = await guiCho(bth, { title: h.ten || "Nhóm", body: ten + ": " + moTa(m), url, tag: "ht-" + m.hoi_thoai_id, ht: m.hoi_thoai_id, icon });
+    const b = await guiCho(bn, { title: h.ten || "Nhóm", body: ten + " đã nhắc đến bạn: " + moTa(m), url, tag: "ht-" + m.hoi_thoai_id, ht: m.hoi_thoai_id, icon });
     return a + b;
   }
-  return guiCho(nhan.map((t) => t.employee_id), { title: ten, body: moTa(m), url, tag: "ht-" + m.hoi_thoai_id, ht: m.hoi_thoai_id });
+  return guiCho(nhan.map((t) => t.employee_id), { title: ten, body: moTa(m), url, tag: "ht-" + m.hoi_thoai_id, ht: m.hoi_thoai_id, icon });
 }
 
 async function cuocGoi(id: number) {
-  const { data: g } = await db.from("ht_cuoc_goi").select("id,hoi_thoai_id,nguoi_goi,nguoi_nghe,loai").eq("id", id).single();
-  if (!g) return 0;
+  const { data: g } = await db.from("ht_cuoc_goi").select("id,hoi_thoai_id,nguoi_goi,nguoi_nghe,loai,trang_thai").eq("id", id).single();
+  if (!g || g.trang_thai !== "do_chuong") return 0; // người gọi đã huỷ trước khi kịp gửi → không báo cuộc gọi cũ
   const { data: gui } = await db.from("employees").select("ten").eq("id", g.nguoi_goi).single();
   return guiCho([g.nguoi_nghe], {
+    icon: await anhDaiDien(g.nguoi_goi),
     title: "📞 Cuộc gọi " + (g.loai === "video" ? "video" : "thoại") + " đến",
     body: (gui?.ten || "Ai đó") + " đang gọi cho bạn... Bấm để nghe",
     url: "./chat.html#ht=" + g.hoi_thoai_id + "&goi=" + g.id,
