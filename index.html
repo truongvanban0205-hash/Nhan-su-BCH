@@ -7163,6 +7163,9 @@ function veCongTac(id, bat){
 /* ===== XUẤT BÁO CÁO SO SÁNH ĐỊNH BIÊN (Nhân sự / MMTB) — ảnh PNG trình bày gọn, đủ chức danh/máy ===== */
 async function xuatSoSanhDB(loai){
   if(typeof html2canvas==='undefined'){ alert('Chưa tải được công cụ xuất ảnh, thử lại sau.'); return; }
+  var mk=prompt('🔒 Nhập mật khẩu vận hành để xuất báo cáo so sánh định biên:');
+  if(mk===null) return;
+  if(!(await dbmXacThuc(mk))){ alert('❌ Sai mật khẩu!'); return; }
   var ns = loai==='ns';
   var ymd = ns ? (vDate||tkey()) : (mmtbVDate||mmtbTkey());
   toast('⏳ Đang tạo báo cáo so sánh...');
