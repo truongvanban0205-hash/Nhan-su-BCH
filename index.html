@@ -3575,7 +3575,7 @@ function renderTable(){
   var h='<thead><tr>';
   h+='<th class="stk s0" rowspan="2">Dự án</th>';
   h+='<th class="stk s1" rowspan="2">Ca làm việc</th>';
-  COLS.forEach(function(c){h+='<th>'+c.n+'</th>';});
+  COLS.forEach(function(c){h+='<th id="dbn_th_'+c.k+'">'+c.n+'</th>';});
   h+='<th style="background:#F7C31E;color:#0F2A5C;min-width:42px">Tổng</th>';
   var _hdHoTro=projects.some(function(p){return HO_TRO_PROJS[p];});
   var _hdNow=new Date(), _hdDate=p2(_hdNow.getDate())+'/'+p2(_hdNow.getMonth()+1)+'/'+_hdNow.getFullYear();
@@ -5216,7 +5216,7 @@ function mmtbRenderTable(){
   mmtbMachines.forEach(function(m,idx){
     h+='<tr>';
     h+='<td style="font-weight:700">'+(idx+1)+'</td>';
-    h+='<td style="text-align:left;font-weight:700;padding-left:6px">'+m.n+'</td>';
+    h+='<td id="dbm-ten-'+m.k+'" style="text-align:left;font-weight:700;padding-left:6px">'+m.n+'</td>';
     var rowTotal=0;
     mmtbProjects.forEach(function(proj){
       MMTB_STATUS.forEach(function(s){
@@ -6934,14 +6934,23 @@ function dbmCapNhat(){
   mmtbMachines.forEach(function(m){
     var a=document.getElementById('dbm-db-'+m.k),c=document.getElementById('dbm-cl-'+m.k); if(!a||!c)return;
     var t=0; mmtbProjects.forEach(function(p){MMTB_STATUS.forEach(function(s){t+=(mmtbData[p]&&mmtbData[p][s]&&mmtbData[p][s][m.k])||0;});});
-    var d=dbmDB[dbmNorm(m.n)];
-    if(d===undefined){a.textContent='—';c.textContent='—';c.style.color='';return;}
-    tD+=d;tT+=t; a.textContent=mmtbFmtN(d); dbmGhiCL(c,t-d);
+    var d=dbmDB[dbmNorm(m.n)], ten=document.getElementById('dbm-ten-'+m.k);
+    if(d===undefined){a.textContent='—';c.textContent='—';c.style.color='';c.style.background='';dbToMau(ten,null);return;}
+    tD+=d;tT+=t; dbGhiDB(a,d); dbmGhiCL(c,t-d); dbToMau(ten,t-d);
   });
   var a2=document.getElementById('dbm-db-tong'),c2=document.getElementById('dbm-cl-tong');
-  if(a2){a2.textContent=mmtbFmtN(tD);} if(c2)dbmGhiCL(c2,tT-tD);
+  if(a2)dbGhiDB(a2,tD); if(c2)dbmGhiCL(c2,tT-tD);
 }
-function dbmGhiCL(el,v){ el.textContent=v>0?'+'+v:(v<0?String(v):'0'); el.style.color=v===0?'#2e7d32':(v>0?'#1565c0':'#c62828'); }
+/* Quy ước màu so sánh định biên (Nhân sự & MMTB, giống ảnh báo cáo xuất):
+   ĐỎ = chưa đủ định biên (thiếu) · XANH LÁ = bằng định biên · XANH DƯƠNG = vượt định biên */
+var DB_MAU={thieu:{nen:'#fdecea',chu:'#c62828'}, du:{nen:'#e8f5e9',chu:'#2e7d32'}, vuot:{nen:'#e3f2fd',chu:'#1565c0'}};
+function dbMau(v){ return v<0?DB_MAU.thieu:(v>0?DB_MAU.vuot:DB_MAU.du); }
+// Ô Chênh lệch: số thiếu (đỏ) / "-" khi đủ (xanh lá) / +số vượt (xanh dương), có nền màu
+function dbmGhiCL(el,v){ var m=dbMau(v); el.textContent=v>0?'+'+v:(v<0?String(v):'-'); el.style.color=m.chu; el.style.background=m.nen; }
+// Ô Định biên: 0 ghi "-" (chữ xanh dương), không ghi số 0
+function dbGhiDB(el,d){ el.textContent=d===0?'-':(d<10?'0'+d:String(d)); el.style.color='#1565c0'; }
+// Tô màu ô tên chức danh (Nhân sự) / tên máy (MMTB) theo đủ / thiếu / vượt; null = bỏ màu
+function dbToMau(el,v){ if(!el)return; if(v===null){el.style.background='';el.style.color='';return;} var m=dbMau(v); el.style.background=m.nen; el.style.color=m.chu; }
 /* ===== 1 TÀI KHOẢN – 1 MÁY ===== */
 var bchPhienLanCuoi=0;
 function bchBiDaKhoiMay(){
@@ -7151,12 +7160,12 @@ function dbnCapNhat(){
   var tD=0,tT=0;
   COLS.forEach(function(c){
     var a=document.getElementById('dbn_db_'+c.k),b=document.getElementById('dbn_cl_'+c.k); if(!a||!b)return;
-    var d=dbnGia[c.k];
-    if(d===undefined){a.textContent='—';b.textContent='—';b.style.color='';return;}
-    tD+=d; tT+=tong[c.k]; a.textContent=fmtN(d); dbmGhiCL(b,tong[c.k]-d);
+    var d=dbnGia[c.k], th=document.getElementById('dbn_th_'+c.k);
+    if(d===undefined){a.textContent='—';b.textContent='—';b.style.color='';b.style.background='';dbToMau(th,null);return;}
+    tD+=d; tT+=tong[c.k]; dbGhiDB(a,d); dbmGhiCL(b,tong[c.k]-d); dbToMau(th,tong[c.k]-d);
   });
   var a2=document.getElementById('dbn_db_t'),b2=document.getElementById('dbn_cl_t');
-  if(a2)a2.textContent=fmtN(tD); if(b2)dbmGhiCL(b2,tT-tD);
+  if(a2)dbGhiDB(a2,tD); if(b2)dbmGhiCL(b2,tT-tD);
 }
 </script>
 
