@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#0068ff">
 <title>Tin nhắn — BCH</title>
 <link rel="manifest" href="manifest.json">
@@ -13,7 +13,8 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,'Segoe UI',Roboto,'Be Vietnam Pro',sans-serif;color:var(--chu);background:#fff}
 button{font-family:inherit;cursor:pointer}
-#app{display:flex;height:100vh;height:100dvh}
+/* chiều cao = vùng nhìn thấy thật (trừ bàn phím điện thoại) → ô nhập luôn nằm ngay trên bàn phím, tiêu đề không bị đẩy mất */
+#app{display:flex;height:100vh;height:100dvh;height:var(--cao-thay,100dvh);position:fixed;left:0;right:0;top:0}
 /* ---- danh sách ---- */
 #list{width:360px;border-right:1px solid var(--vien);display:flex;flex-direction:column;background:#fff;min-width:0}
 .hd{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--xanh);color:#fff;min-height:54px;padding-top:max(10px,env(safe-area-inset-top))}
@@ -113,7 +114,17 @@ button{font-family:inherit;cursor:pointer}
 .bong.co-anh .tg,.bong.co-anh .nguoi{padding:0 6px}
 .bong img.anh{display:block;max-width:min(260px,62vw);max-height:340px;width:auto;height:auto;border-radius:9px;cursor:zoom-in;background:#dde3ea}
 .anh-het{padding:18px 14px;color:var(--mo);font-size:13px;text-align:center}
-#nutAnh{background:none;border:none;padding:6px;width:40px;height:40px;color:var(--xanh)}
+#nutAnh,#nutChup{background:none;border:none;padding:6px;width:40px;height:40px;color:var(--xanh);flex:0 0 40px}
+#nutChup svg{width:24px;height:24px}
+#cam{display:none;position:fixed;inset:0;z-index:96;background:#000;flex-direction:column}
+#cam video,#cam img{flex:1;min-height:0;width:100%;object-fit:contain;background:#000}
+#cam .cam-nut{display:flex;align-items:center;justify-content:space-around;padding:16px 10px max(18px,env(safe-area-inset-bottom));background:#000}
+#cam .cn{width:52px;height:52px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+#cam .cn svg{width:26px;height:26px}
+#cam .chup{width:72px;height:72px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.25)}
+#cam .chup:active{background:#fff}
+#cam .chu{color:#fff;font-size:12px;text-align:center;margin-top:4px}
+#cam .gui-anh{background:var(--xanh);color:#fff;border:none;border-radius:24px;padding:12px 26px;font-size:15px;font-weight:700}
 #xemAnh{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:80;align-items:center;justify-content:center;flex-direction:column;gap:10px}
 #xemAnh img{max-width:96vw;max-height:84vh;object-fit:contain}
 #xemAnh a{color:#fff;font-size:14px}
@@ -224,9 +235,11 @@ button{font-family:inherit;cursor:pointer}
         <div id="traloi"><span data-ic="traloi" style="color:var(--xanh);width:18px;height:18px;flex:0 0 18px"></span><div class="x" id="traloiNd"></div><button class="ib nho" onclick="boTraLoi()" data-ic="x"></button></div>
         <div id="goiy"></div>
         <div class="o-soan">
-          <button id="nutAnh" onclick="document.getElementById('chonAnh').click()" title="Gửi ảnh" data-ic="anh"></button>
+          <button id="nutAnh" onclick="document.getElementById('chonAnh').click()" title="Chọn ảnh từ thư viện" data-ic="anh"></button>
+          <button id="nutChup" onclick="moCamera()" title="Chụp ảnh" data-ic="may_anh"></button>
+          <input type="file" id="chupDuPhong" accept="image/*" capture="environment" style="display:none" onchange="guiAnh(this.files);this.value=''">
           <input type="file" id="chonAnh" accept="image/*" multiple style="display:none" onchange="guiAnh(this.files);this.value=''">
-          <textarea id="nhap" rows="1" placeholder="Nhập tin nhắn..." oninput="khiGo()" onkeydown="phimNhap(event)"></textarea>
+          <textarea id="nhap" rows="1" placeholder="Nhập tin nhắn..." enterkeyhint="send" oninput="khiGo()" onkeydown="phimNhap(event)"></textarea>
           <button id="gui" onclick="gui()" disabled title="Gửi" data-ic="gui"></button>
         </div>
       </div>
@@ -236,6 +249,12 @@ button{font-family:inherit;cursor:pointer}
 
 <div id="menu"></div>
 <div id="mo" onclick="if(event.target===this)dongHop()"><div id="hop"></div></div>
+<!-- CHỤP ẢNH TRỰC TIẾP -->
+<div id="cam">
+  <video id="camVideo" autoplay playsinline muted></video>
+  <img id="camXem" alt="" style="display:none">
+  <div class="cam-nut" id="camNut"></div>
+</div>
 <!-- MÀN HÌNH CUỘC GỌI -->
 <div id="goi">
   <video id="goiXa" autoplay playsinline></video>
@@ -391,6 +410,21 @@ function baoCha(su){ if(NHUNG) try{ window.parent.postMessage({chat:su}, locatio
 function veTrangChu(){ if(NHUNG) baoCha('thu_nho'); else location.href='index.html'; }
 if(NHUNG){ const b=document.getElementById('nutVe'); b.dataset.ic='nho'; b.innerHTML=''; b.title='Thu nhỏ (vẫn nhận tin)'; gan_ic(b.parentNode); }
 
+/* ---------- bàn phím điện thoại: giữ bố cục theo vùng nhìn thấy ---------- */
+(function(){
+  const vv=window.visualViewport; if(!vv) return;
+  let truoc=vv.height;
+  const chinh=()=>{
+    const tn=document.getElementById('tn'), oCuoi=tn && (tn.scrollHeight-tn.scrollTop-tn.clientHeight<120);
+    document.documentElement.style.setProperty('--cao-thay', vv.height+'px');
+    document.getElementById('app').style.top=vv.offsetTop+'px';
+    if(window.scrollY) window.scrollTo(0,0); // iPhone hay đẩy cả trang lên khi mở bàn phím
+    if(tn && oCuoi && vv.height<truoc) tn.scrollTop=tn.scrollHeight; // bàn phím mở → vẫn thấy tin mới nhất
+    truoc=vv.height;
+  };
+  vv.addEventListener('resize', chinh); vv.addEventListener('scroll', chinh); chinh();
+})();
+
 /* ---------- khởi động ---------- */
 async function batDau(){
   let sv={}; try{ sv=JSON.parse(localStorage.getItem(LS_KEY)||'{}')||{}; }catch(e){}
@@ -400,6 +434,8 @@ async function batDau(){
   if(r.error){ if(!/CHUA_DANG_NHAP|CHUA_DUOC_DUYET/.test(r.error.message||'')){ document.getElementById('ds').innerHTML='<div class="trong">Không tải được tin nhắn.<br><small>'+esc(r.error.message)+'</small></div>'; } return; }
   toi = r.data;
   luuTheChoSW(TOKEN);
+  napHC(); // tin chưa gửi được từ lần trước (mất mạng / tắt app) → gửi tiếp
+  setTimeout(chayHC, 1500);
   document.getElementById('avToi').innerHTML=avatar(toi.id,toi.ten,'nho');
   taiAnhDD([toi.id]);
   ketNoiRealtime();
@@ -419,7 +455,8 @@ async function batDau(){
   setInterval(()=>{ if(!document.hidden) rpc('ht_online'); }, 60000);
   setInterval(()=>{ if(!realtimeOk && !document.hidden){ taiDanhSach(); if(htMo) taiTinMoi(); } }, 5000); // dự phòng khi realtime mất
   setInterval(()=>{ if(htMo) veTieuDe(); }, 60000);
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ rpc('ht_online'); taiDanhSach(); if(htMo){ taiTinMoi(); taiThongTin(); } } });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ rpc('ht_online'); dongBoLai(); if(!realtimeOk){ try{ sc.removeChannel(kenhToi); }catch(e){} ketNoiRealtime(); } } });
+  window.addEventListener('pageshow', e=>{ if(e.persisted) dongBoLai(); }); // quay lại trang từ bộ nhớ đệm
 }
 
 /* ---------- realtime: kênh riêng của tôi (có tin mới / sửa / đã xem) ---------- */
@@ -444,8 +481,24 @@ function ketNoiRealtime(){
       .on('broadcast', {event:'goi'}, ({payload})=>{ coCuocGoiDen(payload); })
       .on('broadcast', {event:'goi_tl'}, ({payload})=>{ khiTraLoiGoi(payload); })
       .on('broadcast', {event:'goi_kt'}, ({payload})=>{ if(GOI && payload && payload.id===GOI.id) ketThucGoi(false, 'Cuộc gọi đã kết thúc'); })
-      .subscribe((st)=>{ realtimeOk = (st==='SUBSCRIBED'); });
+      .subscribe((st)=>{
+        const truoc=realtimeOk;
+        realtimeOk = (st==='SUBSCRIBED');
+        if(realtimeOk && !truoc && daKetNoiLan1) dongBoLai(); // nối lại sau khi rớt → lấy bù tin bị lỡ
+        if(realtimeOk) daKetNoiLan1=true;
+        if(st==='CHANNEL_ERROR' || st==='TIMED_OUT' || st==='CLOSED'){ // rớt kết nối → tự nối lại (trong lúc chờ: tự làm mới 5 giây/lần)
+          clearTimeout(henNoiLai); henNoiLai=setTimeout(()=>{ try{ sc.removeChannel(kenhToi); }catch(e){} ketNoiRealtime(); }, 4000);
+        }
+      });
   }catch(e){ realtimeOk=false; }
+}
+let daKetNoiLan1=false, henNoiLai=null;
+// Lấy bù mọi thứ có thể bị lỡ (mở lại app, có mạng lại, nối lại realtime)
+function dongBoLai(){
+  if(!toi) return;
+  taiDanhSach();
+  if(htMo){ taiTinMoi(); taiThongTin(); }
+  if(HANG_CHO.some(x=>x.tt!=='dang')){ HANG_CHO.forEach(x=>{ if(x.tt==='loi' && /Mất mạng/.test(x.loi||'')) x.tt='cho'; }); chayHC(); }
 }
 // kênh của hội thoại đang mở: chỉ dùng cho "đang soạn tin..."
 function ketNoiKenhHt(){
@@ -651,7 +704,8 @@ function veNoiDung(s, m){
 }
 function veTin(){
   const tn=document.getElementById('tn');
-  if(!tinMo.length){ tn.innerHTML='<div class="trong">Chưa có tin nhắn.<br>Hãy gửi lời chào 👋</div>'; return; }
+  const cho=htMo?HANG_CHO.filter(x=>x.ht===htMo.id):[];
+  if(!tinMo.length && !cho.length){ tn.innerHTML='<div class="trong">Chưa có tin nhắn.<br>Hãy gửi lời chào 👋</div>'; return; }
   let h=hetTinCu?'':'<div class="ngay"><span>Kéo lên để xem tin cũ</span></div>', ngayTruoc='', truoc=null;
   tinMo.forEach((m,i)=>{
     const ng=nhanNgay(m.tao_luc);
@@ -687,6 +741,14 @@ function veTin(){
     truoc=m;
   });
   h+='<div id="daxem"></div>';
+  // tin đang chờ gửi / gửi lỗi (chỉ máy mình thấy)
+  cho.forEach(m=>{
+    const nd = m.loai==='anh' ? '<img class="anh" src="'+esc(m.xem||'')+'" alt="Ảnh" style="opacity:.6">' : '<div class="nd">'+esc(m.noi_dung)+'</div>';
+    const tt = m.tt==='loi'
+      ? '<div class="tg" style="color:var(--do)">⚠ '+esc(m.loi||'Chưa gửi được')+' · <a href="#" onclick="guiLai(\''+m.ma+'\');return false">Gửi lại</a> · <a href="#" onclick="boTinCho(\''+m.ma+'\');return false">Xoá</a></div>'
+      : '<div class="tg">'+(m.loai==='anh'?'Đang tải ảnh lên...':'Đang gửi...')+'</div>';
+    h+='<div class="dong toi"><div class="bong'+(m.loai==='anh'?' co-anh':'')+'">'+nd+tt+'</div></div>';
+  });
   tn.innerHTML=h;
   veDaXem();
 }
@@ -694,7 +756,7 @@ function veTin(){
 function veDaXem(){
   const el=document.getElementById('daxem'); if(!el || !ttMo || !tinMo.length) return;
   const cuoi=tinMo[tinMo.length-1];
-  if(cuoi.nguoi_gui!==toi.id || cuoi.thu_hoi){ el.innerHTML=''; return; }
+  if(cuoi.nguoi_gui!==toi.id || cuoi.thu_hoi || HANG_CHO.some(x=>htMo&&x.ht===htMo.id)){ el.innerHTML=''; return; }
   const da=(ttMo.thanh_vien||[]).filter(t=>t.id!==toi.id && Number(t.doc_den)>=cuoi.id);
   if(htMo.loai==='rieng') el.innerHTML='<div class="daxem">'+(da.length?'✓✓ Đã xem':'✓ Đã gửi')+'</div>';
   else el.innerHTML='<div class="daxem" title="'+esc(da.map(t=>t.ten).join(', '))+'">'+(da.length?da.slice(0,8).map(t=>avatar(t.id,t.ten,'ti')).join('')+(da.length>8?' +'+(da.length-8):''):'✓ Đã gửi')+'</div>';
@@ -792,9 +854,23 @@ function phimNhap(e){
     if(e.key==='Enter'||e.key==='Tab'){ e.preventDefault(); (items[i]||items[0]).click(); return; }
     if(e.key==='Escape'){ g.style.display='none'; return; }
   }
-  // máy tính: Enter gửi, Shift+Enter xuống dòng. Điện thoại: phím Enter xuống dòng, bấm ➤ để gửi.
-  if(e.key==='Enter' && !e.shiftKey && window.innerWidth>=768){ e.preventDefault(); gui(); }
+  // Enter = gửi, Shift+Enter = xuống dòng (máy tính lẫn điện thoại; bàn phím ảo hiện nút "Gửi").
+  // Đang gõ dấu tiếng Việt (Telex/VNI đang ghép chữ) thì KHÔNG gửi, tránh mất chữ cuối.
+  if(e.key==='Enter' && !e.shiftKey){
+    if(e.isComposing || e.keyCode===229) return;
+    e.preventDefault(); gui();
+  }
 }
+// Điện thoại Android: bàn phím ảo báo mọi phím là 229 nên không bắt được ở keydown → bắt lúc nó định chèn xuống dòng
+document.getElementById('nhap').addEventListener('beforeinput', e=>{
+  if((e.inputType==='insertLineBreak' || e.inputType==='insertParagraph') && !e.isComposing && !phimShift){
+    if(document.getElementById('goiy').style.display==='block') return;
+    e.preventDefault(); gui();
+  }
+});
+let phimShift=false;
+document.addEventListener('keydown', e=>{ if(e.key==='Shift') phimShift=true; });
+document.addEventListener('keyup', e=>{ if(e.key==='Shift') phimShift=false; });
 // @nhắc tên trong nhóm
 function goiYNhac(){
   const g=document.getElementById('goiy'), o=document.getElementById('nhap');
@@ -813,18 +889,72 @@ function goiYNhac(){
     o.setSelectionRange(dau.length,dau.length); g.style.display='none'; o.focus(); capNhatNutGui();
   });
 }
-let dangGui=false;
-async function gui(){
+/* ---------- HÀNG CHỜ GỬI: hiện tin ngay (Đang gửi...), gửi lần lượt đúng thứ tự,
+   lỗi / mất mạng → giữ lại (tin chữ lưu cả khi tắt app), có mạng lại tự gửi tiếp. Mỗi tin có mã tạm
+   → gửi lại không bao giờ tạo tin trùng (server bỏ qua mã đã nhận). ---------- */
+let HANG_CHO=[];   // {ma, ht, loai:'chu'|'anh', noi_dung, file, xem, tep, tra_loi, nhac, tt:'cho'|'dang'|'loi', loi}
+let svCoMaTam=true, dangChayHC=false, lanGuiCuoi=0;
+function maTam(){ return 't'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function khoaHC(){ return 'ht_cho_gui_'+(toi?toi.id:''); }
+function luuHC(){ try{ localStorage.setItem(khoaHC(), JSON.stringify(HANG_CHO.filter(x=>x.loai==='chu').map(x=>({ma:x.ma,ht:x.ht,loai:'chu',noi_dung:x.noi_dung,tra_loi:x.tra_loi,nhac:x.nhac,luc:x.luc})))); }catch(e){} }
+function napHC(){ try{ HANG_CHO=(JSON.parse(localStorage.getItem(khoaHC())||'[]')||[]).map(x=>Object.assign(x,{tt:'cho'})); }catch(e){ HANG_CHO=[]; } }
+async function rpcGui(p){
+  if(!svCoMaTam) delete p.p_ma_tam;
+  let r=await rpc('ht_gui',p);
+  if(r.error && svCoMaTam && /Could not find the function|p_ma_tam/i.test(r.error.message||'')){ svCoMaTam=false; delete p.p_ma_tam; r=await rpc('ht_gui',p); } // chưa chạy chat-7.sql
+  return r;
+}
+async function guiMuc(m){
+  m.tt='dang'; m.loi=''; if(htMo && htMo.id===m.ht) veTin();
+  try{
+    const p={p_ht:m.ht, p_noi_dung:m.noi_dung||null, p_tra_loi:m.tra_loi||null, p_nhac:m.nhac||[], p_ma_tam:m.ma};
+    if(m.loai==='anh'){
+      if(!m.tep) m.tep=await taiLenAnh('anh', m.file, 1600, false, m.ht); // tải ảnh 1 lần, gửi lại không tải lại
+      p.p_loai='anh'; p.p_tep=m.tep;
+    }
+    const r=await rpcGui(p);
+    if(r.error) throw new Error(r.error.message||'Lỗi không rõ');
+    HANG_CHO=HANG_CHO.filter(x=>x!==m); luuHC();
+    if(m.xem) setTimeout(()=>URL.revokeObjectURL(m.xem), 30000);
+    return true;
+  }catch(e){
+    m.tt='loi';
+    m.loi=(!navigator.onLine || /fetch|network|Failed/i.test(e.message)) ? 'Mất mạng — sẽ tự gửi khi có mạng' : e.message;
+    luuHC(); if(htMo && htMo.id===m.ht) veTin();
+    return false;
+  }
+}
+async function chayHC(){
+  if(dangChayHC) return; dangChayHC=true;
+  let coGui=false;
+  try{
+    for(const m of HANG_CHO.slice()){
+      if(m.tt!=='cho') continue;
+      const ok=await guiMuc(m); coGui=coGui||ok;
+      if(!ok && !navigator.onLine){ HANG_CHO.forEach(x=>{ if(x.tt==='cho') x.tt='loi', x.loi='Mất mạng — sẽ tự gửi khi có mạng'; }); break; }
+    }
+  }finally{ dangChayHC=false; }
+  if(coGui){ if(htMo) await taiTinMoi(); taiDanhSach(); }
+  else if(htMo) veTin();
+  if(HANG_CHO.some(x=>x.tt==='cho')) chayHC();
+}
+function guiLai(ma){ const m=HANG_CHO.find(x=>x.ma===ma); if(m){ m.tt='cho'; chayHC(); } }
+function boTinCho(ma){ HANG_CHO=HANG_CHO.filter(x=>x.ma!==ma); luuHC(); veTin(); }
+window.addEventListener('online', ()=>{ toast('Đã có mạng lại'); HANG_CHO.forEach(x=>{ if(x.tt==='loi') x.tt='cho'; }); chayHC(); dongBoLai(); });
+window.addEventListener('offline', ()=>toast('Mất kết nối mạng — tin nhắn sẽ được gửi khi có mạng lại'));
+
+function gui(){
   const o=document.getElementById('nhap'), nd=o.value.trim();
-  if(!nd || !htMo || dangGui) return;
-  dangGui=true;
+  if(!nd || !htMo) return;                          // không gửi tin rỗng / toàn khoảng trắng
+  if(Date.now()-lanGuiCuoi<250) return;            // bấm Enter dồn dập → chỉ nhận 1 lần
+  lanGuiCuoi=Date.now();
   const nhac=Object.keys(nhacIds).filter(id=>nd.indexOf('@'+nhacIds[id])>=0).map(Number);
-  const tl=traLoi?traLoi.id:null;
+  HANG_CHO.push({ma:maTam(), ht:htMo.id, loai:'chu', noi_dung:nd, tra_loi:traLoi?traLoi.id:null, nhac:nhac, tt:'cho', luc:Date.now()});
+  luuHC();
   o.value=''; khiGo(); boTraLoi(); nhacIds={};
-  const r=await rpc('ht_gui',{p_ht:htMo.id, p_noi_dung:nd, p_tra_loi:tl, p_nhac:nhac});
-  dangGui=false;
-  if(r.error){ toast('❌ Chưa gửi được: '+(r.error.message||'')); o.value=nd; khiGo(); return; }
-  await taiTinMoi(); cuonXuong(true); taiDanhSach();
+  o.focus();                                        // giữ bàn phím để gõ tiếp
+  veTin(); cuonXuong(true);
+  chayHC();
 }
 
 /* ---------- ảnh: nén, tải lên, gửi, xem lớn ---------- */
@@ -850,36 +980,79 @@ function nenAnh(file, canh, vuong){
     im.src=URL.createObjectURL(file);
   });
 }
-async function taiLenAnh(mucDich, file, canh, vuong){
+async function taiLenAnh(mucDich, file, canh, vuong, ht){
   const a=await nenAnh(file, canh, vuong);
   if(a.blob.size>5*1024*1024) throw new Error('Ảnh quá lớn (tối đa 5 MB)');
-  const v=await rpc('ht_xin_ve',{p_muc_dich:mucDich, p_ht:mucDich==='anh'?htMo.id:null, p_duoi:a.duoi});
+  const v=await rpc('ht_xin_ve',{p_muc_dich:mucDich, p_ht:mucDich==='anh'?(ht||htMo.id):null, p_duoi:a.duoi});
   if(v.error) throw new Error(v.error.message);
   const up=await sc.storage.from('ht-anh').upload(v.data, a.blob, {contentType:a.duoi==='gif'?'image/gif':'image/jpeg', cacheControl:'31536000', upsert:false});
   if(up.error) throw new Error(up.error.message);
   return {path:v.data, rong:a.rong, cao:a.cao};
 }
-let dangGuiAnh=false;
-async function guiAnh(files){
+// Ảnh đi chung hàng chờ với tin chữ: hiện ngay ảnh xem trước "Đang gửi...", lỗi thì bấm gửi lại
+function guiAnh(files){
   files=[...(files||[])].filter(f=>/^image\//.test(f.type));
   if(!files.length || !htMo) return;
-  if(dangGuiAnh){ toast('Đang gửi ảnh, đợi chút...'); return; }
   if(files.length>10){ toast('Mỗi lần gửi tối đa 10 ảnh'); files=files.slice(0,10); }
-  dangGuiAnh=true;
   const ht=htMo.id, tl=traLoi?traLoi.id:null; boTraLoi();
-  let loi=0;
-  for(let i=0;i<files.length;i++){
-    toast('📤 Đang gửi ảnh '+(i+1)+'/'+files.length+'...');
-    try{
-      const a=await taiLenAnh('anh', files[i], 1600, false);
-      const r=await rpc('ht_gui',{p_ht:ht, p_noi_dung:null, p_loai:'anh', p_tep:a, p_tra_loi:i===0?tl:null});
-      if(r.error) throw new Error(r.error.message);
-    }catch(e){ loi++; console.error(e); toast('❌ Ảnh '+(i+1)+': '+e.message); }
+  files.forEach((f,i)=>HANG_CHO.push({ma:maTam(), ht:ht, loai:'anh', file:f, xem:URL.createObjectURL(f), tra_loi:i===0?tl:null, nhac:[], tt:'cho', luc:Date.now()}));
+  veTin(); cuonXuong(true); chayHC();
+}
+/* ---------- chụp ảnh trực tiếp: camera trước/sau → xem trước → chụp lại / gửi ---------- */
+let CAM=null; // {luong, mat, blob}
+async function moCamera(){
+  if(!htMo) return;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ document.getElementById('chupDuPhong').click(); return; } // máy cũ: mở camera của hệ thống
+  CAM={mat:'environment'};
+  document.getElementById('cam').style.display='flex';
+  await batCam();
+}
+async function batCam(){
+  if(!CAM) return;
+  if(CAM.luong) CAM.luong.getTracks().forEach(t=>t.stop());
+  const v=document.getElementById('camVideo'), xem=document.getElementById('camXem');
+  xem.style.display='none'; v.style.display='block';
+  try{
+    CAM.luong=await navigator.mediaDevices.getUserMedia({video:{facingMode:CAM.mat, width:{ideal:1920}, height:{ideal:1080}}, audio:false});
+    v.srcObject=CAM.luong; v.style.transform = CAM.mat==='user' ? 'scaleX(-1)' : 'none';
+    await v.play().catch(()=>{});
+    document.getElementById('camNut').innerHTML=
+      '<div><button class="cn" onclick="dongCamera()">'+ic('x')+'</button><div class="chu">Đóng</div></div>'
+      +'<div><button class="cn chup" onclick="chupAnh()" title="Chụp"></button></div>'
+      +'<div><button class="cn" onclick="CAM.mat=CAM.mat===\'user\'?\'environment\':\'user\';batCam()">'+ic('doi_cam')+'</button><div class="chu">Đổi camera</div></div>';
+  }catch(e){
+    const tuChoi = e.name==='NotAllowedError' || e.name==='SecurityError';
+    dongCamera();
+    if(confirm((tuChoi?'Bạn chưa cho phép dùng camera.\nMở cài đặt trang (biểu tượng ổ khoá cạnh địa chỉ web) → Camera → Cho phép.':'Không mở được camera: '+e.message)+'\n\nBấm OK để chọn ảnh có sẵn trong máy thay thế.'))
+      document.getElementById('chonAnh').click();
   }
-  dangGuiAnh=false;
-  if(!loi) toast('✓ Đã gửi '+files.length+' ảnh');
-  if(htMo && htMo.id===ht){ await taiTinMoi(); cuonXuong(true); }
-  taiDanhSach();
+}
+function chupAnh(){
+  const v=document.getElementById('camVideo'); if(!v.videoWidth) return;
+  const cv=document.createElement('canvas'); cv.width=v.videoWidth; cv.height=v.videoHeight;
+  const cx=cv.getContext('2d');
+  if(CAM.mat==='user'){ cx.translate(cv.width,0); cx.scale(-1,1); } // camera trước: lưu đúng chiều như đang thấy
+  cx.drawImage(v,0,0);
+  cv.toBlob(b=>{
+    if(!b) return;
+    CAM.blob=b;
+    const xem=document.getElementById('camXem'); xem.src=URL.createObjectURL(b); xem.style.display='block'; v.style.display='none';
+    document.getElementById('camNut').innerHTML=
+      '<div><button class="cn" onclick="batCam()">'+ic('thuhoi')+'</button><div class="chu">Chụp lại</div></div>'
+      +'<button class="gui-anh" id="camGui" onclick="guiAnhChup()">Gửi ảnh</button>';
+  }, 'image/jpeg', 0.9);
+}
+function guiAnhChup(){
+  if(!CAM || !CAM.blob) return;
+  document.getElementById('camGui').disabled=true; // chặn bấm Gửi 2 lần
+  const f=new File([CAM.blob], 'chup-'+Date.now()+'.jpg', {type:'image/jpeg'});
+  dongCamera(); guiAnh([f]);
+}
+function dongCamera(){
+  if(CAM && CAM.luong) CAM.luong.getTracks().forEach(t=>t.stop());
+  CAM=null;
+  document.getElementById('cam').style.display='none';
+  document.getElementById('camVideo').srcObject=null;
 }
 function xemAnh(u){
   document.getElementById('xemAnhImg').src=u;
