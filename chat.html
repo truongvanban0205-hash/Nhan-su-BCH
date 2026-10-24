@@ -423,7 +423,10 @@ if(NHUNG){ const b=document.getElementById('nutVe'); b.dataset.ic='nho'; b.inner
     truoc=vv.height;
   };
   vv.addEventListener('resize', chinh); vv.addEventListener('scroll', chinh); chinh();
+  // bấm vào ô nhập: trình duyệt thường tự cuộn trang để "đưa ô nhập lên" → kéo trang về đúng chỗ sau khi bàn phím mở xong
+  document.getElementById('nhap').addEventListener('focus', ()=>{ [50,300,600].forEach(t=>setTimeout(chinh, t)); });
 })();
+document.addEventListener('scroll', ()=>{ if(window.scrollY) window.scrollTo(0,0); }, {passive:true});
 
 /* ---------- khởi động ---------- */
 async function batDau(){

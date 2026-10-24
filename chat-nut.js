@@ -19,7 +19,7 @@
     + '#cn-khung{position:fixed;z-index:9001;background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.3);overflow:hidden;display:none;'
     + 'width:380px;height:min(620px,calc(100vh - 32px))}'
     + '#cn-khung iframe{width:100%;height:100%;border:0;display:block}'
-    + '@media (max-width:767px){#cn-khung{left:0!important;top:0!important;width:100vw;height:100vh;height:100dvh;border-radius:0}}';
+    + '@media (max-width:767px){#cn-khung{left:0!important;width:100vw;border-radius:0}}';
   document.head.appendChild(st);
 
   var nut = document.createElement('div');
@@ -80,14 +80,29 @@
     var x = r.left + 27 < w / 2 ? r.right + 10 : r.left - kw - 10;
     x = Math.max(8, Math.min(w - kw - 8, x));
     var y = Math.max(8, Math.min(h - kh - 8, r.top - kh / 2));
-    khung.style.left = x + 'px'; khung.style.top = y + 'px';
+    khung.style.left = x + 'px'; khung.style.top = y + 'px'; khung.style.height = kh + 'px';
     khung.style.display = 'block';
-    if(window.innerWidth < 768) nut.style.display = 'none';
+    if(window.innerWidth < 768){ nut.style.display = 'none'; document.documentElement.style.overflow = 'hidden'; } // trang báo cáo phía sau không bị cuộn theo
+    khopBanPhim();
     dongGoi(); // khung chat tự lo cuộc gọi
   }
+  /* Điện thoại: mở bàn phím thì trình duyệt KHÔNG thu nhỏ trang mà "trượt" vùng nhìn lên trên → khung chat
+     (đặt theo trang) bị đẩy lên, mất thanh tiêu đề. Cách sửa: luôn đặt khung khít đúng vùng đang nhìn thấy. */
+  function khopBanPhim(){
+    if(!khung || khung.style.display === 'none' || window.innerWidth >= 768) return;
+    var vv = window.visualViewport;
+    khung.style.top = (vv ? vv.offsetTop : 0) + 'px';
+    khung.style.height = (vv ? vv.height : window.innerHeight) + 'px';
+  }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', khopBanPhim);
+    window.visualViewport.addEventListener('scroll', khopBanPhim);
+  }
+  window.addEventListener('resize', khopBanPhim);
   function thuNho(){
     if(khung) khung.style.display = 'none';
     nut.style.display = 'flex';
+    document.documentElement.style.overflow = '';
     demChuaDoc();
   }
   window.addEventListener('message', function(e){
