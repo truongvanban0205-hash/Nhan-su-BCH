@@ -706,8 +706,9 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 .hh-sec{margin:10px 0;background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.10);overflow:hidden}
 .hh-bar{background:#eceff3;color:#1a1a1a;border-bottom:1px solid #d7dee6;font-weight:800;font-size:13.5px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .hh-bar .hh-tinh{font-size:11.5px;font-weight:700;color:#c99404}
-/* bảng tổng hợp + biểu đồ: mỗi bên đúng nửa khung, ẩn 1 bên thì bên kia vẫn giữ nửa (không giãn theo bảng chi tiết) */
-.hh-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:10px;align-items:stretch}
+/* bảng tổng hợp + biểu đồ: cả 2 gộp lại chiếm nửa trái khung (mỗi cái ~1/4), không giãn theo bảng chi tiết */
+.hh-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:10px;align-items:stretch;width:50%;box-sizing:border-box}
+@media (max-width:1100px){.hh-top{width:100%}}
 @media (max-width:760px){.hh-top{grid-template-columns:minmax(0,1fr)}}
 .hh-tom{min-width:0;overflow-x:auto}
 .hh-tom .hh-tb th.hh-sl{width:86px;white-space:normal;line-height:1.3}
