@@ -779,6 +779,12 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
       <button class="btn btn-sm btn-gr" onclick="hhLuuCauHinh()">💾 Lưu cấu hình</button>
       <button class="btn btn-sm btn-or" onclick="hhMacDinh()">↺ Khôi phục mặc định</button>
     </div>
+    <div class="hh-tool" style="margin-top:6px">
+      <span class="hh-he" style="width:100%">Hiện riêng từng bảng (trên màn hình và ảnh xuất):</span>
+      <button class="db-sw" id="hh-sw-tong" onclick="hhDoiBang('tong')" role="switch" aria-checked="true"><span class="db-sw-ray"><span class="db-sw-nut"></span></span><span class="db-sw-chu">MMTB hư hỏng và tình trạng sửa chữa</span></button>
+      <button class="db-sw" id="hh-sw-bd" onclick="hhDoiBang('bd')" role="switch" aria-checked="true"><span class="db-sw-ray"><span class="db-sw-nut"></span></span><span class="db-sw-chu">Biểu đồ 7 ngày gần nhất</span></button>
+      <button class="db-sw" id="hh-sw-ct" onclick="hhDoiBang('ct')" role="switch" aria-checked="true"><span class="db-sw-ray"><span class="db-sw-nut"></span></span><span class="db-sw-chu">Bảng chi tiết hư hỏng</span></button>
+    </div>
     <div id="hh-cf-loi" class="hh-loi"></div>
   </div>
   <div class="hh-card">
@@ -792,6 +798,11 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     <p class="hh-sub">Thêm / sửa / ẩn / xoá / đổi thứ tự cột của "Bảng chi tiết hư hỏng". Đầu mục <b>hệ thống</b> (cần để tính giờ, xếp nhóm) chỉ đổi tên được, không xoá. Kiểu <b>Lựa chọn</b>: mỗi dòng một lựa chọn; tick "Cho chọn Khác" để có thêm mục Khác (tự gõ).</p>
     <div class="hh-tool"><button class="btn btn-sm btn-or" onclick="hhThemCot()">+ Thêm đầu mục</button></div>
     <div style="overflow-x:auto"><table class="hh-cf" id="hh-cf-cot"></table></div>
+  </div>
+  <div class="hh-card">
+    <h2>🗑 Máy đã xoá khỏi bảng chi tiết</h2>
+    <p class="hh-sub">Mới xoá ở trên cùng. <b>Phục hồi</b>: máy quay lại bảng chi tiết và biểu đồ. <b>Xoá vĩnh viễn</b>: dùng cho dòng nhập thử / nhập nhầm, xoá hẳn và không tính vào biểu đồ nữa (không lấy lại được). Hai nút này lưu ngay, không cần bấm 💾.</p>
+    <div style="overflow-x:auto"><table class="hh-cf" id="hh-cf-xoa"></table></div>
   </div>
 </div>
 <div id="hh-mo" onclick="if(event.target===this)hhDongForm()"><div id="hh-hop"></div></div>
@@ -7462,6 +7473,8 @@ function hhSaoChep(o){ return JSON.parse(JSON.stringify(o)); }
 function hhChuanHoa(c){
   c=c&&typeof c==='object'?hhSaoChep(c):hhSaoChep(HH_MAC_DINH);
   if(typeof c.hien!=='boolean') c.hien=true;
+  if(!c.hien_bang || typeof c.hien_bang!=='object') c.hien_bang={};
+  ['tong','bd','ct'].forEach(function(k){ if(typeof c.hien_bang[k]!=='boolean') c.hien_bang[k]=true; });
   if(!Array.isArray(c.nhom)) c.nhom=hhSaoChep(HH_MAC_DINH.nhom);
   if(!Array.isArray(c.cot)) c.cot=hhSaoChep(HH_MAC_DINH.cot);
   HH_MAC_DINH.cot.forEach(function(md){ if(md.he && !c.cot.some(function(x){return x.ma===md.ma;})) c.cot.push(hhSaoChep(md)); });
@@ -7623,8 +7636,10 @@ function hhHtml(d,opt){
   var oGhi=function(ma){ return opt.xuat ? '<div style="text-align:left;white-space:pre-line;font-size:11px">'+E(d.ghiChu[ma]||'')+'</div>'
       : '<textarea class="hh-gc" data-nhom="'+E(ma)+'" rows="1" '+(chiDoc?'disabled':'')+'>'+E(d.ghiChu[ma]||'')+'</textarea>'; };
   var h='<div class="hh-bar"><span>MMTB HƯ HỎNG VÀ TÌNH TRẠNG SỬA CHỮA</span><span class="hh-tinh">Tính tới: '+p2(v.h)+':'+p2(v.mi)+' - '+p2(v.d)+'/'+p2(v.mo)+'/'+v.y+'</span></div>';
+  var hb=cfg.hien_bang||{}, hTong=hb.tong!==false, hBd=hb.bd!==false, hCt=hb.ct!==false; // ẩn/hiện riêng từng bảng
+  h+='<div class="hh-top"'+(hTong||hBd?'':' style="display:none"')+'>';
   // bảng tổng hợp
-  h+='<div class="hh-top"><div class="hh-tom"><table class="hh-tb"><tr><th style="width:38px">STT</th><th>Loại hư hỏng</th><th style="width:96px;white-space:nowrap">Số lượng<br>(máy/xe)</th><th style="width:34%">Ghi chú</th></tr>';
+  h+='<div class="hh-tom"'+(hTong?'':' style="display:none"')+'><table class="hh-tb"><tr><th style="width:38px">STT</th><th>Loại hư hỏng</th><th style="width:96px;white-space:nowrap">Số lượng<br>(máy/xe)</th><th style="width:34%">Ghi chú</th></tr>';
   nhom.forEach(function(g,i){
     var m=HH_MAU[g.mau]||HH_MAU.vang;
     h+='<tr><td>'+(i+1)+'</td><td class="hh-ten" style="color:'+m.chu+'"><b><span class="hh-cham" style="background:'+m.cham+'"></span>'+E(g.ten)+'</b><small>'+E(g.mo_ta||'')+'</small></td>'
@@ -7636,8 +7651,10 @@ function hhHtml(d,opt){
     +'<td class="hh-so" id="hh-khop" style="'+(khop?'':'background:#fdecea;color:#c62828')+'" title="'+(khop?'Khớp phần I: '+tong+'/'+I:'Lệch phần I: mục này '+tong+', phần I (Hư hỏng) '+I)+'">'+(tong?p2(tong):'–')+'</td>'
     +'<td>'+oGhi('__tong')+'</td></tr></table></div>';
   // biểu đồ
-  h+='<div class="hh-bd"><div class="hh-bd-t">BIỂU ĐỒ THIẾT BỊ HƯ HỎNG VÀ TÌNH TRẠNG SỬA CHỮA <span>(7 NGÀY GẦN NHẤT)</span></div>'
-    +'<div class="hh-bd-cv"><canvas id="'+(opt.idBd||'hh-bd-cv')+'"></canvas></div></div></div>';
+  if(hBd) h+='<div class="hh-bd"><div class="hh-bd-t">BIỂU ĐỒ THIẾT BỊ HƯ HỎNG VÀ TÌNH TRẠNG SỬA CHỮA <span>(7 NGÀY GẦN NHẤT)</span></div>'
+    +'<div class="hh-bd-cv"><canvas id="'+(opt.idBd||'hh-bd-cv')+'"></canvas></div></div>';
+  h+='</div>';
+  if(!hCt) return h;
   // bảng chi tiết: máy đang hỏng ở trên, máy đã sửa xong xuống cuối (theo thời gian xong)
   var cot=cfg.cot.filter(function(c){return !c.an;});
   h+='<div class="hh-band"><span>Bảng chi tiết hư hỏng</span>'+(chiDoc||opt.xuat?'':'<button class="hh-nut" onclick="hhMoForm(null)">+ Thêm dòng</button>')+'</div>';
@@ -7838,13 +7855,14 @@ async function hhMoCauHinh(){
   if(HH.chuaCai){ alert('Chưa cài đặt mục II trên máy chủ: cần chạy file sql/mmtb-hu-hong.sql.'); return; }
   HH.nhap=hhSaoChep(hhCfg());
   document.getElementById('hh-cf-loi').textContent='';
-  hhVeCauHinh(); showScreen('hh');
+  hhVeCauHinh(); showScreen('hh'); hhTaiDaXoa();
 }
 function hhVeMMTB(){ HH.pass=''; HH.nhap=null; showScreen('mmtb'); hhVe(); }
 function hhVeCauHinh(){
   var c=HH.nhap, E=escHtmlHub; if(!c) return;
   veCongTac('hh-sw-hien', c.hien);
   var sw=document.querySelector('#hh-sw-hien .db-sw-chu'); if(sw) sw.textContent='Hiện mục II trong báo cáo: '+(c.hien?'Bật':'Tắt');
+  ['tong','bd','ct'].forEach(function(k){ veCongTac('hh-sw-'+k, c.hien_bang[k]); });
   var h='<tr><th></th><th>Tên nhóm</th><th>Mô tả</th><th>Từ (giờ, &gt;)</th><th>Đến (giờ, ≤)</th><th>Màu</th><th>Hiện</th><th></th></tr>';
   c.nhom.forEach(function(g,i){
     h+='<tr class="'+(g.an?'hh-an':'')+'"><td class="hh-ud"><button data-nl="'+i+'"'+(i?'':' disabled')+'>▲</button><button data-nx="'+i+'"'+(i<c.nhom.length-1?'':' disabled')+'>▼</button></td>'
@@ -7905,6 +7923,44 @@ function hhVeCauHinh(){
   });
 })();
 function hhDoiHien(){ if(!HH.nhap) return; HH.nhap.hien=!HH.nhap.hien; hhVeCauHinh(); }
+function hhDoiBang(k){ if(!HH.nhap) return; HH.nhap.hien_bang[k]=!HH.nhap.hien_bang[k]; hhVeCauHinh(); }
+/* ---------- danh sách máy đã xoá: phục hồi / xoá vĩnh viễn ---------- */
+var HH_XOA=[];
+async function hhTaiDaXoa(){
+  var t=document.getElementById('hh-cf-xoa'); if(!t) return;
+  t.innerHTML='<tr><td style="color:#9aa3ae;padding:10px">Đang tải…</td></tr>';
+  var r=await sc.from('mmtb_hu_hong').select('*').eq('don_vi_id',getDonViId()||'khanh_hoa').eq('da_xoa',true).order('xoa_luc',{ascending:false}).limit(300);
+  if(r.error){ t.innerHTML='<tr><td class="hh-loi">Không tải được: '+escHtmlHub(r.error.message||'')+'</td></tr>'; return; }
+  HH_XOA=r.data||[]; hhVeDaXoa();
+}
+function hhVeDaXoa(){
+  var t=document.getElementById('hh-cf-xoa'), E=escHtmlHub; if(!t) return;
+  var chu=function(v){ return v==null?'':(typeof v==='object'?(v.c!==undefined?v.c:(v.k||'')):String(v)); };
+  var h='<tr><th>Xoá lúc</th><th>Loại máy</th><th>Mã thiết bị</th><th>Thời điểm hỏng</th><th>Tình trạng lúc xoá</th><th>Biểu đồ</th><th></th></tr>';
+  if(!HH_XOA.length) h+='<tr><td colspan="7" style="color:#9aa3ae;padding:10px">Chưa có máy nào bị xoá.</td></tr>';
+  HH_XOA.forEach(function(r){
+    var gt=r.gt||{};
+    h+='<tr><td style="white-space:nowrap">'+E(hhChuGio(r.xoa_luc))+'</td><td style="white-space:pre-line">'+E(chu(gt.loai_may))+'</td><td>'+E(chu(gt.ma_tb))+'</td>'
+      +'<td style="white-space:nowrap">'+E(hhChuGio(r.t_hong))+'</td>'
+      +'<td>'+(r.xong?'Đã sửa xong '+E(hhNgayVN(r.xong_luc)):'Đang hỏng')+'</td>'
+      +'<td>'+(r.xoa_nham?'<span class="hh-he">Không tính (xoá khi chưa xong)</span>':'<span style="color:#2e7d32">Vẫn tính</span>')+'</td>'
+      +'<td style="white-space:nowrap"><button class="hh-nut xong" onclick="hhPhucHoi('+r.id+')">↺ Phục hồi</button> <button class="hh-nut do" onclick="hhXoaVinhVien('+r.id+')">Xoá vĩnh viễn</button></td></tr>';
+  });
+  t.innerHTML=h;
+}
+function hhLoiRpc(e){ var m=(e&&e.message)||''; return /could not find|does not exist|PGRST202/i.test(m+' '+((e&&e.code)||''))?'Chưa cài: cần chạy file sql/mmtb-hu-hong-2.sql.':m; }
+async function hhPhucHoi(id){
+  if(!confirm('Phục hồi máy này về bảng chi tiết hư hỏng (và tính lại vào biểu đồ)?')) return;
+  var r=await sc.rpc('mmtb_hh_phuc_hoi',{p_pass:HH.pass, p_don_vi_id:getDonViId()||'khanh_hoa', p_id:id});
+  if(r.error){ alert('Không phục hồi được: '+hhLoiRpc(r.error)); return; }
+  toast('✓ Đã phục hồi'); hhTaiDaXoa(); hhTai();
+}
+async function hhXoaVinhVien(id){
+  if(!confirm('XOÁ VĨNH VIỄN dòng này?\nDòng sẽ mất hẳn, không tính vào biểu đồ, KHÔNG lấy lại được.')) return;
+  var r=await sc.rpc('mmtb_hh_xoa_vinh_vien',{p_pass:HH.pass, p_don_vi_id:getDonViId()||'khanh_hoa', p_id:id});
+  if(r.error){ alert('Không xoá được: '+hhLoiRpc(r.error)); return; }
+  toast('✓ Đã xoá vĩnh viễn'); hhTaiDaXoa(); hhTai();
+}
 function hhThemNhom(){ var c=HH.nhap; if(!c) return; var cuoi=c.nhom[c.nhom.length-1]; c.nhom.push({ma:'n'+Date.now().toString(36),ten:'Nhóm mới',mo_ta:'',tu:cuoi&&cuoi.den!=null?cuoi.den:0,den:null,mau:'tim',an:false}); hhVeCauHinh(); }
 function hhThemCot(){ var c=HH.nhap; if(!c) return; var ten=prompt('Tên đầu mục mới:'); if(!ten||!ten.trim()) return; c.cot.push({ma:'c'+Date.now().toString(36),ten:ten.trim(),kieu:'chu'}); hhVeCauHinh(); }
 function hhMacDinh(){ if(!confirm('Đưa cấu hình mục II về mặc định ban đầu? (Chưa lưu cho tới khi bấm 💾 Lưu cấu hình)'))return; HH.nhap=hhChuanHoa(null); hhVeCauHinh(); }
