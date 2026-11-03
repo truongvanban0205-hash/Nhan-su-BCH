@@ -1871,7 +1871,7 @@ async function exportFullReport(){
     if(ssM && dbM!==undefined){ ssMHT+=rowTot; ssMDB+=dbM; ssMList.push({n:m.n,ht:rowTot,db:dbM}); }
     mmtbRows+='<td style="border:1px solid #ccc;padding:4px;text-align:center;font-weight:800;background:#FCF3D9">'+f(rowTot)+'</td>'
       +(ssM?oSoSanhM(rowTot,dbM):'')
-      +'<td style="border:1px solid #ccc;padding:4px;text-align:left;font-size:10px;color:#666;white-space:pre-line;">'+mmtbReportNote+'</td>'
+      +'<td style="border:1px solid #ccc;padding:4px;text-align:left;font-size:10px;color:#666;white-space:pre-line;min-width:150px;">'+mmtbReportNote+'</td>'
       +'</tr>';
   });
   // Hàng TỔNG CỘNG ở cuối bảng — cộng dồn Hoạt động/Hư hỏng/Lưu kho của TẤT CẢ loại máy theo
@@ -2182,7 +2182,7 @@ async function exportFullReport(){
     +'<tr>'+mmtbHeaderStatusCols+'</tr>'
     +mmtbRows
     +'</table>'
-    +'<div id="reportMmtbChartPanel" style="min-width:170px;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px;font-size:10px;flex-shrink:0;"></div>'
+    +'<div id="reportMmtbChartPanel" style="min-width:210px;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px;font-size:10px;flex-shrink:0;"></div>'
     +'</div></div>'
     +thMmtbNgay
     +'</div>'
@@ -2250,16 +2250,8 @@ async function exportFullReport(){
   var mmtbYesterday=mmtbMap[days7[5]]||null;
   if(mmtbPanelEl)renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterday,(mmtbToday&&mmtbToday.bienDong)||{},(mmtbToday&&mmtbToday.ghiChuTuyChinh)||'');
 
-  // Khổ A4 dọc (1 : 1,414): thử vài chiều ngang, chọn chiều cho chữ to nhất khi thu vừa đúng 1 trang
-  var A4W=1240, A4H=Math.round(A4W*Math.SQRT2), tot=null;
-  container.style.display='block';
-  [1240,1340,1440,1560,1680,1800].forEach(function(W){
-    container.style.width=W+'px';
-    var w=Math.max(W,container.scrollWidth), h=container.offsetHeight, k=Math.min(A4W/w, A4H/h);
-    if(!tot || k>tot.k+0.005) tot={W:W,k:k};
-  });
-  container.style.width=tot.W+'px';
-  if(hhX && hhX.ve){ try{ hhX.ve(); }catch(e){} } // biểu đồ 7 ngày của mục II (vẽ sau khi chốt chiều ngang)
+  // Không ép khổ giấy: ảnh rộng/dài theo đúng nội dung để không mất thông tin
+  if(hhX && hhX.ve){ try{ hhX.ve(); }catch(e){} } // biểu đồ 7 ngày của mục II (vẽ sau khi bố cục xong)
 
   await new Promise(function(res){setTimeout(res,300);});
   // Đảm bảo đã paint xong trước khi chụp (khắc phục hiện tượng panel lúc có lúc không)
@@ -2267,13 +2259,7 @@ async function exportFullReport(){
   await new Promise(function(res){setTimeout(res,200);});
 
   try{
-    var anh=await html2canvas(container,{backgroundColor:'#f0f4ff',scale:2});
-    // dán vào trang A4: thu đều 2 chiều cho vừa, căn giữa ngang, nền cùng màu
-    var canvas=document.createElement('canvas'); canvas.width=A4W*2; canvas.height=A4H*2;
-    var g2=canvas.getContext('2d'); g2.fillStyle='#f0f4ff'; g2.fillRect(0,0,canvas.width,canvas.height);
-    var k2=Math.min(canvas.width/anh.width, canvas.height/anh.height);
-    g2.imageSmoothingQuality='high';
-    g2.drawImage(anh,(canvas.width-anh.width*k2)/2,0,anh.width*k2,anh.height*k2);
+    var canvas=await html2canvas(container,{backgroundColor:'#f0f4ff',scale:2});
     var link=document.createElement('a');
     link.download='BaoCao_BCH_'+n.getFullYear()+p2(n.getMonth()+1)+p2(n.getDate())+'.png';
     link.href=canvas.toDataURL('image/png');
