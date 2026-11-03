@@ -1840,7 +1840,7 @@ async function exportFullReport(){
   var mmtbRows='';
   function f(v){return v===0?'-':(v<10?'0'+v:v);}
   // Đang bật so sánh định biên MMTB → thêm cột Định biên · Chênh lệch · Tỷ lệ ngay trong bảng (giữa Tổng và Ghi chú)
-  // Định biên KHÔNG chen vào bảng nữa: gom về dải "So sánh định biên" sau 2 mục lớn
+  // ssMList: từng loại máy có định biên — dùng cho 4 ô thống kê cạnh tiêu đề + thẻ Tổng hợp MMTB
   var ssM=(dbmExp&&dbmExp.bat)?dbmExp.map:null, ssMHT=0, ssMDB=0, ssMList=[];
   var tdSS='border:1px solid #ccc;padding:4px;text-align:center;font-weight:800;';
   function oSoSanhM(ht,db){
@@ -1870,6 +1870,7 @@ async function exportFullReport(){
     var dbM=ssM?ssM[dbmNorm(m.n)]:undefined;
     if(ssM && dbM!==undefined){ ssMHT+=rowTot; ssMDB+=dbM; ssMList.push({n:m.n,ht:rowTot,db:dbM}); }
     mmtbRows+='<td style="border:1px solid #ccc;padding:4px;text-align:center;font-weight:800;background:#FCF3D9">'+f(rowTot)+'</td>'
+      +(ssM?oSoSanhM(rowTot,dbM):'')
       +'<td style="border:1px solid #ccc;padding:4px;text-align:left;font-size:10px;color:#666;white-space:pre-line;">'+mmtbReportNote+'</td>'
       +'</tr>';
   });
@@ -1890,6 +1891,7 @@ async function exportFullReport(){
       +'<td style="border:1px solid #ccc;padding:4px;text-align:center;">'+f(slk)+'</td>';
   });
   mmtbRows+='<td style="border:1px solid #ccc;padding:4px;text-align:center;background:#F7C31E;">'+f(mTotal.hd+mTotal.hh+mTotal.lk)+'</td>'
+    +(ssM?oSoSanhM(ssMHT,ssMDB):'') // tổng chỉ tính các loại máy đã có định biên
     +'<td style="border:1px solid #ccc;padding:4px;"></td>'
     +'</tr>';
 
@@ -1959,7 +1961,7 @@ async function exportFullReport(){
 
   // Hàng Định biên (tháng hiện tại) + Chênh lệch — chỉ hiện khi đã có dữ liệu định biên
   var clByCol={}; // lưu lại Chênh lệch từng chức danh để tô màu header (đủ/thiếu/dư)
-  var ssNList=[], nsRowsGoc=nsRows; // các hàng Định biên/Chênh lệch/Tỷ lệ không còn nằm trong bảng (đưa xuống dải so sánh)
+  var ssNList=[]; // từng chức danh: hiện có / định biên — dùng cho 4 ô thống kê cạnh tiêu đề
   if(dbnSoSanh && dinhBienThangNay && Object.keys(dinhBienThangNay).length){
     nsCols.forEach(function(c){ ssNList.push({n:c.n, ht:TYPES.reduce(function(a,t){return a+(bchTot[t][c.k]||0);},0), db:dinhBienThangNay[c.k]||0}); });
     nsRows+='<tr><td colspan="2" style="border:2px solid #0F2A5C;padding:4px;background:#e3f2fd;font-weight:800;font-size:11px">Định biên</td>';
@@ -2000,30 +2002,19 @@ async function exportFullReport(){
     var mTL=dbMau(tlHT-tlDB);
     nsRows+='<td style="border:2px solid #0F2A5C;padding:3px;text-align:center;background:'+mTL.nen+';font-weight:800;font-size:11px;color:'+mTL.chu+'">'+dbTyLe(tlHT,tlDB)+'</td></tr>';
   }
-  nsRows=nsRowsGoc;
 
-  // Dải "So sánh định biên": mỗi chỉ số 1 cột — Hiện có / Định biên / Chênh lệch / Tỷ lệ (thiếu đỏ, đủ/vượt xanh)
-  function bangSoSanh(tieuDe,ds){
+  // 4 ô thống kê định biên đặt ngay cạnh tiêu đề mỗi mục lớn: Hiện tại / Định biên / Chênh lệch / Thiếu-Đủ-Vượt
+  function oThongKeDB(ds){
     if(!ds.length) return '';
-    var th='border:1px solid #c3cee6;padding:3px 4px;background:#e3e9f5;font-size:9.5px;text-align:center;';
-    var td='border:1px solid #d7dee6;padding:3px 4px;text-align:center;font-size:10.5px;font-weight:700;';
-    var tong={n:'Tổng',ht:0,db:0}; ds.forEach(function(x){tong.ht+=x.ht; tong.db+=x.db;});
-    var all=ds.concat([tong]);
-    var hang=function(nhan,fn,nen){ return '<tr><td style="'+td+'text-align:left;background:'+(nen||'#f5f7fb')+';white-space:nowrap">'+nhan+'</td>'+all.map(function(x,i){ return fn(x,i===all.length-1); }).join('')+'</tr>'; };
-    return '<div style="flex:1 1 0;min-width:0">'
-      +'<div style="font-size:11.5px;font-weight:800;color:#0F2A5C;margin-bottom:4px">'+tieuDe+'</div>'
-      +'<table style="border-collapse:collapse;width:100%">'
-      +'<tr><th style="'+th+'"></th>'+all.map(function(x,i){ return '<th style="'+th+(i===all.length-1?'background:#F7C31E;':'')+'">'+String(x.n).split('(')[0]+'</th>'; }).join('')+'</tr>'
-      +hang('Hiện có',function(x,t){ return '<td style="'+td+(t?'background:#FCF3D9;':'')+'">'+f(x.ht)+'</td>'; })
-      +hang('Định biên',function(x,t){ return '<td style="'+td+'color:'+DB_MAU_SO+(t?';background:#FCF3D9':'')+'">'+f(x.db)+'</td>'; })
-      +hang('Chênh lệch',function(x){ var c=x.ht-x.db, m=dbMau(c); return '<td style="'+td+'background:'+m.nen+';color:'+m.chu+'">'+(c>0?'+'+c:(c<0?c:'-'))+'</td>'; })
-      +hang('Tỷ lệ',function(x){ var m=dbMau(x.ht-x.db); return '<td style="'+td+'background:'+m.nen+';color:'+m.chu+'">'+dbTyLe(x.ht,x.db)+'</td>'; })
-      +'</table></div>';
+    var tH=0,tD=0,dem={thieu:0,du:0,vuot:0};
+    ds.forEach(function(x){ tH+=x.ht; tD+=x.db; var c=x.ht-x.db; if(c<0)dem.thieu++; else if(c>0)dem.vuot++; else dem.du++; });
+    var cl=tH-tD, mT=dbMau(cl);
+    var o=function(nhan,gt,mau){ return '<div style="min-width:84px;background:#fff;border:1px solid #dde3ea;border-left:4px solid '+mau+';border-radius:8px;padding:4px 10px"><div style="font-size:9px;color:#5d6478;font-weight:700;white-space:nowrap">'+nhan+'</div><div style="font-size:17px;font-weight:800;color:'+mau+';line-height:1.2;white-space:nowrap">'+gt+'</div></div>'; };
+    return '<div style="display:flex;gap:8px">'+o('Hiện tại',tH,'#0F2A5C')+o('Định biên',tD,DB_MAU_SO)+o('Chênh lệch',cl>0?'+'+cl:(cl<0?cl:'0'),mT.chu)
+      +o('Thiếu / Đủ / Vượt','<span style="color:#c62828">'+dem.thieu+'</span> / <span style="color:#2e7d32">'+dem.du+'</span> / <span style="color:#1565c0">'+dem.vuot+'</span>','#5d6478')+'</div>';
   }
-  var ssHtml=bangSoSanh('🚜 MMTB',ssMList)+bangSoSanh('👷 Nhân sự',ssNList);
-  if(ssHtml) ssHtml='<div style="background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:12px">'
-    +'<div style="font-size:15px;font-weight:800;color:#1a1a1a;margin-bottom:8px">📊 So sánh định biên <span style="font-size:11px;font-weight:600;color:#5d6478">(hiện có so với định biên · <span style="color:#c62828">đỏ = thiếu</span> · <span style="color:#2e7d32">xanh = đủ / vượt</span>)</span></div>'
-    +'<div style="display:flex;flex-direction:column;gap:10px">'+ssHtml+'</div></div>';
+  var tkM=oThongKeDB(ssMList), tkN=oThongKeDB(ssNList);
+  var tieuDeMuc=function(chu,tk){ return '<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:10px"><div style="font-size:16px;font-weight:800;color:#1a1a1a">'+chu+'</div>'+tk+'</div>'; };
 
   var mmtbHeaderCols=mList.map(function(c){return '<th style="border:1px solid #c3cee6;padding:4px;font-size:10px">'+c.n.split('(')[0]+'</th>';}).join('');
   var nsHeaderCols=nsCols.map(function(c){
@@ -2103,6 +2094,65 @@ async function exportFullReport(){
     vals.forEach(function(v,i){ if(v==null){dau=true;return;} if(dau){g.moveTo(x(i),y(v));dau=false;} else g.lineTo(x(i),y(v)); }); g.stroke();
     var cuoi=vals.length-1; if(vals[cuoi]!=null){ g.fillStyle=mau; g.beginPath(); g.arc(x(cuoi),y(vals[cuoi]),2.6,0,Math.PI*2); g.fill(); }
   }
+  // Thẻ "Tổng hợp MMTB trong ngày" (bên phải bảng MMTB): % hoạt động, thanh tỷ lệ, định biên, xu hướng 7 ngày
+  function mnNgay(dk){
+    var d=mmtbMap[dk]; if(!d||!d.data) return null;
+    var o={hd:0,hh:0,lk:0}, dt=d.data;
+    Object.keys(dt).forEach(function(p){ [['hoatdong','hd'],['huhong','hh'],['luukho','lk']].forEach(function(s){ var b=dt[p]&&dt[p][s[0]]; if(b) Object.keys(b).forEach(function(k){ o[s[1]]+=(+b[k]||0); }); }); });
+    return o;
+  }
+  var mn7=days7.map(mnNgay); mn7[6]={hd:mTotal.hd,hh:mTotal.hh,lk:mTotal.lk};
+  var mnTong=mTotal.hd+mTotal.hh+mTotal.lk, mnPT=function(v){ return mnTong?Math.round(v*100/mnTong):0; };
+  var mnDau=-1; for(var mi=0;mi<6;mi++){ if(mn7[mi]){ mnDau=mi; break; } }
+  var mnDong=[{k:'hd',ten:'Hoạt động',mau:'#2e7d32',duong:'#43a047'},{k:'hh',ten:'Hư hỏng',mau:'#c62828',duong:'#e53935'},{k:'lk',ten:'Lưu kho',mau:'#5d6478',duong:'#9aa3ae'}];
+  var thMmtbNgay='<div style="width:330px;flex-shrink:0;background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);overflow:hidden;font-size:11px;color:#1a1a1a">'
+    +'<div style="background:#eef2f8;padding:8px 12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:800;color:#0F2A5C">Tổng hợp MMTB <span style="color:#e0a800">trong ngày</span></span><span style="font-size:10px;color:#5d6478">'+dayName+', '+dateStr+'</span></div>'
+    +'<div style="padding:10px 12px">'
+    +'<div style="display:flex;gap:8px">'
+      +'<div style="flex:1;background:#eaf6ea;border-radius:8px;padding:6px 10px"><div style="font-size:11px;color:#2e7d32;font-weight:700">Máy hoạt động</div>'
+        +'<div style="font-size:34px;font-weight:900;color:#2e7d32;line-height:1.05">'+mnPT(mTotal.hd)+'<span style="font-size:18px">%</span></div>'
+        +'<div style="font-size:10.5px;color:#2e7d32">'+mTotal.hd+' / '+mnTong+' máy</div></div>'
+      +'<div style="width:96px;background:#F7C31E;border-radius:8px;padding:6px 10px"><div style="font-size:11px;font-weight:700;color:#5a4300">Tổng máy</div><div style="font-size:32px;font-weight:900;color:#1a1a1a;line-height:1.15">'+mnTong+'</div></div>'
+    +'</div>'
+    +'<div style="display:flex;height:20px;border-radius:5px;overflow:hidden;margin-top:8px;background:#eceff3">'
+      +[['hd','#43a047'],['hh','#e53935'],['lk','#9aa3ae']].map(function(s){ var v=mTotal[s[0]]; return v?'<div style="flex:'+v+';background:'+s[1]+';color:#fff;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;min-width:18px">'+v+'</div>':''; }).join('')
+    +'</div>'
+    +'<div style="font-size:10px;margin-top:4px;line-height:1.5">'
+      +'<span style="color:#2e7d32">■</span> Hoạt động '+mTotal.hd+' ('+mnPT(mTotal.hd)+'%) &nbsp; <span style="color:#e53935">■</span> Hư hỏng '+mTotal.hh+' ('+mnPT(mTotal.hh)+'%)<br>'
+      +'<span style="color:#9aa3ae">■</span> Lưu kho '+mTotal.lk+' ('+mnPT(mTotal.lk)+'%)'+(mTotal.lk?'':', không có máy nằm kho')
+    +'</div>';
+  if(ssM && ssMList.length){
+    var mnCL=ssMHT-ssMDB, mnM=dbMau(mnCL), mnThieu=ssMList.filter(function(x){return x.ht<x.db;});
+    thMmtbNgay+='<div style="display:flex;border:1px solid #dde3ea;border-radius:8px;overflow:hidden;margin-top:8px">'
+      +'<div style="flex:1;padding:5px 8px;background:#e3f2fd"><div style="font-size:17px;font-weight:800;color:'+DB_MAU_SO+'">'+ssMDB+'</div><div style="font-size:9.5px;color:'+DB_MAU_SO+'">định biên</div></div>'
+      +'<div style="flex:1;padding:5px 8px;border-left:1px solid #dde3ea"><div style="font-size:17px;font-weight:800;color:'+mnM.chu+'">'+dbTyLe(ssMHT,ssMDB)+'</div><div style="font-size:9.5px;color:'+mnM.chu+'">đạt ('+ssMHT+'/'+ssMDB+')</div></div>'
+      +'<div style="flex:1;padding:5px 8px;border-left:1px solid #dde3ea;background:'+mnM.nen+'"><div style="font-size:17px;font-weight:800;color:'+mnM.chu+'">'+(mnCL>0?'+'+mnCL:(mnCL<0?mnCL:'0'))+'</div><div style="font-size:9.5px;color:'+mnM.chu+'">chênh lệch</div></div>'
+      +'</div>';
+    if(mnThieu.length) thMmtbNgay+='<div style="font-size:10px;color:#c62828;margin-top:4px">Thiếu: '+(mnThieu.length===1?'toàn bộ là '+mnThieu[0].n+', hiện có '+mnThieu[0].ht+'/'+mnThieu[0].db
+      :mnThieu.map(function(x){return x.n+' '+x.ht+'/'+x.db;}).join(', '))+'</div>';
+  }
+  thMmtbNgay+='<div style="border-top:1px solid #eceff3;margin-top:8px;padding-top:4px">';
+  mnDong.forEach(function(r){
+    var nay=mn7[6][r.k], dau=mnDau>=0?mn7[mnDau][r.k]:null, cl=dau==null?null:nay-dau;
+    var ghi=cl==null?'':(cl===0?'Không đổi':(cl>0?'+':'−')+Math.abs(cl)+' máy so với '+dayLabels[mnDau]);
+    thMmtbNgay+='<div style="display:flex;align-items:center;gap:6px;border-bottom:1px solid #f0f2f5;padding:2px 0">'
+      +'<div style="width:78px;flex-shrink:0"><div style="font-size:12px;font-weight:800;color:'+r.mau+'">'+r.ten+'</div><div style="font-size:9px;color:'+r.mau+';line-height:1.2">'+ghi+'</div></div>'
+      +'<canvas id="mn-sp-'+r.k+'" width="226" height="40" style="width:226px;height:40px"></canvas></div>';
+  });
+  thMmtbNgay+='<div style="display:flex;margin-left:84px;font-size:9px;color:#5d6478">'+dayLabels.map(function(l,i){ return '<span style="flex:1;text-align:center;'+(i===6?'font-weight:800;color:#1a1a1a':'')+'">'+l+'</span>'; }).join('')+'</div>'
+    +'</div></div></div>';
+  function veDongMn(cv,vals,mau){ // đường 7 ngày có ghi số trên từng điểm, điểm cuối to + đậm
+    if(!cv) return; var g=cv.getContext('2d'), W=cv.width, Hh=cv.height;
+    var co=vals.filter(function(v){return v!=null;}); if(!co.length) return;
+    var mn=Math.min.apply(null,co), mx=Math.max.apply(null,co); if(mx===mn){ mx+=1; mn-=1; }
+    var x=function(i){ return W*(i+0.5)/vals.length; }, y=function(v){ return Hh-7-(v-mn)*(Hh-22)/(mx-mn); };
+    g.strokeStyle=mau; g.lineWidth=2; g.beginPath(); var dau=true;
+    vals.forEach(function(v,i){ if(v==null){dau=true;return;} if(dau){g.moveTo(x(i),y(v)); dau=false;} else g.lineTo(x(i),y(v)); }); g.stroke();
+    g.textAlign='center';
+    vals.forEach(function(v,i){ if(v==null) return; var cuoi=i===vals.length-1;
+      g.fillStyle=mau; g.beginPath(); g.arc(x(i),y(v),cuoi?4:2.8,0,Math.PI*2); g.fill();
+      g.fillStyle=cuoi?'#1a1a1a':'#5d6478'; g.font=(cuoi?'bold 12px':'10px')+' sans-serif'; g.fillText(String(v),x(i),y(v)-6); });
+  }
   // Hàng cuối: [Bảng loại hư hỏng] [Biểu đồ hư hỏng 7 ngày] [Tình trạng hoạt động] — phần nào tắt thì các phần còn lại chia đều
   var cuoiO=[];
   if(hhX && hhX.tom) cuoiO.push('<div style="background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);overflow:hidden;min-width:0">'+(hhX.tren?'':hhX.bar)+'<div class="hh-top" style="display:block;width:auto;padding:8px">'+hhX.tom+'</div></div>');
@@ -2121,22 +2171,35 @@ async function exportFullReport(){
     +'</div>'
     +'<div style="display:flex;gap:14px;margin-bottom:14px;align-items:flex-start;">'
     +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);flex:1;">'
-    +'<div style="font-size:16px;font-weight:800;color:#1a1a1a;margin-bottom:10px;">🚜 Báo cáo MMTB: '+getDonViTenBaoCao()+'</div>'
+    +tieuDeMuc('🚜 Báo cáo MMTB: '+getDonViTenBaoCao(), tkM)
     +'<div style="display:flex;gap:12px;align-items:flex-start;">'
     +'<table style="border-collapse:collapse;flex:1;">'
     +'<tr><th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">STT</th><th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Tên máy</th>'
     +mmtbHeaderProjCols
     +'<th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#F7C31E">Tổng</th>'
+    +(ssM?'<th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Định biên</th><th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Chênh lệch</th><th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Tỷ lệ</th>':'')
     +'<th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Ghi chú</th></tr>'
     +'<tr>'+mmtbHeaderStatusCols+'</tr>'
     +mmtbRows
     +'</table>'
     +'<div id="reportMmtbChartPanel" style="min-width:170px;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px;font-size:10px;flex-shrink:0;"></div>'
     +'</div></div>'
-    +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);min-width:320px;">'
-    +'<div style="font-size:13px;font-weight:800;color:#1565c0;margin-bottom:8px;">📈 Xu hướng Nhân sự &amp; MMTB (7 ngày)</div>'
-    +'<canvas id="reportComboChart" width="300" height="240"></canvas>'
-    +'<div style="display:flex;gap:14px;margin-top:8px;font-size:9px;">'
+    +thMmtbNgay
+    +'</div>'
+    +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:12px;">'
+    +tieuDeMuc('📋 Báo cáo nhân sự: '+getDonViTenBaoCao(), tkN)
+    +'<div style="display:flex;gap:12px;align-items:flex-start;">'
+    +'<table style="border-collapse:collapse;flex:1;">'
+    +'<tr><th style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Dự án</th><th style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Ca làm việc</th>'+nsHeaderCols+'<th style="border:1px solid #c3cee6;padding:4px;background:#F7C31E">Tổng</th></tr>'
+    +nsRows
+    +'</table>'
+    // cột phải: khung tổng hợp nhân sự, bên dưới là biểu đồ xu hướng 7 ngày (lấp chỗ trống)
+    +'<div style="width:320px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;">'
+    +'<div id="reportNsChartPanel" style="background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px;font-size:11.5px;"></div>'
+    +'<div style="background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px;">'
+    +'<div style="font-size:12.5px;font-weight:800;color:#1565c0;margin-bottom:6px;">📈 Xu hướng Nhân sự &amp; MMTB (7 ngày)</div>'
+    +'<canvas id="reportComboChart" width="298" height="220"></canvas>'
+    +'<div style="display:flex;gap:14px;margin-top:6px;font-size:9px;">'
       +'<div style="flex:1;border-top:1px solid #eee;padding-top:6px;">'
         +'<div style="font-weight:700;color:#555;margin-bottom:3px;">Nhân sự</div>'
         +'<div style="color:#1565c0;">■ Tổng nhân sự'+(hasHoTro?' (không gồm hỗ trợ)':'')+'</div>'
@@ -2147,19 +2210,9 @@ async function exportFullReport(){
         +'<div style="color:#F9A825;">■ Tổng MMTB</div>'
         +'<div style="color:#43a047;">■ MMTB đang hoạt động</div>'
       +'</div>'
-    +'</div>'
-    +'</div>'
-    +'</div>'
-    +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:12px;">'
-    +'<div style="font-size:16px;font-weight:800;color:#1a1a1a;margin-bottom:10px;">📋 Báo cáo nhân sự: '+getDonViTenBaoCao()+'</div>'
-    +'<div style="display:flex;gap:12px;align-items:flex-start;">'
-    +'<table style="border-collapse:collapse;flex:1;">'
-    +'<tr><th style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Dự án</th><th style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Ca làm việc</th>'+nsHeaderCols+'<th style="border:1px solid #c3cee6;padding:4px;background:#F7C31E">Tổng</th></tr>'
-    +nsRows
-    +'</table>'
-    +'<div id="reportNsChartPanel" style="min-width:300px;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px;font-size:11.5px;flex-shrink:0;"></div>'
     +'</div></div>'
-    +ssHtml
+    +'</div>'
+    +'</div></div>'
     +(hhX?hhX.tren:'')
     +cuoiHtml;
 
@@ -2185,6 +2238,7 @@ async function exportFullReport(){
   drawPointLabels(ctx, [nsVals,mmtbVals], ['#1565c0','#D68A00'], 'above', 0);
   drawPointLabels(ctx, [nsDiLamVals,mmtbHDVals], ['#33691E','#33691E'], 'below', 0);
   ttThe.forEach(function(t,i){ veSpark(document.getElementById('tt-sp-'+i), t.ds, t.noi?'#e0a800':'#1565c0'); });
+  mnDong.forEach(function(r){ veDongMn(document.getElementById('mn-sp-'+r.k), mn7.map(function(x){return x?x[r.k]:null;}), r.duong); });
 
   // Render panel chi tiết Nhân sự
   var nsPanelEl=document.getElementById('reportNsChartPanel');
