@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bch-app-v10';
+const CACHE_NAME = 'bch-app-v11';
 const urlsToCache = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(e){
@@ -57,17 +57,12 @@ self.addEventListener('push', function(e){
     };
     if(!data.goi) return self.registration.showNotification(data.title || 'Tin nhắn', tb);
     tb.actions = [{action:'nghe', title:'Nghe'}, {action:'tu_choi', title:'Từ chối'}];
-    // Cuộc gọi: hỏi lại server trước — thông báo đến trễ (máy vừa có mạng lại) mà cuộc gọi đã xong thì KHÔNG đổ chuông
-    return goiRpc('ht_xem_goi', { p_goi: tb.data.goi }).then(function(g){
-      if(g && g.trang_thai && g.trang_thai !== 'do_chuong'){
-        return self.registration.showNotification('Cuộc gọi đã kết thúc', { tag: tb.tag, silent: true, icon: tb.icon, badge: './icon.png', data: tb.data })
-          .then(function(){ return new Promise(function(ok){ setTimeout(function(){
-            self.registration.getNotifications({ tag: tb.tag }).then(function(ds){ ds.forEach(function(n){ n.close(); }); ok(); });
-          }, 1500); }); });
-      }
-      return self.registration.showNotification(data.title || 'Cuộc gọi đến', tb).then(function(){
-        return doChuongLap(data.title, tb); // kêu + rung lại mỗi 5 giây tới khi bắt máy / từ chối / hết giờ
-      });
+    // Cuộc gọi: ĐỔ CHUÔNG NGAY, không chờ hỏi server trước. Trước đây hỏi server trước khi hiện → lúc máy đang
+    // ngủ, mạng chậm/treo thì chuông không kêu, tới khi cuộc gọi xong mới thấy thông báo.
+    // Push gọi chỉ sống 60 giây (TTL) nên không sợ đổ chuông cuộc gọi quá cũ; sau đó cứ 5 giây hỏi lại server,
+    // ai đó đã nghe / từ chối / tắt máy thì tự gỡ thông báo.
+    return self.registration.showNotification(data.title || 'Cuộc gọi đến', tb).then(function(){
+      return doChuongLap(data.title, tb); // kêu + rung lại mỗi 5 giây tới khi bắt máy / từ chối / hết giờ
     });
   }));
 });
@@ -89,8 +84,11 @@ function goiRpc(ten, p){
   return layThe().then(function(t){
     if(!t) return null;
     p.p_token = t;
-    return fetch(SB_URL + '/rest/v1/rpc/' + ten, { method:'POST', headers:{ 'Content-Type':'application/json', apikey:SB_KEY }, body:JSON.stringify(p) })
-      .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+    // tối đa 4 giây: mạng treo thì coi như chưa biết (vẫn đổ chuông tiếp), không làm kẹt thông báo
+    var huy = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var hen = setTimeout(function(){ if(huy) huy.abort(); }, 4000);
+    return fetch(SB_URL + '/rest/v1/rpc/' + ten, { method:'POST', headers:{ 'Content-Type':'application/json', apikey:SB_KEY }, body:JSON.stringify(p), signal: huy ? huy.signal : undefined })
+      .then(function(r){ clearTimeout(hen); return r.ok ? r.json() : null; }).catch(function(){ clearTimeout(hen); return null; });
   });
 }
 function doChuongLap(title, tb){
@@ -100,7 +98,7 @@ function doChuongLap(title, tb){
       if(++lan > 8) return xong();
       setTimeout(function(){
         goiRpc('ht_xem_goi', { p_goi:id }).then(function(g){
-          if(!g || g.trang_thai !== 'do_chuong'){ // đã nghe / từ chối / nhỡ → bỏ thông báo đổ chuông
+          if(g && g.trang_thai !== 'do_chuong'){ // đã nghe / từ chối / nhỡ → bỏ thông báo đổ chuông (mất mạng → chưa biết, cứ đổ tiếp)
             self.registration.getNotifications({ tag:tb.tag }).then(function(ds){ ds.forEach(function(n){ n.close(); }); });
             return xong();
           }
