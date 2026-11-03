@@ -433,7 +433,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         <div class="export-popover-wrap">
           <div class="home-avatar" id="home-avatar" onclick="toggleExportPopover()"><img src="icon.png" alt="VB"></div>
           <div class="export-popover" id="exportPopover">
-            <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo đơn vị này (ảnh)</button>
+            <button onclick="toggleExportPopover();exportFullReport();">📄 Xuất báo cáo đơn vị này (ảnh / PDF / Excel)</button>
             <button onclick="toggleExportPopover();exportTongHop4DonVi();">📊 Xuất tổng hợp 4 đơn vị (ảnh)</button>
           </div>
         </div>
@@ -707,9 +707,9 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 .hh-bar{background:#eceff3;color:#1a1a1a;border-bottom:1px solid #d7dee6;font-weight:800;font-size:13.5px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .hh-bar .hh-tinh{font-size:11.5px;font-weight:700;color:#c99404}
 /* bảng tổng hợp + biểu đồ: cả 2 gộp lại chiếm nửa trái khung (mỗi cái ~1/4), không giãn theo bảng chi tiết */
-.hh-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:10px;align-items:stretch;width:50%;box-sizing:border-box}
-@media (max-width:1100px){.hh-top{width:100%}}
-@media (max-width:760px){.hh-top{grid-template-columns:minmax(0,1fr)}}
+.hh-dau{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:10px;align-items:stretch;width:50%;box-sizing:border-box}
+@media (max-width:1100px){.hh-dau{width:100%}}
+@media (max-width:760px){.hh-dau{grid-template-columns:minmax(0,1fr)}}
 .hh-tom{min-width:0;overflow-x:auto}
 .hh-tom .hh-tb th.hh-sl{width:76px;white-space:nowrap;line-height:1.3}
 .hh-tom .hh-tb td.hh-ten{width:1%;white-space:nowrap}
@@ -1590,7 +1590,56 @@ async function exportTongHop4DonVi(){
 }
 
 
+// Hộp chọn chế độ xuất: Ảnh / PDF / Excel → trả 'png' | 'pdf' | 'xlsx' | null
+function chonCheDoXuat(){
+  return new Promise(function(xong){
+    var nen=document.createElement('div');
+    nen.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px';
+    var nut=function(ma,icon,ten,mo){ return '<button data-ma="'+ma+'" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid #d7dee6;background:#fff;border-radius:10px;padding:12px 14px;cursor:pointer;font-family:inherit;margin-top:8px">'
+      +'<span style="font-size:26px">'+icon+'</span><span><b style="font-size:14px;color:#0F2A5C">'+ten+'</b><br><span style="font-size:12px;color:#5d6478">'+mo+'</span></span></button>'; };
+    nen.innerHTML='<div style="background:#fff;border-radius:14px;max-width:380px;width:100%;padding:16px 16px 12px;box-shadow:0 10px 30px rgba(0,0,0,.25)">'
+      +'<div style="font-size:16px;font-weight:800;color:#0F2A5C">📄 Xuất báo cáo đơn vị này</div><div style="font-size:12px;color:#5d6478">Chọn kiểu file:</div>'
+      +nut('png','🖼️','Ảnh (PNG)','Gửi Zalo / chat nhanh')
+      +nut('pdf','📕','PDF','In hoặc gửi file — giống hệt ảnh, 1 trang')
+      +nut('xlsx','📗','Excel','Trang 1 giống hệt ảnh + các bảng số liệu sửa được')
+      +'<button data-ma="" style="width:100%;margin-top:10px;border:none;background:transparent;color:#5d6478;font-family:inherit;font-size:13px;padding:6px;cursor:pointer">Huỷ</button></div>';
+    nen.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b && e.target!==nen) return; document.body.removeChild(nen); xong(b?(b.dataset.ma||null):null); });
+    document.body.appendChild(nen);
+  });
+}
+function napThuVienXuat(url,co){ // nạp thư viện khi cần (PDF / Excel), lần sau dùng lại
+  if(co()) return Promise.resolve();
+  return new Promise(function(ok,loi){ var s=document.createElement('script'); s.src=url; s.onload=function(){ ok(); }; s.onerror=function(){ loi(new Error('Không tải được thư viện, kiểm tra mạng')); }; document.head.appendChild(s); });
+}
+// Chuyển các bảng trong báo cáo thành ô Excel: giữ gộp ô, màu nền, màu chữ, đậm, căn lề, viền
+function xlChepBang(ws,tb,dong0){
+  var mau=function(c){ var m=/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/.exec(c||''); if(!m||(m[4]!==undefined&&+m[4]===0)) return null;
+    return 'FF'+[m[1],m[2],m[3]].map(function(x){return (+x).toString(16).padStart(2,'0');}).join('').toUpperCase(); };
+  var chiem={}, r=dong0, maxC=0;
+  Array.prototype.forEach.call(tb.rows,function(tr){
+    var c=1;
+    Array.prototype.forEach.call(tr.cells,function(td){
+      while(chiem[r+','+c]) c++;
+      var rs=td.rowSpan||1, cs=td.colSpan||1;
+      for(var i=0;i<rs;i++) for(var j=0;j<cs;j++) chiem[(r+i)+','+(c+j)]=1;
+      var st=getComputedStyle(td), cell=ws.getCell(r,c), chu=(td.innerText||'').replace(/ /g,' ').trim();
+      cell.value=chu;
+      var nen=mau(st.backgroundColor), mc=mau(st.color);
+      if(nen) cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:nen}};
+      cell.font={name:'Arial',size:10,bold:(+st.fontWeight||400)>=600,color:mc?{argb:mc}:undefined};
+      cell.alignment={vertical:'middle',horizontal:st.textAlign==='left'||st.textAlign==='start'?'left':(st.textAlign==='right'||st.textAlign==='end'?'right':'center'),wrapText:true};
+      var vien={style:'thin',color:{argb:'FFC3CEE6'}}; cell.border={top:vien,left:vien,bottom:vien,right:vien};
+      if(rs>1||cs>1){ try{ ws.mergeCells(r,c,r+rs-1,c+cs-1); }catch(e){} }
+      if(cs===1){ var w=Math.min(60,Math.max(6,td.offsetWidth/7)); var col=ws.getColumn(c); if(!col.width||col.width<w) col.width=w; }
+      c+=cs; if(c-1>maxC) maxC=c-1;
+    });
+    r++;
+  });
+  return r;
+}
 async function exportFullReport(){
+  var cheDo=await chonCheDoXuat();
+  if(!cheDo) return;
   var pass=prompt('🔒 Mật khẩu vận hành để xuất báo cáo:');
   if(pass===null)return;
   if(!(await kiemTraMatKhauBaoCao(pass))){alert('❌ Sai mật khẩu!');return;}
@@ -2155,8 +2204,8 @@ async function exportFullReport(){
   }
   // Hàng cuối: [Bảng loại hư hỏng] [Biểu đồ hư hỏng 7 ngày] [Tình trạng hoạt động] — phần nào tắt thì các phần còn lại chia đều
   var cuoiO=[];
-  if(hhX && hhX.tom) cuoiO.push('<div style="background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);overflow:hidden;min-width:0">'+(hhX.tren?'':hhX.bar)+'<div class="hh-top" style="display:block;width:auto;padding:8px">'+hhX.tom+'</div></div>');
-  if(hhX && hhX.bd) cuoiO.push('<div class="hh-top" style="display:block;width:auto;padding:0;min-width:0">'+hhX.bd.replace('class="hh-bd"','class="hh-bd" style="height:100%;box-sizing:border-box;box-shadow:0 2px 10px rgba(0,0,0,0.08);border-radius:10px"')+'</div>');
+  if(hhX && hhX.tom) cuoiO.push('<div style="background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);overflow:hidden;min-width:0">'+(hhX.tren?'':hhX.bar)+'<div class="hh-dau" style="display:block;width:auto;padding:8px">'+hhX.tom+'</div></div>');
+  if(hhX && hhX.bd) cuoiO.push('<div class="hh-dau" style="display:block;width:auto;padding:0;min-width:0">'+hhX.bd.replace('class="hh-bd"','class="hh-bd" style="height:100%;box-sizing:border-box;box-shadow:0 2px 10px rgba(0,0,0,0.08);border-radius:10px"')+'</div>');
   cuoiO.push(ttHtml);
   var cuoiHtml='<div style="display:grid;grid-template-columns:repeat('+cuoiO.length+',minmax(0,1fr));gap:12px;align-items:stretch">'+cuoiO.join('')+'</div>';
   container.innerHTML=
@@ -2173,7 +2222,7 @@ async function exportFullReport(){
     +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);flex:1;">'
     +tieuDeMuc('🚜 Báo cáo MMTB: '+getDonViTenBaoCao(), tkM)
     +'<div style="display:flex;gap:12px;align-items:flex-start;">'
-    +'<table style="border-collapse:collapse;flex:1;">'
+    +'<table id="repMmtbBang" style="border-collapse:collapse;flex:1;">'
     +'<tr><th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">STT</th><th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Tên máy</th>'
     +mmtbHeaderProjCols
     +'<th rowspan="2" style="border:1px solid #c3cee6;padding:4px;background:#F7C31E">Tổng</th>'
@@ -2189,7 +2238,7 @@ async function exportFullReport(){
     +'<div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:12px;">'
     +tieuDeMuc('📋 Báo cáo nhân sự: '+getDonViTenBaoCao(), tkN)
     +'<div style="display:flex;gap:12px;align-items:flex-start;">'
-    +'<table style="border-collapse:collapse;flex:1;">'
+    +'<table id="repNsBang" style="border-collapse:collapse;flex:1;">'
     +'<tr><th style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Dự án</th><th style="border:1px solid #c3cee6;padding:4px;background:#e3e9f5">Ca làm việc</th>'+nsHeaderCols+'<th style="border:1px solid #c3cee6;padding:4px;background:#F7C31E">Tổng</th></tr>'
     +nsRows
     +'</table>'
@@ -2260,10 +2309,37 @@ async function exportFullReport(){
 
   try{
     var canvas=await html2canvas(container,{backgroundColor:'#f0f4ff',scale:2});
-    var link=document.createElement('a');
-    link.download='BaoCao_BCH_'+n.getFullYear()+p2(n.getMonth()+1)+p2(n.getDate())+'.png';
-    link.href=canvas.toDataURL('image/png');
-    link.click();
+    var tenFile='BaoCao_BCH_'+n.getFullYear()+p2(n.getMonth()+1)+p2(n.getDate());
+    var taiVe=function(href,ten){ var a=document.createElement('a'); a.download=ten; a.href=href; a.click(); };
+    var rongPx=canvas.width/2, caoPx=canvas.height/2;
+    if(cheDo==='pdf'){
+      // 1 trang đúng kích thước ảnh → giống hệt ảnh, không cắt trang
+      await napThuVienXuat('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',function(){return !!(window.jspdf&&window.jspdf.jsPDF);});
+      var pdf=new window.jspdf.jsPDF({orientation:rongPx>caoPx?'l':'p',unit:'px',format:[rongPx,caoPx],hotfixes:['px_scaling'],compress:true});
+      pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,rongPx,caoPx);
+      pdf.save(tenFile+'.pdf');
+    }else if(cheDo==='xlsx'){
+      await napThuVienXuat('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js',function(){return !!window.ExcelJS;});
+      var wb=new ExcelJS.Workbook();
+      // Trang 1: nguyên ảnh báo cáo (giống hệt ảnh / PDF)
+      var ws1=wb.addWorksheet('Báo cáo',{views:[{showGridLines:false}]});
+      var idAnh=wb.addImage({base64:canvas.toDataURL('image/png'),extension:'png'});
+      ws1.addImage(idAnh,{tl:{col:0,row:0},ext:{width:rongPx,height:caoPx}});
+      // Các trang số liệu: chép đúng từng bảng (màu, gộp ô) để xem / lọc / sửa
+      var nhom=[
+        ['MMTB', document.getElementById('repMmtbBang')],
+        ['Nhân sự', document.getElementById('repNsBang')],
+        ['Hư hỏng chi tiết', container.querySelector('.hh-ct')],
+        ['Loại hư hỏng', container.querySelector('.hh-tom table')],
+        ['CNCH-LXLM-TBMM', (function(){ var p=document.getElementById('reportNsChartPanel'); return p&&p.querySelector('table'); })()]
+      ];
+      nhom.forEach(function(x){ if(!x[1]) return; var ws=wb.addWorksheet(x[0]); ws.getCell(1,1).value=x[0]+' — '+getDonViTenBaoCao()+' — '+dateStr; ws.getCell(1,1).font={bold:true,size:13,color:{argb:'FF0F2A5C'}}; xlChepBang(ws,x[1],3); });
+      var buf=await wb.xlsx.writeBuffer();
+      var url=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+      taiVe(url,tenFile+'.xlsx'); setTimeout(function(){ URL.revokeObjectURL(url); },5000);
+    }else{
+      taiVe(canvas.toDataURL('image/png'),tenFile+'.png');
+    }
     toast('✅ Đã xuất báo cáo!');
   }catch(e){
     alert('Lỗi xuất ảnh: '+e.message);
@@ -7788,7 +7864,7 @@ function hhHtml(d,opt){
   var hb=cfg.hien_bang||{}, hTong=hb.tong!==false, hBd=hb.bd!==false, hCt=hb.ct!==false; // ẩn/hiện riêng từng bảng
   // opt.tach: trả riêng từng phần {bar, tom, bd, ct} để ảnh xuất tự sắp bố cục
   var vt=[h.length];
-  h+='<div class="hh-top"'+(hTong||hBd?'':' style="display:none"')+'>';
+  h+='<div class="hh-dau"'+(hTong||hBd?'':' style="display:none"')+'>';
   vt.push(h.length);
   // bảng tổng hợp
   h+='<div class="hh-tom"'+(hTong?'':' style="display:none"')+'><table class="hh-tb"><tr><th style="width:38px">STT</th><th>Loại hư hỏng</th><th class="hh-sl">Số lượng<br>(MMTB)</th><th>Ghi chú</th></tr>';
