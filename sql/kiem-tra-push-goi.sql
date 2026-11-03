@@ -1,17 +1,14 @@
 -- KIỂM TRA: lúc gọi điện, máy chủ có gửi thông báo đẩy tới điện thoại người nghe không?
--- Chỉ ĐỌC, không sửa gì. Chạy trong Supabase → SQL Editor ngay sau khi thử gọi 1 cuộc.
-
--- 1. 10 cuộc gọi gần nhất (giờ Việt Nam)
-select id, loai, trang_thai,
-       to_char(tao_luc at time zone 'Asia/Ho_Chi_Minh', 'HH24:MI:SS DD/MM') as luc_goi,
-       nguoi_goi, nguoi_nghe
-from public.ht_cuoc_goi order by id desc limit 10;
-
--- 2. Kết quả gọi hàm gửi thông báo (gui-push) gần nhất:
---    status_code 200 + {"da_gui":1} trở lên = đã gửi tới điện thoại; {"da_gui":0} = người nghe chưa đăng ký nhận thông báo
-select id, status_code, content::text as ket_qua,
-       to_char(created at time zone 'Asia/Ho_Chi_Minh', 'HH24:MI:SS DD/MM') as luc
-from net._http_response order by id desc limit 10;
-
--- 3. Số thiết bị đã bật nhận thông báo của từng người
-select employee_id, count(*) as so_thiet_bi from public.ht_dang_ky_push group by employee_id order by employee_id;
+-- Chỉ ĐỌC, không sửa gì. Chạy trong Supabase → SQL Editor NGAY SAU khi thử gọi 1 cuộc (gộp 1 câu để editor hiện đủ).
+--   Dòng "CUOC GOI": cot_3 = trạng thái, cot_5 = mã người nghe, cot_6 = số thiết bị người nghe đã bật thông báo
+--   Dòng "GUI PUSH": cot_3 = mã HTTP (200 là được), cot_5 = kết quả ({"da_gui":1} = đã gửi tới điện thoại)
+(select 'CUOC GOI' as loai, id::text as cot_2, trang_thai as cot_3,
+        to_char(tao_luc at time zone 'Asia/Ho_Chi_Minh', 'HH24:MI:SS DD/MM') as luc,
+        nguoi_nghe::text as cot_5,
+        (select count(*) from public.ht_dang_ky_push d where d.employee_id = g.nguoi_nghe)::text as cot_6
+   from public.ht_cuoc_goi g order by id desc limit 5)
+union all
+(select 'GUI PUSH', id::text, coalesce(status_code::text, 'lỗi: ' || coalesce(error_msg, '')),
+        to_char(created at time zone 'Asia/Ho_Chi_Minh', 'HH24:MI:SS DD/MM'),
+        left(coalesce(content::text, ''), 120), ''
+   from net._http_response order by id desc limit 10);
