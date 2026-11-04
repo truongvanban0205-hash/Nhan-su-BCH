@@ -930,6 +930,7 @@ const modalPass = document.getElementById("modalPass");
 let duAnCache = [];
 let loaiCaCache = [];
 let tenCaRiengCache = [];
+let caAnCache = [], caAnChuaCai = false; // ca ẩn riêng từng dự án [{du_an_id, ma_ca}]
 let loaiMayCache = [];
 let tenNhomMayCache = { thi_cong: 'Máy thi công', phu_tro: 'Máy phụ trợ' };
 
@@ -945,13 +946,16 @@ async function loadCauHinhNS(){
       return null;
     }
   }
-  const [d1, d2, d3, d4, d5] = await Promise.all([
+  const [d1, d2, d3, d4, d5, d6] = await Promise.all([
     safeRpc("cauhinh_lay_du_an"),
     safeRpc("cauhinh_lay_loai_ca"),
     safeRpc("cauhinh_lay_ten_ca_rieng"),
     safeRpc("cauhinh_lay_loai_may"),
-    safeRpc("cauhinh_lay_ten_nhom_may")
+    safeRpc("cauhinh_lay_ten_nhom_may"),
+    safeRpc("cauhinh_lay_ca_an")
   ]);
+  caAnCache = d6 || [];
+  caAnChuaCai = d6 === null;
   duAnCache = d1 || [];
   duAnCache.sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); });
   loaiCaCache = d2 || [];
@@ -1205,11 +1209,36 @@ function renderTenCaRieng(){
     const cells = loaiCaCache.map(c=>{
       const found = tenCaRiengCache.find(t=>t.du_an===d.ten && t.ma_ca===c.ma);
       const val = found ? found.ten_rieng : "";
-      return `<td><input type="text" data-duan="${escapeHtml(d.ten)}" data-ma="${escapeHtml(c.ma)}" class="ten-rieng-input"
-        placeholder="${escapeHtml(c.ten_mac_dinh)}" value="${escapeHtml(val)}" style="margin:0;padding:6px 8px;font-size:12px;width:110px;"></td>`;
+      const an = caAnCache.some(x=>Number(x.du_an_id)===Number(d.id) && x.ma_ca===c.ma);
+      // nút ẩn/hiện ca RIÊNG cho dự án này (VD dự án hỗ trợ chỉ cần 1 hàng số lượng)
+      return `<td><div style="display:flex;align-items:center;gap:4px;${an?'opacity:.55;':''}">
+        <input type="text" data-duan="${escapeHtml(d.ten)}" data-ma="${escapeHtml(c.ma)}" class="ten-rieng-input"
+        placeholder="${escapeHtml(c.ten_mac_dinh)}" value="${escapeHtml(val)}" style="margin:0;padding:6px 8px;font-size:12px;width:96px;${an?'text-decoration:line-through;':''}">
+        <button class="icon-btn" data-ca-an="${d.id}" data-ma="${escapeHtml(c.ma)}" title="${an?'Đang ẩn ở dự án này — bấm để hiện':'Bấm để ẩn ca này ở riêng dự án này'}"
+          style="padding:4px 6px;font-size:12px;${an?'color:var(--bad);border-color:var(--bad);':''}">${an?'🙈':'👁️'}</button></div></td>`;
     }).join("");
     return `<tr><td>${escapeHtml(d.ten)}</td>${cells}</tr>`;
   }).join("");
+
+  body.querySelectorAll("[data-ca-an]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(caAnChuaCai){ alert("Chưa cài tính năng ẩn ca theo dự án: cần chạy file sql/an-ca-theo-du-an.sql trong Supabase."); return; }
+      const duAnId = Number(btn.dataset.caAn), ma = btn.dataset.ma;
+      const dangAn = caAnCache.some(x=>Number(x.du_an_id)===duAnId && x.ma_ca===ma);
+      if(!dangAn){
+        const conHien = loaiCaCache.filter(c=>!caAnCache.some(x=>Number(x.du_an_id)===duAnId && x.ma_ca===c.ma));
+        if(conHien.length<=1){ alert("Mỗi dự án phải còn ít nhất 1 ca hiện."); return; }
+        const d = duAnCache.find(x=>Number(x.id)===duAnId), c = loaiCaCache.find(x=>x.ma===ma);
+        if(!confirm(`Ẩn ca "${c?c.ten_mac_dinh:ma}" ở riêng dự án "${d?d.ten:''}"?\n(Số đã nhập trước đây ở ca này KHÔNG bị xoá, vẫn được tính vào tổng; bấm lại để hiện.)`)) return;
+      }
+      const { error } = await sb.rpc("admin_an_hien_ca_du_an", { p_pass: currentAdminPass, p_don_vi_id: window.currentAdminDonVi || 'khanh_hoa', p_du_an_id: duAnId, p_ma_ca: ma, p_an: !dangAn });
+      if(error){ alert("Không lưu được: " + (error.message||"")); return; }
+      if(dangAn) caAnCache = caAnCache.filter(x=>!(Number(x.du_an_id)===duAnId && x.ma_ca===ma));
+      else caAnCache.push({ du_an_id: duAnId, ma_ca: ma });
+      showToast(dangAn ? "✓ Đã hiện lại ca" : "✓ Đã ẩn ca ở dự án này");
+      renderTenCaRieng();
+    });
+  });
 
   body.querySelectorAll(".ten-rieng-input").forEach(inp=>{
     inp.addEventListener("change", async ()=>{

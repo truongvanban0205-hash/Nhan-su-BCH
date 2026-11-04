@@ -2207,13 +2207,15 @@ async function exportFullReport(){
   function fN(v){return v===0?'-':(v<10?'0'+v:v);}
   nsProjs.forEach(function(proj){
     var pdata=nsData[proj]||{};
-    var rowspanN = TYPES.length + 1;
+    var caHienX=TYPES.filter(function(t){ return !caAn(proj,t,pdata); }); // ca ẩn riêng dự án: bỏ dòng, vẫn cộng tổng
+    var rowspanN = caHienX.length + 1;
     TYPES.forEach(function(typeKey,ti){
       var isNghi = isNghiType(typeKey);
       var bg = isNghi ? '#ffebee' : '#e3f2fd';
       var lbl = getTenCa(proj, ti);
+      var anDong = caHienX.indexOf(typeKey)<0, nsRowsTruoc = nsRows;
       nsRows+='<tr>';
-      if(ti===0)nsRows+='<td rowspan="'+rowspanN+'" style="border:1px solid #ccc;padding:4px;font-weight:800;background:#fff;vertical-align:middle">'+nl2br(projName(proj))+'</td>';
+      if(typeKey===caHienX[0])nsRows+='<td rowspan="'+rowspanN+'" style="border:1px solid #ccc;padding:4px;font-weight:800;background:#fff;vertical-align:middle">'+nl2br(projName(proj))+'</td>';
       nsRows+='<td style="border:1px solid #ccc;padding:4px;background:'+bg+';font-weight:600;font-size:11px">'+lbl+'</td>';
       var rowT=0;
       nsCols.forEach(function(c){
@@ -2225,6 +2227,7 @@ async function exportFullReport(){
       });
       nsRows+='<td style="border:1px solid #ccc;padding:3px;text-align:center;background:'+bg+';font-weight:700;font-size:11px">'+fN(rowT)+'</td>';
       nsRows+='</tr>';
+      if(anDong) nsRows=nsRowsTruoc; // đã cộng vào tổng BCH ở trên, chỉ bỏ phần hiển thị
     });
     var totRowT=0;
     nsRows+='<tr><td style="border:1px solid #ccc;padding:4px;background:#FCF3D9;font-weight:700;font-size:11px">Tổng</td>';
@@ -3347,6 +3350,14 @@ var TYPES=['ca1','ca2','nghi'];
 var TLABELS=['Ca 1','Ca 2','Nghỉ'];
 var LIVE_TYPES=null, LIVE_TLABELS=null; // sao lưu bộ ca HIỆN TẠI — dùng để khôi phục sau khi xem lịch sử
 var TEN_RIENG_MAP={}; // {ten_du_an: {ma_ca: ten_rieng}}
+var CA_AN_MAP={}; // {duan_<id>: {ma_ca: true}} — ca ẩn riêng ở dự án đó (không hiện dòng; số đã nhập vẫn tính vào tổng)
+// Ca có bị ẩn ở dự án này không — ca đang có số trong ngày đang xem thì vẫn hiện để không "giấu" số liệu
+function caAn(proj, ma, pdata){
+  if(!(CA_AN_MAP[proj] && CA_AN_MAP[proj][ma])) return false;
+  var o = pdata && pdata[ma];
+  if(o && typeof o==='object' && Object.keys(o).some(function(k){ return +o[k]>0; })) return false;
+  return true;
+}
 
 function getTenCa(proj, ti){
   var ma = TYPES[ti];
@@ -3394,6 +3405,12 @@ async function taiCauHinhCaLamViec(){
       if(!TEN_RIENG_MAP[t.du_an]) TEN_RIENG_MAP[t.du_an] = {};
       TEN_RIENG_MAP[t.du_an][t.ma_ca] = t.ten_rieng;
     });
+    // ca ẩn riêng từng dự án (chưa chạy an-ca-theo-du-an.sql thì bỏ qua, hiện đủ như cũ)
+    try{
+      var r3 = await sc.rpc('cauhinh_lay_ca_an',{p_don_vi_id:getDonViId()||'khanh_hoa'});
+      CA_AN_MAP = {};
+      (r3.data||[]).forEach(function(x){ var k='duan_'+x.du_an_id; if(!CA_AN_MAP[k]) CA_AN_MAP[k]={}; CA_AN_MAP[k][x.ma_ca]=true; });
+    }catch(e){}
   }catch(e){
     console.error('[taiCauHinhCaLamViec] Lỗi tải cấu hình ca, đang dùng mặc định:', e);
     // Nếu lỗi mạng/Supabase, giữ nguyên mặc định ca1/ca2/nghỉ để trang vẫn chạy được
@@ -4211,19 +4228,23 @@ function renderTable(){
 
   var showBch = projects.filter(function(p){return !HO_TRO_PROJS[p];}).length > 1;
   // +1: dòng đệm cuối bảng, nhận phần chiều cao dư của khung tổng hợp để các dòng số liệu luôn cao bằng nhau
-  var chartRowspanTotal = (projects.length+(showBch?1:0))*(TYPES.length+1)+1+(dbnSoSanh?3:0); // so sánh: Định biên + Chênh lệch + Tỷ lệ
+  // ca ẩn riêng từng dự án: không vẽ dòng đó (số đã có vẫn cộng vào Tổng ở calc)
+  var caHien = {};
+  projects.forEach(function(proj){ ensureProj(proj); caHien[proj]=TYPES.filter(function(t){ return !caAn(proj,t,data[proj]); }); });
+  var chartRowspanTotal = projects.reduce(function(s,p){ return s+caHien[p].length+1; },0)+(showBch?TYPES.length+1:0)+1+(dbnSoSanh?3:0); // so sánh: Định biên + Chênh lệch + Tỷ lệ
   var chartCellPlaced = false;
 
   projects.forEach(function(proj){
     ensureProj(proj);
-    var rowspanN = TYPES.length + 1;
+    var rowspanN = caHien[proj].length + 1, dongDau = caHien[proj][0];
     TYPES.forEach(function(type,ti){
+      if(caHien[proj].indexOf(type)<0) return;
       var isNghi = isNghiType(type);
       var bg = isNghi ? '#ffcdd2' : '#e3f2fd';
       var txtColor = isNghi ? 'color:#b71c1c !important;font-weight:700;' : '';
       var compact = 'padding:1px 2px;font-size:11px;line-height:1.2;'; // khớp đúng chiều cao với hàng Tổng (.row-tong)
       h+='<tr style="background:'+bg+';'+txtColor+'">';
-      if(ti===0){
+      if(type===dongDau){
         h+='<td class="stk s0" rowspan="'+rowspanN+'" style="vertical-align:middle;font-weight:800;background:#fff">'+nl2br(projName(proj))+'</td>';
       }
       h+='<td class="stk s1" style="background:'+bg+';'+txtColor+compact+'">'+getTenCa(proj,ti)+'</td>';
