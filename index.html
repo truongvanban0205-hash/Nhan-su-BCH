@@ -2793,7 +2793,7 @@ function renderReportNsPanel(nsProjs,nsCols,nsData,prevDayFull,dateStr,mList,mmt
     if(cur===base)return;
     var e=nsBienDong[c.k];
     var dau=cur>base?'+':'';
-    bdRowsExp.push('<div style="margin-top:2px;"><b>'+c.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
+    bdRowsExp.push('<div style="margin-top:2px;"><b>'+c.n+'</b> ('+soBienDong(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
   });
   var _gcNs=(nsGhiChuFree!=null&&nsGhiChuFree!==undefined)?nsGhiChuFree:(typeof ghiChuTuyChinh==='string'?ghiChuTuyChinh:'');
   html+='<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;font-size:10px;color:#555;">'
@@ -2885,7 +2885,7 @@ function renderReportMmtbPanel(mList,mProjs,mmtbToday,dateStr,mTotal,mmtbYesterd
     if(cur===base)return;
     var e=mmtbBienDongExp[m.k];
     var dau=cur>base?'+':'';
-    bdRowsExpM.push('<div style="margin-top:2px;"><b>'+m.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
+    bdRowsExpM.push('<div style="margin-top:2px;"><b>'+m.n+'</b> ('+soBienDong(cur-base)+'):'+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
   });
     var _gcM=(mmtbGhiChuFree!=null&&mmtbGhiChuFree!==undefined)?mmtbGhiChuFree:(typeof mmtbGhiChuTuyChinh==='string'?mmtbGhiChuTuyChinh:'');
   html+='<div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;font-size:10px;color:#555;">' 
@@ -4571,8 +4571,7 @@ async function renderCharts(){
     var e=bienDong[c.k];
     var dau=cur>base?'+':'';
     bdRows.push('<div style="margin-top:3px;cursor:pointer;" onclick="suaLyDoBienDong(\'ns\',\''+c.k+'\')" title="Bấm để nhập/sửa lý do">'
-      +'<b>'+c.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')
-      +' <span style="color:#1565c0;">✎</span></div>');
+      +'<b>'+c.n+'</b> ('+soBienDong(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
   });
   html+=htmlGhiChuBlock('ns', bdRows.length ? bdRows.join('') : '');
   el.innerHTML=html;
@@ -5120,13 +5119,12 @@ function htmlGhiChuBlock(module, bdRowsHtml){
     }
   }
   return '<div style="border-top:1px solid #ddd;margin-top:8px;padding-top:5px;font-size:10px;color:#555;">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
-    +'<b>Ghi chú:</b>'
-    +'<span style="color:#1565c0;cursor:pointer;font-weight:700;" onclick="suaGhiChuTuyChinh(\''+module+'\')" title="Sửa ghi chú tự do">✎ Sửa</span>'
-    +'</div>'
+    +'<div style="cursor:pointer;" onclick="suaGhiChuTuyChinh(\''+module+'\')" title="Bấm để sửa ghi chú tự do"><b>Ghi chú:</b></div>'
     +body
     +'</div>';
 }
+// Số biến động so với hôm qua trong ghi chú: giảm đỏ, tăng xanh dương (chỉ tô số)
+function soBienDong(v){ return '<span style="color:'+(v<0?'#e53935':'#1565c0')+';font-weight:700">'+(v>0?'+':'')+v+'</span>'; }
 async function suaGhiChuTuyChinh(module){
   var p=prompt('🔒 Mật khẩu vận hành để sửa ghi chú:');
   if(p===null)return;
@@ -5900,7 +5898,7 @@ function mmtbRenderTable(){
       +' placeholder="Ghi chú...">'+mmtbNoteVal+'</textarea>'
       +'</td>';
     if(idx===0){
-      h+='<td rowspan="'+mmtbMachines.length+'" class="chart-cell" id="mmtb-chart-panel"></td>';
+      h+='<td rowspan="'+mmtbMachines.length+'" class="chart-cell" id="mmtb-chart-panel" style="min-width:320px;max-width:380px;"></td>';
     }
     h+='</tr>';
   });
@@ -6121,8 +6119,7 @@ function mmtbRenderCharts(){
     var e=mmtbBienDong[m.k];
     var dau=cur>base?'+':'';
     bdRowsM.push('<div style="margin-top:3px;cursor:pointer;" onclick="suaLyDoBienDong(\'mmtb\',\''+m.k+'\')" title="Bấm để nhập/sửa lý do">'
-      +'<b>'+m.n+'</b> ('+dau+(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')
-      +' <span style="color:#1565c0;">✎</span></div>');
+      +'<b>'+m.n+'</b> ('+soBienDong(cur-base)+'): '+(e?e.nhan:'<i style="color:#999;">chưa có ghi chú</i>')+'</div>');
   });
   html+=htmlGhiChuBlock('mmtb', bdRowsM.length ? bdRowsM.join('') : '');
   el.innerHTML=html;
