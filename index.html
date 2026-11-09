@@ -3354,7 +3354,7 @@ function backToDonViHub(){
 //  • các đơn vị được duyệt nằm trong 1 khối → hiện luôn danh sách đơn vị của khối đó
 //  • nhiều khối → chọn khối trước, rồi mới chọn đơn vị. Chỉ hiện khối / đơn vị được duyệt.
 // Nút trên đầu: trong đơn vị → về danh sách đơn vị; ở danh sách đơn vị (nhiều khối) → về danh sách khối; còn lại ẩn
-function hubNutVe(hien){ var b=document.getElementById('home-don-vi-btn'); if(b){ b.textContent='‹ Trở về'; b.style.display=hien?'':'none'; } }
+function hubNutVe(hien){ var b=document.getElementById('home-don-vi-btn'); if(b){ b.textContent='‹ Trở về'; b.style.display=hien?'inline-flex':'none'; } } // CSS mặc định ẩn nút ngoài đơn vị → phải đặt inline-flex
 function homeNutVe(){
   var trongDonVi = !!(window.BCH_DON_VI_TEN && getDonViId());
   if(trongDonVi){ backToDonViHub(); return; }
@@ -3541,7 +3541,7 @@ async function ensureDonViSelected(){
       showDonViWorkspace();
       applyDonViModuleVisibility();
       var btn = document.getElementById('home-don-vi-btn');
-      if(btn){ btn.style.display = ''; btn.textContent = '‹ Trở về'; } // trong đơn vị: về danh sách đơn vị
+      if(btn){ btn.style.display = 'inline-flex'; btn.textContent = '‹ Trở về'; } // trong đơn vị: về danh sách đơn vị
       return true;
     }
     clearDonVi();
