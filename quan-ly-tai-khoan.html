@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản lý tài khoản — KHỐI SAN LẤP - HẠ TẦNG 3</title>
+<title>Quản lý tài khoản</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -213,7 +213,7 @@
 <body>
 
 <div class="topbar">
-  <div class="brand"><span style="color:#58a6ff">KHỐI SAN LẤP</span> — <b style="color:var(--accent)">XÂY DỰNG HẠ TẦNG 3</b></div>
+  <div class="brand"><b style="color:var(--accent)">🔐 Tài khoản</b></div>
   <button class="linkbtn" id="btnToggleAdmin">Quản lý chung</button>
 </div>
 
@@ -301,7 +301,7 @@
     <div class="admin-actions">
       <button class="linkbtn" id="btnBackAdminUnits" style="display:none;">← Đơn vị</button>
       <button class="linkbtn" id="btnThongBao">🔔 Quản lý Thông báo</button>
-      <button class="linkbtn" id="btnDonVi">🏢 Đơn vị</button>
+      <button class="linkbtn" id="btnDonVi">🏢 Khối &amp; đơn vị</button>
       <button class="linkbtn" id="btnCauHinhNS" style="display:none;">Cấu hình Nhân sự</button>
       <button class="linkbtn" id="btnAddModule" style="display:none;">+ Thêm quyền</button>
       <button class="linkbtn" id="btnAddEmp" style="display:none;">+ Thêm nhân viên</button>
@@ -316,7 +316,7 @@
 
   <!-- Bước 1: chọn đơn vị -->
   <div id="adminUnitPick">
-    <p class="sub" style="margin:0 0 12px;">Chạm vào đơn vị để vào quản lý. Đơn vị chưa có người → danh sách trống.</p>
+    <p class="sub" style="margin:0 0 12px;">Đơn vị được xếp theo khối. Chạm vào đơn vị để vào quản lý. Thêm khối / đơn vị ngay tại đây hoặc ở 🏢 Khối &amp; đơn vị.</p>
     <div id="adminUnitGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
   </div>
 
@@ -499,7 +499,7 @@
   </div>
 </div>
 
-<footer>KHỐI SAN LẤP — XÂY DỰNG HẠ TẦNG 3 · Hệ thống quản lý tài khoản nội bộ</footer>
+<footer>Hệ thống quản lý tài khoản nội bộ</footer>
 
 <!-- ============ MODAL THÔNG BÁO CHUNG ============ -->
 <div class="modal-overlay" id="modalThongBao">
@@ -812,7 +812,13 @@ document.getElementById("btnBackStep1").addEventListener("click", ()=>{
     const list = (r && r.data) || [];
     const sel = document.getElementById("nvDonViReg");
     if(sel && list.length){
-      sel.innerHTML = list.map(d=>'<option value="'+escapeHtml(d.id)+'">'+escapeHtml(d.ten||d.id)+'</option>').join("");
+      const opt = d=>'<option value="'+escapeHtml(d.id)+'">'+escapeHtml(d.ten||d.id)+'</option>';
+      let dsKhoi = [];
+      try{ const rk = await sb.rpc("lay_danh_sach_khoi"); if(!rk.error && Array.isArray(rk.data)) dsKhoi = rk.data; }catch(e){}
+      // nhiều khối: nhóm đơn vị theo khối để chọn đúng khối → đơn vị
+      sel.innerHTML = dsKhoi.length > 1
+        ? dsKhoi.map(k=>{ const ds = list.filter(d=>(d.khoi_id||'khoi_03')===k.id); return ds.length ? '<optgroup label="'+escapeHtml(k.ten)+'">'+ds.map(opt).join("")+'</optgroup>' : ''; }).join("")
+        : list.map(opt).join("");
     }
   }catch(e){}
 })();
@@ -2220,15 +2226,52 @@ async function renderAdminUnitGrid(){
     grid.innerHTML = '<div style="color:var(--muted);">Chưa có đơn vị. Mở «Đơn vị» để tạo.</div>';
     return;
   }
-  // Admin (mật khẩu quản lý) mở được tất cả đơn vị. Khóa chỉ dùng nếu sau này có phân quyền admin theo ĐV.
-  grid.innerHTML = list.map(function(d){
+  // Admin (mật khẩu quản lý) mở được tất cả đơn vị. Xếp theo khối; khối mới thêm hiện ngay ở đây.
+  try{ await loadKhoi(); }catch(e){}
+  const the = function(d){
     const n = counts[d.id]||0;
     return '<button type="button" class="admin-unit-card" data-id="'+escapeHtml(d.id)+'">'
       +'<div class="lbl">Đơn vị</div>'
       +'<div class="name">'+escapeHtml(d.ten||d.id)+'</div>'
       +'<div class="meta">'+(n? (n+' nhân viên') : 'Chưa có danh sách — trống')+'</div>'
       +'</button>';
-  }).join('');
+  };
+  const nutThem = 'border:1.5px dashed rgba(249,168,37,.6);background:transparent;color:#ffb74d;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer;font-family:inherit;';
+  const khoiHien = (khoiCache||[]).filter(function(k){ return !k.an; });
+  if(!khoiHien.length){
+    grid.style.display = 'grid';
+    grid.innerHTML = list.map(the).join('');
+  }else{
+    grid.style.display = 'block';
+    grid.innerHTML = khoiHien.map(function(k){
+      const ds = list.filter(function(d){ return (d.khoi_id||'khoi_03')===k.id; });
+      return '<div style="margin-bottom:18px">'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+        +'<div style="font-size:16px;font-weight:900;color:#f9a825;flex:1;min-width:0">🏗️ '+escapeHtml(k.ten)+' <span style="font-size:12px;color:var(--muted);font-weight:600">· '+ds.length+' đơn vị</span></div>'
+        +'<button type="button" class="icon-btn" data-k-ten="'+escapeHtml(k.id)+'">Sửa tên khối</button>'
+        +'<button type="button" style="'+nutThem+'" data-k-them-dv="'+escapeHtml(k.id)+'">+ Thêm đơn vị</button></div>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">'
+        +(ds.length ? ds.map(the).join('') : '<div style="color:var(--muted);font-size:13px;">Khối chưa có đơn vị.</div>')
+        +'</div></div>';
+    }).join('')
+    +'<button type="button" style="'+nutThem+'" id="btnGridThemKhoi">+ Thêm khối mới</button>';
+    grid.querySelectorAll('[data-k-ten]').forEach(function(b){ b.onclick = async function(){
+      const k = khoiCache.find(function(x){ return x.id===b.getAttribute('data-k-ten'); }); const ten = prompt('Tên khối:', k?k.ten:''); if(ten===null||!ten.trim()) return;
+      const r = await sb.rpc('admin_luu_khoi', { p_pass: currentAdminPass, p_id: k.id, p_ten: ten.trim(), p_an: false });
+      if(r.error){ alert(r.error.message||'Không lưu được'); return; } renderAdminUnitGrid(); }; });
+    grid.querySelectorAll('[data-k-them-dv]').forEach(function(b){ b.onclick = async function(){
+      const ten = prompt('Tên đơn vị mới:'); if(ten===null||!ten.trim()) return;
+      const r = await sb.rpc('admin_them_don_vi', { p_pass: currentAdminPass, p_ten: ten.trim(), p_khoi_id: b.getAttribute('data-k-them-dv') });
+      if(r.error){ alert(r.error.message||'Không thêm được'); return; }
+      await loadDonVi(); showToast('✓ Đã thêm đơn vị');
+      if(r.data && r.data.id && confirm('Đã thêm "'+ten.trim()+'".\nSao chép cấu hình (dự án, loại ca, loại máy, định biên, hư hỏng...) từ đơn vị có sẵn để khỏi nhập lại?')) moSaoChepCauHinh(r.data.id);
+      renderAdminUnitGrid(); }; });
+    const nk = document.getElementById('btnGridThemKhoi');
+    if(nk) nk.onclick = async function(){
+      const ten = prompt('Tên khối mới (VD: KHỐI SL - XDHT 05):'); if(ten===null||!ten.trim()) return;
+      const r = await sb.rpc('admin_luu_khoi', { p_pass: currentAdminPass, p_id: null, p_ten: ten.trim(), p_an: false });
+      if(r.error){ alert(r.error.message||'Không thêm được'); return; } showToast('✓ Đã thêm khối'); renderAdminUnitGrid(); };
+  }
   grid.querySelectorAll('.admin-unit-card').forEach(function(btn){
     btn.onclick = function(){ enterAdminUnit(btn.getAttribute('data-id')); };
   });
@@ -2310,12 +2353,14 @@ function renderDonViList(){
         <div style="font-weight:800;font-size:13px;">${escapeHtml(d.ten||d.id)}${badge}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">mã: ${escapeHtml(d.id)}${mods?(' · module: '+escapeHtml(mods)):''}</div>
       </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;max-width:62%;">
       ${khoiCache.length?`<select data-dv-khoi="${escapeHtml(d.id)}" title="Thuộc khối" style="padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;font-size:12px;max-width:150px;">${khoiCache.map(k=>`<option value="${escapeHtml(k.id)}"${k.id===(d.khoi_id||'khoi_03')?' selected':''}>${escapeHtml(k.ten)}</option>`).join('')}</select>`:''}
       <button type="button" class="icon-btn" data-dv-copy="${escapeHtml(d.id)}" title="Sao chép cấu hình từ đơn vị khác vào đơn vị này">📋 Chép</button>
       <button type="button" class="icon-btn" data-dv-up="${escapeHtml(d.id)}" title="Lên" ${i===0?'disabled':''}>↑</button>
       <button type="button" class="icon-btn" data-dv-down="${escapeHtml(d.id)}" title="Xuống" ${i===donViCache.length-1?'disabled':''}>↓</button>
       <button type="button" class="icon-btn" data-dv-rename="${escapeHtml(d.id)}">Sửa</button>
       <button type="button" class="icon-btn reject" data-dv-toggle="${escapeHtml(d.id)}">${d.an?'Hiện':'Ẩn'}</button>
+      </div>
     </div>`;
   }).join('');
 

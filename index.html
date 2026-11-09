@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="BCH VB">
 <meta name="theme-color" content="#1565c0">
 <link rel="apple-touch-icon" href="icon.png">
-<title>KHỐI SAN LẤP - XÂY DỰNG HẠ TẦNG 3</title>
+<title>Báo cáo BCH</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -444,7 +444,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
         </div>
       </div>
       <div class="hh-body">
-        <h1 class="brand-title" id="home-brand-title"><span style="color:#42a5f5">KHỐI SAN LẤP</span> <span style="color:#fff">-</span> <span style="color:#ffa726">XÂY DỰNG HẠ TẦNG 3</span></h1>
+        <h1 class="brand-title" id="home-brand-title"></h1>
         <div id="home-user-slot" class="home-user-line"></div>
         <div class="sub">📅 <span id="home-date"></span></div>
       </div>
@@ -466,7 +466,6 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
     <!-- HUB chọn đơn vị (giống folder) -->
     <div id="home-hub">
-      <div id="home-hub-khoi" style="display:none;gap:8px;overflow-x:auto;padding:2px 2px 10px;"></div>
       <div class="hub-grid" id="home-hub-grid"></div>
 </div>
 
@@ -1048,11 +1047,11 @@ function tmH(k){
   return st?'<span style="'+st+'">'+t+'</span>':t;
 }
 // Tên khối: chưa đổi thì giữ kiểu 2 màu như cũ
-function khoiTenHienTai(){ var t=window.BCH_KHOI_TEN||''; if(!t){ try{ t=localStorage.getItem('bch_khoi_ten')||''; }catch(e){} } return t; }
+function khoiTenHienTai(){ if(typeof window.BCH_KHOI_TEN==='string') return window.BCH_KHOI_TEN; try{ return localStorage.getItem('bch_khoi_ten')||''; }catch(e){ return ''; } }
 // Tiêu đề Trang chủ ở màn chọn đơn vị: tên khối (bảng khoi) — màu theo 🎨 nếu đã chỉnh
 function tmKhoiTieuDe(){
   var ten=khoiTenHienTai(), o=tm('khoi_ten');
-  if(!ten) return tmDaDoi('khoi_ten') ? tmH('khoi_ten') : ORG_BRAND_HTML;
+  if(!ten) return ORG_BRAND_HTML; // đang ở bước chọn khối
   var st=(o.mau?'color:'+o.mau+';':'color:#ffa726;')+(o.nen?'background:'+o.nen+';padding:1px 8px;border-radius:5px;':'');
   return '<span style="'+st+'">'+escHtmlHub(ten).replace(/\n/g,'<br>')+'</span>';
 }
@@ -3288,7 +3287,7 @@ function clearDonVi(){
   localStorage.removeItem('bch_don_vi_modules');
 }
 
-var ORG_BRAND_HTML = '<span style="color:#42a5f5">KHỐI SAN LẤP</span> <span style="color:#fff">-</span> <span style="color:#ffa726">XÂY DỰNG HẠ TẦNG 3</span>';
+var ORG_BRAND_HTML = '<span style="color:#ffa726">Chọn khối</span>'; // nhiều khối: chưa chọn khối thì không gắn tên khối cố định
 
 function applyHomeBrand(){
   var el = document.getElementById('home-brand-title');
@@ -3334,12 +3333,17 @@ function showDonViWorkspace(){
   applyHomeBrand();
 }
 function backToDonViHub(){
-  // Về trang Khối — chọn lại đơn vị (trong danh sách được phép)
+  // Về trang Khối — chọn lại đơn vị (trong danh sách được phép); đánh dấu để không tự vào lại khi chỉ có 1 đơn vị
+  try{ sessionStorage.setItem('bch_ve_hub','1'); }catch(e){}
   clearDonVi();
   try{ sessionStorage.removeItem('bch_in_unit'); }catch(e){}
   showDonViHub();
 }
 
+// Màn chọn sau đăng nhập — theo quyền duyệt:
+//  • được duyệt đúng 1 đơn vị → vào thẳng đơn vị đó (không qua chọn khối / chọn đơn vị)
+//  • các đơn vị được duyệt nằm trong 1 khối → hiện luôn danh sách đơn vị của khối đó
+//  • nhiều khối → chọn khối trước, rồi mới chọn đơn vị. Chỉ hiện khối / đơn vị được duyệt.
 async function renderDonViHub(){
   var grid = document.getElementById('home-hub-grid');
   if(!grid) return;
@@ -3349,48 +3353,62 @@ async function renderDonViHub(){
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#ef5350;padding:16px;font-size:13px;">Chưa có đơn vị. Chạy SQL P1.</div>';
     return;
   }
-  // Nhiều khối: chọn khối trước → chỉ hiện đơn vị của khối đó (chưa chạy nhieu-khoi.sql thì như cũ)
-  var dsKhoi = await fetchKhoiList();
-  var chipEl = document.getElementById('home-hub-khoi');
-  if(dsKhoi.length){
-    var khoiId = khoiDangChon(dsKhoi, rows);
-    rows = rows.filter(function(d){ return (d.khoi_id||'khoi_03')===khoiId; });
-    if(chipEl){
-      chipEl.style.display = dsKhoi.length>1 ? 'flex' : 'none';
-      chipEl.innerHTML = dsKhoi.map(function(k){ return '<button type="button" data-khoi="'+escHtmlHub(k.id)+'" style="flex-shrink:0;border-radius:999px;padding:7px 14px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;border:1.5px solid '+(k.id===khoiId?'#f9a825;background:#f9a825;color:#1a140a':'rgba(249,168,37,.5);background:transparent;color:#ffb74d')+'">'+escHtmlHub(k.ten)+'</button>'; }).join('');
-      chipEl.querySelectorAll('[data-khoi]').forEach(function(b){ b.onclick=function(){ try{ localStorage.setItem('bch_khoi_id', b.getAttribute('data-khoi')); }catch(e){} renderDonViHub(); }; });
-    }
-    applyHomeBrand();
-    if(!rows.length){ grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b93a8;padding:16px;font-size:13px;">Khối này chưa có đơn vị.</div>'; return; }
-  }else if(chipEl){ chipEl.style.display='none'; }
   var allowed = [];
   try{
     allowed = window.BCH_ALLOWED_DON_VI || (window.BCH_USER && window.BCH_USER.don_vi_ids) || [];
     allowed = (allowed || []).map(function(x){ return String(x); });
   }catch(e){ allowed = []; }
-  grid.innerHTML = rows.map(function(d){
-    var ok = !allowed.length || allowed.indexOf(String(d.id)) >= 0;
-    var cls = ok ? 'hub-card' : 'hub-card locked';
-    return '<button type="button" class="'+cls+'" data-id="'+String(d.id).replace(/"/g,'')+'" '+(ok?'':'disabled')+'>'
-      +'<span class="hub-ico">'+(ok?'📁':'🔒')+'</span>'
-      +'<span class="hub-meta"><span class="hub-name">'+escHtmlHub(d.ten||d.id)+(ok?'':' <span class="hub-lock">🔒</span>')+'</span></span>'
-      +'<span class="hub-arrow">'+(ok?'›':'')+'</span>'
-      +'</button>';
-  }).join('');
-  grid.querySelectorAll('.hub-card:not(.locked)').forEach(function(btn){
-    btn.onclick = function(){
-      var id = btn.getAttribute('data-id');
-      var row = rows.find(function(x){ return x.id===id; });
-      setDonVi(id, row?row.ten:id, row?row.modules:null);
-      try{ sessionStorage.setItem('bch_in_unit','1'); }catch(e){}
-      // Không hiện workspace trước khi tải lại: tile bấm được nhưng ~1 giây sau trang reload làm mất lần bấm
-      grid.style.pointerEvents='none';
-      grid.innerHTML='<div style="grid-column:1/-1;text-align:center;color:#8b93a8;padding:20px;">⏳ Đang vào '+escHtmlHub(row?(row.ten||id):id)+'...</div>';
-      location.reload();
-    };
+  if(allowed.length) rows = rows.filter(function(d){ return allowed.indexOf(String(d.id)) >= 0; }); // chỉ đơn vị được duyệt
+  if(!rows.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#ef5350;padding:16px;font-size:13px;">Tài khoản chưa được duyệt vào đơn vị nào.</div>';
+    return;
+  }
+  var vaoDonVi = function(row){
+    setDonVi(row.id, row.ten||row.id, row.modules||null);
+    try{ sessionStorage.setItem('bch_in_unit','1'); if(row.khoi_id) localStorage.setItem('bch_khoi_id', row.khoi_id); }catch(e){}
+    // Không hiện workspace trước khi tải lại: tile bấm được nhưng ~1 giây sau trang reload làm mất lần bấm
+    grid.style.pointerEvents='none';
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;color:#8b93a8;padding:20px;">⏳ Đang vào '+escHtmlHub(row.ten||row.id)+'...</div>';
+    location.reload();
+  };
+  var tuVe = false; try{ tuVe = sessionStorage.getItem('bch_ve_hub')==='1'; }catch(e){}
+  if(rows.length===1 && !tuVe){ vaoDonVi(rows[0]); return; } // 1 đơn vị → vào thẳng
+  var dsKhoi = await fetchKhoiList();
+  var khoiCo = dsKhoi.filter(function(k){ return rows.some(function(d){ return (d.khoi_id||'khoi_03')===k.id; }); });
+  var nhieuKhoi = khoiCo.length > 1;
+  var the = function(icon, ten, phu, attr){
+    return '<button type="button" class="hub-card" '+attr+'><span class="hub-ico">'+icon+'</span>'
+      +'<span class="hub-meta">'+(phu?'<span class="hub-label">'+escHtmlHub(phu)+'</span>':'')+'<span class="hub-name">'+escHtmlHub(ten)+'</span></span><span class="hub-arrow">›</span></button>';
+  };
+  var khoiChon = window.BCH_KHOI_PICK || '';
+  if(nhieuKhoi && !khoiCo.some(function(k){ return k.id===khoiChon; })){
+    // Bước 1: chọn khối
+    window.BCH_KHOI_ID=''; window.BCH_KHOI_TEN='';
+    applyHomeBrand();
+    grid.innerHTML = khoiCo.map(function(k){
+      var n = rows.filter(function(d){ return (d.khoi_id||'khoi_03')===k.id; }).length;
+      return the('🏗️', k.ten, n+' đơn vị', 'data-khoi="'+escHtmlHub(k.id)+'"');
+    }).join('');
+    grid.querySelectorAll('[data-khoi]').forEach(function(b){ b.onclick=function(){ window.BCH_KHOI_PICK=b.getAttribute('data-khoi'); renderDonViHub(); }; });
+    return;
+  }
+  // Bước 2: đơn vị trong khối
+  var hienThi = rows;
+  if(khoiCo.length){
+    var kId = nhieuKhoi ? khoiChon : khoiCo[0].id, k = khoiCo.find(function(x){ return x.id===kId; });
+    window.BCH_KHOI_ID = kId; window.BCH_KHOI_TEN = k ? k.ten : '';
+    try{ localStorage.setItem('bch_khoi_id', kId); localStorage.setItem('bch_khoi_ten', window.BCH_KHOI_TEN); }catch(e){}
+    hienThi = rows.filter(function(d){ return (d.khoi_id||'khoi_03')===kId; });
+  }
+  applyHomeBrand();
+  grid.innerHTML = (nhieuKhoi ? the('‹', 'Chọn khối khác', '', 'data-ve-khoi="1" style="opacity:.8"') : '')
+    + hienThi.map(function(d){ return the('📁', d.ten||d.id, '', 'data-id="'+String(d.id).replace(/"/g,'')+'"'); }).join('');
+  var ve = grid.querySelector('[data-ve-khoi]');
+  if(ve) ve.onclick = function(){ window.BCH_KHOI_PICK=''; renderDonViHub(); };
+  grid.querySelectorAll('[data-id]').forEach(function(btn){
+    btn.onclick = function(){ var row = rows.find(function(x){ return String(x.id)===btn.getAttribute('data-id'); }); if(row) vaoDonVi(row); };
   });
 }
-
 
 
 // Danh sách khối (sql/nhieu-khoi.sql). Chưa cài → [] (app chạy như 1 khối như cũ)
