@@ -557,10 +557,18 @@
 <!-- ============ MODAL ĐƠN VỊ (P1) ============ -->
 <div class="modal-overlay" id="modalDonVi">
   <div class="modal" style="max-width:640px;">
-    <h3>🏢 Quản lý đơn vị</h3>
-    <p class="sub" style="margin-top:-6px;">4 đơn vị vận hành độc lập. Đơn vị 1 = app đang dùng (đổi tên được). Thêm / sửa / ẩn / ↑↓ — giống quản lý dự án.</p>
+    <h3>🏢 Quản lý khối &amp; đơn vị</h3>
+    <div style="font-weight:800;font-size:13px;margin:4px 0 6px;">Khối</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+      <input type="text" id="inputKhoiMoi" placeholder="Tên khối mới (VD: KHỐI SL - XDHT 05)" style="flex:1;min-width:180px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;">
+      <button class="btn small" id="btnThemKhoi">+ Thêm khối</button>
+    </div>
+    <div id="listKhoi" class="cfg-list" style="max-height:180px;overflow:auto;margin-bottom:14px;"></div>
+    <div style="font-weight:800;font-size:13px;margin:4px 0 6px;">Đơn vị</div>
+    <p class="sub" style="margin-top:0;">Mỗi đơn vị thuộc 1 khối. Thêm đơn vị mới có thể <b>sao chép cấu hình</b> từ đơn vị có sẵn (dự án, loại ca, loại máy, định biên, hư hỏng, tên &amp; màu) để khỏi nhập lại. Chỉ chép cấu hình, không chép số liệu hằng ngày.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-      <input type="text" id="inputDonViMoi" placeholder="Tên đơn vị mới" style="flex:1;min-width:180px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;">
+      <input type="text" id="inputDonViMoi" placeholder="Tên đơn vị mới" style="flex:1;min-width:160px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;">
+      <select id="selKhoiDonViMoi" title="Thuộc khối" style="padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;"></select>
       <button class="btn small" id="btnThemDonVi">+ Thêm</button>
     </div>
     <div id="listDonVi" class="cfg-list" style="max-height:360px;overflow:auto;"></div>
@@ -2302,6 +2310,8 @@ function renderDonViList(){
         <div style="font-weight:800;font-size:13px;">${escapeHtml(d.ten||d.id)}${badge}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">mã: ${escapeHtml(d.id)}${mods?(' · module: '+escapeHtml(mods)):''}</div>
       </div>
+      ${khoiCache.length?`<select data-dv-khoi="${escapeHtml(d.id)}" title="Thuộc khối" style="padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;font-size:12px;max-width:150px;">${khoiCache.map(k=>`<option value="${escapeHtml(k.id)}"${k.id===(d.khoi_id||'khoi_03')?' selected':''}>${escapeHtml(k.ten)}</option>`).join('')}</select>`:''}
+      <button type="button" class="icon-btn" data-dv-copy="${escapeHtml(d.id)}" title="Sao chép cấu hình từ đơn vị khác vào đơn vị này">📋 Chép</button>
       <button type="button" class="icon-btn" data-dv-up="${escapeHtml(d.id)}" title="Lên" ${i===0?'disabled':''}>↑</button>
       <button type="button" class="icon-btn" data-dv-down="${escapeHtml(d.id)}" title="Xuống" ${i===donViCache.length-1?'disabled':''}>↓</button>
       <button type="button" class="icon-btn" data-dv-rename="${escapeHtml(d.id)}">Sửa</button>
@@ -2322,6 +2332,14 @@ function renderDonViList(){
       showToast('✓ Đã đổi tên đơn vị');
     };
   });
+  el.querySelectorAll('[data-dv-khoi]').forEach(sel=>{
+    sel.onchange = async ()=>{
+      const { error } = await sb.rpc('admin_gan_khoi', { p_pass: currentAdminPass, p_don_vi_id: sel.getAttribute('data-dv-khoi'), p_khoi_id: sel.value });
+      if(error){ alert(error.message||'Không đổi được khối'); return; }
+      await loadDonVi(); await loadKhoi(); renderDonViList(); showToast('✓ Đã chuyển khối');
+    };
+  });
+  el.querySelectorAll('[data-dv-copy]').forEach(btn=>{ btn.onclick = ()=> moSaoChepCauHinh(btn.getAttribute('data-dv-copy')); });
   el.querySelectorAll('[data-dv-toggle]').forEach(btn=>{
     btn.onclick = async ()=>{
       const id = btn.getAttribute('data-dv-toggle');
@@ -2357,6 +2375,7 @@ document.getElementById('btnDonVi').addEventListener('click', async ()=>{
   msg.style.display = 'none';
   try{
     await loadDonVi();
+    await loadKhoi();
     renderDonViList();
     document.getElementById('modalDonVi').classList.add('show');
   }catch(e){
@@ -2369,13 +2388,79 @@ document.getElementById('btnCloseDonVi').addEventListener('click', ()=>{
 document.getElementById('btnThemDonVi').addEventListener('click', async ()=>{
   const ten = document.getElementById('inputDonViMoi').value.trim();
   if(!ten){ alert('Nhập tên đơn vị'); return; }
-  const { data, error } = await sb.rpc('admin_them_don_vi', { p_pass: currentAdminPass, p_ten: ten });
+  const selK = document.getElementById('selKhoiDonViMoi');
+  const thamSo = { p_pass: currentAdminPass, p_ten: ten };
+  if(khoiCache.length && selK && selK.value) thamSo.p_khoi_id = selK.value;
+  const { data, error } = await sb.rpc('admin_them_don_vi', thamSo);
   if(error){ alert(error.message||'Không thêm được'); return; }
   document.getElementById('inputDonViMoi').value = '';
   await loadDonVi(); renderDonViList();
   showToast('✓ Đã thêm đơn vị');
+  if(data && data.id && donViCache.length>1 && confirm('Đã thêm đơn vị "'+ten+'".\nSao chép cấu hình (dự án, loại ca, loại máy, định biên, hư hỏng...) từ một đơn vị có sẵn để khỏi nhập lại?')) moSaoChepCauHinh(data.id);
 });
 
+
+/* ================= KHỐI + SAO CHÉP CẤU HÌNH (sql/nhieu-khoi.sql) ================= */
+let khoiCache = [];
+async function loadKhoi(){
+  const { data, error } = await sb.rpc('admin_lay_danh_sach_khoi', { p_pass: currentAdminPass });
+  khoiCache = error ? [] : (data || []);
+  renderKhoiList();
+}
+function renderKhoiList(){
+  const el = document.getElementById('listKhoi'), sel = document.getElementById('selKhoiDonViMoi');
+  if(sel){ sel.style.display = khoiCache.length ? '' : 'none'; sel.innerHTML = khoiCache.filter(k=>!k.an).map(k=>`<option value="${escapeHtml(k.id)}">${escapeHtml(k.ten)}</option>`).join(''); }
+  if(!el) return;
+  if(!khoiCache.length){ el.innerHTML = '<i style="color:var(--muted);font-size:12.5px;">Chưa cài tính năng nhiều khối: chạy file sql/nhieu-khoi.sql trong Supabase.</i>'; return; }
+  el.innerHTML = khoiCache.map(k=>`<div class="cfg-item" style="${k.an?'opacity:.55;':''}display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:13px;">${escapeHtml(k.ten)}${k.an?' <span style="color:var(--muted);font-size:11px;">(đang ẩn)</span>':''}</div>
+      <div style="font-size:11px;color:var(--muted);">mã: ${escapeHtml(k.id)} · ${k.so_don_vi||0} đơn vị</div></div>
+      <button type="button" class="icon-btn" data-khoi-ten="${escapeHtml(k.id)}">Sửa</button>
+      <button type="button" class="icon-btn reject" data-khoi-an="${escapeHtml(k.id)}">${k.an?'Hiện':'Ẩn'}</button></div>`).join('');
+  el.querySelectorAll('[data-khoi-ten]').forEach(b=>{ b.onclick = async ()=>{
+    const k = khoiCache.find(x=>x.id===b.getAttribute('data-khoi-ten')); const ten = prompt('Tên khối:', k?k.ten:''); if(ten===null||!ten.trim()) return;
+    const { error } = await sb.rpc('admin_luu_khoi', { p_pass: currentAdminPass, p_id: k.id, p_ten: ten.trim(), p_an: !!k.an });
+    if(error){ alert(error.message||'Không lưu được'); return; } await loadKhoi(); renderDonViList(); showToast('✓ Đã đổi tên khối'); }; });
+  el.querySelectorAll('[data-khoi-an]').forEach(b=>{ b.onclick = async ()=>{
+    const k = khoiCache.find(x=>x.id===b.getAttribute('data-khoi-an'));
+    if(!k.an && !confirm('Ẩn khối "'+k.ten+'"? (Các đơn vị trong khối vẫn giữ nguyên)')) return;
+    const { error } = await sb.rpc('admin_luu_khoi', { p_pass: currentAdminPass, p_id: k.id, p_ten: k.ten, p_an: !k.an });
+    if(error){ alert(error.message||'Không lưu được'); return; } await loadKhoi(); }; });
+}
+document.getElementById('btnThemKhoi').addEventListener('click', async ()=>{
+  const o = document.getElementById('inputKhoiMoi'), ten = o.value.trim(); if(!ten){ alert('Nhập tên khối'); return; }
+  const { error } = await sb.rpc('admin_luu_khoi', { p_pass: currentAdminPass, p_id: null, p_ten: ten, p_an: false });
+  if(error){ alert(/admin_luu_khoi|PGRST202|Could not find/i.test(error.message||'')?'Chưa cài: chạy file sql/nhieu-khoi.sql trong Supabase.':(error.message||'Không thêm được')); return; }
+  o.value=''; await loadKhoi(); renderDonViList(); showToast('✓ Đã thêm khối');
+});
+// Sao chép cấu hình từ 1 đơn vị nguồn sang đơn vị denId
+function moSaoChepCauHinh(denId){
+  const den = donViCache.find(x=>x.id===denId); const nguon = donViCache.filter(x=>x.id!==denId);
+  if(!nguon.length){ alert('Chưa có đơn vị khác để sao chép.'); return; }
+  const MUC = [['du_an','Dự án (kèm tên ca riêng, ca ẩn theo dự án)'],['loai_ca','Loại ca'],['loai_may','Loại máy'],['dinh_bien_ns','Định biên Nhân sự (bộ phận, chức danh, mốc, số)'],['dinh_bien_mmtb','Định biên MMTB (loại, mốc, số)'],['hu_hong','Cấu hình hư hỏng MMTB (mục II)'],['ten_mau','Tên & màu báo cáo + trạng thái MMTB']];
+  const nen = document.createElement('div');
+  nen.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:14px;';
+  nen.innerHTML = `<div class="modal" style="max-width:460px;width:100%;">
+    <h3>📋 Sao chép cấu hình</h3>
+    <p class="sub" style="margin-top:-6px;">Vào: <b>${escapeHtml(den?den.ten:denId)}</b>. Mục nào đơn vị này đã có dữ liệu sẽ được bỏ qua (không ghi đè).</p>
+    <label style="font-size:13px;font-weight:700;">Lấy từ đơn vị</label>
+    <select id="scNguon" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;margin:4px 0 10px;">${nguon.map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.ten||x.id)}</option>`).join('')}</select>
+    ${MUC.map(m=>`<label style="display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 0;"><input type="checkbox" data-sc="${m[0]}" checked> ${m[1]}</label>`).join('')}
+    <div id="scKq" style="font-size:12.5px;margin-top:8px;white-space:pre-line;"></div>
+    <div class="modal-actions"><button class="btn secondary" data-sc-dong>Đóng</button><button class="btn" data-sc-chay>📋 Sao chép</button></div></div>`;
+  document.body.appendChild(nen);
+  nen.querySelector('[data-sc-dong]').onclick = ()=> nen.remove();
+  nen.querySelector('[data-sc-chay]').onclick = async ()=>{
+    const muc = [...nen.querySelectorAll('[data-sc]:checked')].map(x=>x.dataset.sc); if(!muc.length){ alert('Chọn ít nhất 1 mục'); return; }
+    const tu = nen.querySelector('#scNguon').value, tenTu = (donViCache.find(x=>x.id===tu)||{}).ten||tu;
+    if(!confirm('Sao chép '+muc.length+' mục cấu hình từ "'+tenTu+'" sang "'+(den?den.ten:denId)+'"?')) return;
+    const kqEl = nen.querySelector('#scKq'); kqEl.textContent = '⏳ Đang sao chép...';
+    const { data, error } = await sb.rpc('admin_sao_chep_cau_hinh', { p_pass: currentAdminPass, p_tu: tu, p_den: denId, p_muc: muc });
+    if(error){ kqEl.textContent = '❌ '+(/admin_sao_chep|PGRST202|Could not find/i.test(error.message||'')?'Chưa cài: chạy file sql/nhieu-khoi.sql trong Supabase.':(error.message||'Lỗi')); return; }
+    kqEl.textContent = MUC.filter(m=>data && data[m[0]]).map(m=>'• '+m[1].split(' (')[0]+': '+data[m[0]]).join('\n') || 'Không có gì để chép.';
+    showToast('✓ Đã sao chép cấu hình');
+  };
+}
 
 /* ================= KHỞI ĐỘNG ================= */
 loadModules();

@@ -466,6 +466,7 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
 
     <!-- HUB chọn đơn vị (giống folder) -->
     <div id="home-hub">
+      <div id="home-hub-khoi" style="display:none;gap:8px;overflow-x:auto;padding:2px 2px 10px;"></div>
       <div class="hub-grid" id="home-hub-grid"></div>
 </div>
 
@@ -1047,7 +1048,16 @@ function tmH(k){
   return st?'<span style="'+st+'">'+t+'</span>':t;
 }
 // Tên khối: chưa đổi thì giữ kiểu 2 màu như cũ
+function khoiTenHienTai(){ var t=window.BCH_KHOI_TEN||''; if(!t){ try{ t=localStorage.getItem('bch_khoi_ten')||''; }catch(e){} } return t; }
+// Tiêu đề Trang chủ ở màn chọn đơn vị: tên khối (bảng khoi) — màu theo 🎨 nếu đã chỉnh
+function tmKhoiTieuDe(){
+  var ten=khoiTenHienTai(), o=tm('khoi_ten');
+  if(!ten) return tmDaDoi('khoi_ten') ? tmH('khoi_ten') : ORG_BRAND_HTML;
+  var st=(o.mau?'color:'+o.mau+';':'color:#ffa726;')+(o.nen?'background:'+o.nen+';padding:1px 8px;border-radius:5px;':'');
+  return '<span style="'+st+'">'+escHtmlHub(ten).replace(/\n/g,'<br>')+'</span>';
+}
 function tmKhoiH(){
+  var ten=khoiTenHienTai(); if(ten){ var o=tm('khoi_ten'); var st=(o.mau?'color:'+o.mau+';':'')+(o.nen?'background:'+o.nen+';padding:1px 8px;border-radius:5px;':''); var h=escHtmlHub(ten).replace(/\n/g,'<br>'); return st?'<span style="'+st+'">'+h+'</span>':h; }
   if(tmDaDoi('khoi_ten')) return tmH('khoi_ten');
   return 'KHỐI SAN LẤP - <span style="color:#e65100;">XÂY DỰNG HẠ TẦNG 3</span>';
 }
@@ -1693,6 +1703,7 @@ async function exportTongHop4DonVi(){
 
   var units=[];
   try{ units = await fetchDonViList(); }catch(e){ units=[]; }
+  try{ var dsK=await fetchKhoiList(); if(dsK.length){ var kId=khoiDangChon(dsK, units); units=units.filter(function(d){ return (d.khoi_id||'khoi_03')===kId; }); } }catch(e){} // chỉ đơn vị của khối đang dùng
   if(!units.length){ alert('Chưa có danh sách đơn vị.'); return; }
 
   // 7 ngày gần nhất, ngày cuối là hôm nay
@@ -3291,10 +3302,10 @@ function applyHomeBrand(){
     if(hdr) hdr.classList.add('in-unit');
     document.title = ten;
   }else{
-    el.innerHTML = tmDaDoi('khoi_ten') ? tmH('khoi_ten') : ORG_BRAND_HTML; // tên khối đã sửa ở 🎨 Tên & màu báo cáo
+    el.innerHTML = tmKhoiTieuDe(); // tên khối đang chọn
     el.classList.remove('in-unit');
     if(hdr) hdr.classList.remove('in-unit');
-    document.title = tm('khoi_ten').t.replace(/\s*\n\s*/g,' ');
+    document.title = (khoiTenHienTai()||tm('khoi_ten').t).replace(/\s*\n\s*/g,' ');
   }
   var lab = document.getElementById('home-don-vi-label');
   if(lab) lab.textContent = ten || '—';
@@ -3338,6 +3349,20 @@ async function renderDonViHub(){
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#ef5350;padding:16px;font-size:13px;">Chưa có đơn vị. Chạy SQL P1.</div>';
     return;
   }
+  // Nhiều khối: chọn khối trước → chỉ hiện đơn vị của khối đó (chưa chạy nhieu-khoi.sql thì như cũ)
+  var dsKhoi = await fetchKhoiList();
+  var chipEl = document.getElementById('home-hub-khoi');
+  if(dsKhoi.length){
+    var khoiId = khoiDangChon(dsKhoi, rows);
+    rows = rows.filter(function(d){ return (d.khoi_id||'khoi_03')===khoiId; });
+    if(chipEl){
+      chipEl.style.display = dsKhoi.length>1 ? 'flex' : 'none';
+      chipEl.innerHTML = dsKhoi.map(function(k){ return '<button type="button" data-khoi="'+escHtmlHub(k.id)+'" style="flex-shrink:0;border-radius:999px;padding:7px 14px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;border:1.5px solid '+(k.id===khoiId?'#f9a825;background:#f9a825;color:#1a140a':'rgba(249,168,37,.5);background:transparent;color:#ffb74d')+'">'+escHtmlHub(k.ten)+'</button>'; }).join('');
+      chipEl.querySelectorAll('[data-khoi]').forEach(function(b){ b.onclick=function(){ try{ localStorage.setItem('bch_khoi_id', b.getAttribute('data-khoi')); }catch(e){} renderDonViHub(); }; });
+    }
+    applyHomeBrand();
+    if(!rows.length){ grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b93a8;padding:16px;font-size:13px;">Khối này chưa có đơn vị.</div>'; return; }
+  }else if(chipEl){ chipEl.style.display='none'; }
   var allowed = [];
   try{
     allowed = window.BCH_ALLOWED_DON_VI || (window.BCH_USER && window.BCH_USER.don_vi_ids) || [];
@@ -3368,6 +3393,22 @@ async function renderDonViHub(){
 
 
 
+// Danh sách khối (sql/nhieu-khoi.sql). Chưa cài → [] (app chạy như 1 khối như cũ)
+async function fetchKhoiList(){
+  try{ var r = await sc.rpc('lay_danh_sach_khoi'); return (!r.error && Array.isArray(r.data)) ? r.data : []; }catch(e){ return []; }
+}
+// Khối đang chọn: đã chọn trước đó → khối của đơn vị đang dùng → khối đầu tiên. Ghi lại tên để làm tiêu đề.
+function khoiDangChon(dsKhoi, dsDv){
+  var id = ''; try{ id = localStorage.getItem('bch_khoi_id')||''; }catch(e){}
+  if(!dsKhoi.some(function(k){return k.id===id;})){
+    var dv = (dsDv||[]).find(function(d){ return String(d.id)===String(getDonViId()||''); });
+    id = dv&&dv.khoi_id&&dsKhoi.some(function(k){return k.id===dv.khoi_id;}) ? dv.khoi_id : dsKhoi[0].id;
+  }
+  var k = dsKhoi.find(function(x){return x.id===id;});
+  window.BCH_KHOI_ID = id; window.BCH_KHOI_TEN = k ? k.ten : '';
+  try{ localStorage.setItem('bch_khoi_id', id); localStorage.setItem('bch_khoi_ten', window.BCH_KHOI_TEN); }catch(e){}
+  return id;
+}
 async function fetchDonViList(){
   try{
     var r = await sc.rpc('lay_danh_sach_don_vi');
