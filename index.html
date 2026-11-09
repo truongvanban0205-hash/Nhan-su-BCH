@@ -1038,11 +1038,8 @@ function tmKhoiH(){
   return 'KHỐI SAN LẤP - <span style="color:#e65100;">XÂY DỰNG HẠ TẦNG 3</span>';
 }
 function tmApDung(){
-  var b=document.getElementById('home-brand-title');
-  if(b){
-    if(!b.dataset.goc) b.dataset.goc=b.innerHTML;
-    b.innerHTML=tmDaDoi('khoi_ten')?tmH('khoi_ten'):b.dataset.goc;
-  }
+  // Trang chủ: đang ở trong đơn vị → tên đơn vị; ở màn chọn đơn vị → tên khối (applyHomeBrand quyết định)
+  if(typeof applyHomeBrand==='function') applyHomeBrand();
 }
 function tmVeLai(){ // vẽ lại những chỗ đang hiện tiêu đề (không đụng số liệu đang nhập)
   tmApDung();
@@ -3180,10 +3177,10 @@ function applyHomeBrand(){
     if(hdr) hdr.classList.add('in-unit');
     document.title = ten;
   }else{
-    el.innerHTML = ORG_BRAND_HTML;
+    el.innerHTML = tmDaDoi('khoi_ten') ? tmH('khoi_ten') : ORG_BRAND_HTML; // tên khối đã sửa ở 🎨 Tên & màu báo cáo
     el.classList.remove('in-unit');
     if(hdr) hdr.classList.remove('in-unit');
-    document.title = 'KHỐI SAN LẤP - XÂY DỰNG HẠ TẦNG 3';
+    document.title = tm('khoi_ten').t.replace(/\s*\n\s*/g,' ');
   }
   var lab = document.getElementById('home-don-vi-label');
   if(lab) lab.textContent = ten || '—';
