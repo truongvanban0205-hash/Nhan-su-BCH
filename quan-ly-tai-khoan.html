@@ -301,6 +301,7 @@
     <div class="admin-actions">
       <button class="linkbtn" id="btnBackAdminUnits" style="display:none;">← Đơn vị</button>
       <button class="linkbtn" id="btnThongBao">🔔 Quản lý Thông báo</button>
+      <button class="linkbtn" id="btnBieuTuong" onclick="moBieuTuong()">🖼 Biểu tượng</button>
       <button class="linkbtn" id="btnDonVi" style="display:none;">🏢 Khối &amp; đơn vị</button>
       <button class="linkbtn" id="btnCauHinhNS" style="display:none;">Cấu hình Nhân sự</button>
       <button class="linkbtn" id="btnAddModule" style="display:none;">+ Thêm quyền</button>
@@ -2249,7 +2250,8 @@ async function renderAdminUnitGrid(){
         +'<button type="button" style="'+nut+'" data-g-khoi-len="'+escapeHtml(k.id)+'" '+(ki===0?'disabled':'')+' title="Lên">↑</button>'
         +'<button type="button" style="'+nut+'" data-g-khoi-xuong="'+escapeHtml(k.id)+'" '+(ki===khoiCache.length-1?'disabled':'')+' title="Xuống">↓</button>'
         +'<button type="button" style="'+nut+'" data-g-tm="__k:'+escapeHtml(k.id)+'" title="Tên & màu tiêu đề áp dụng cho mọi đơn vị trong khối">🎨 Tên & màu khối</button>'
-        +'<button type="button" style="'+nut+'color:#ef5350;" data-g-khoi-an="'+escapeHtml(k.id)+'">'+(k.an?'Hiện':'Ẩn')+'</button></div>'
+        +'<button type="button" style="'+nut+'color:#ef5350;" data-g-khoi-an="'+escapeHtml(k.id)+'">'+(k.an?'Hiện':'Ẩn')+'</button>'
+        +'<button type="button" style="'+nut+'color:#fff;background:#c62828;border-color:#c62828;" data-g-khoi-xoa="'+escapeHtml(k.id)+'" title="Xoá khối (khối phải trống)">🗑 Xoá</button></div>'
         +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><input data-g-dv-moi="'+escapeHtml(k.id)+'" placeholder="Tên đơn vị mới trong khối này" style="flex:1;min-width:180px;'+o+'"><button type="button" data-g-them-dv="'+escapeHtml(k.id)+'" style="'+nutCam+'">+ Thêm đơn vị</button></div>';
       if(!ds.length) h += '<div style="color:var(--muted);font-size:13px;padding:4px 2px;">Khối chưa có đơn vị.</div>';
       ds.forEach(function(d, di){
@@ -2263,6 +2265,7 @@ async function renderAdminUnitGrid(){
           +'<button type="button" style="'+nut+'" data-g-chep="'+escapeHtml(d.id)+'" title="Sao chép cấu hình từ đơn vị khác">📋 Chép</button>'
           +'<button type="button" style="'+nut+'" data-g-tm="'+escapeHtml(d.id)+'" title="Tên & màu tiêu đề riêng đơn vị này">🎨 Tên & màu</button>'
           +'<button type="button" style="'+nut+'color:#ef5350;" data-g-dv-an="'+escapeHtml(d.id)+'">'+(d.an?'Hiện':'Ẩn')+'</button>'
+          +'<button type="button" style="'+nut+'color:#fff;background:#c62828;border-color:#c62828;" data-g-dv-xoa="'+escapeHtml(d.id)+'" title="Xoá đơn vị">🗑</button>'
           +'<button type="button" class="admin-unit-card" data-id="'+escapeHtml(d.id)+'" style="'+nutCam+'min-height:0;padding:7px 12px;">Vào quản lý →</button></div>';
       });
       h += '</div>';
@@ -2289,6 +2292,14 @@ async function renderAdminUnitGrid(){
       if(!k.an && !confirm('Ẩn khối "'+k.ten+'"? (Đơn vị trong khối vẫn giữ nguyên)')) return;
       goi('admin_luu_khoi', { p_id: k.id, p_ten: k.ten, p_an: !k.an }); }; });
     grid.querySelectorAll('[data-g-dv-an]').forEach(function(b){ b.onclick = function(){ goi('admin_an_hien_don_vi', { p_id: b.dataset.gDvAn }); }; });
+    grid.querySelectorAll('[data-g-khoi-xoa]').forEach(function(b){ b.onclick = function(){ const k = khoiCache.find(function(x){ return x.id===b.dataset.gKhoiXoa; });
+      if(tatCa.some(function(d){ return (d.khoi_id||'khoi_03')===k.id; })){ alert('Khối "'+k.ten+'" còn đơn vị. Chuyển đơn vị sang khối khác hoặc xoá đơn vị trước.'); return; }
+      if(!confirm('XOÁ khối "'+k.ten+'"? Không lấy lại được.')) return;
+      goi('admin_xoa_khoi', { p_id: k.id }, '✓ Đã xoá khối'); }; });
+    grid.querySelectorAll('[data-g-dv-xoa]').forEach(function(b){ b.onclick = function(){ const d = tatCa.find(function(x){ return x.id===b.dataset.gDvXoa; });
+      const go = prompt('XOÁ đơn vị "'+(d.ten||d.id)+'"?\n- Không ai vào được đơn vị này nữa, quyền của nhân viên vào đơn vị này bị bỏ.\n- Số liệu báo cáo cũ vẫn lưu trong máy chủ nhưng không còn xem được trên app.\n(Muốn tạm ngừng thì dùng nút Ẩn.)\n\nGõ đúng tên đơn vị để xác nhận xoá:');
+      if(go===null) return; if(go.trim()!==(d.ten||d.id).trim()){ alert('Tên không khớp — chưa xoá.'); return; }
+      goi('admin_xoa_don_vi', { p_id: d.id }, '✓ Đã xoá đơn vị'); }; });
     grid.querySelectorAll('[data-g-dv-khoi]').forEach(function(s){ s.onchange = function(){ goi('admin_gan_khoi', { p_don_vi_id: s.dataset.gDvKhoi, p_khoi_id: s.value }, '✓ Đã chuyển khối'); }; });
     grid.querySelectorAll('[data-g-chep]').forEach(function(b){ b.onclick = function(){ moSaoChepCauHinh(b.dataset.gChep); }; });
     grid.querySelectorAll('[data-g-tm]').forEach(function(b){ b.onclick = function(){ moTenMauAdmin(b.dataset.gTm); }; });
@@ -2597,6 +2608,37 @@ async function moTenMauAdmin(phamVi){
   };
 }
 
+/* ================= 🖼 BIỂU TƯỢNG TOÀN APP (lưu '__chung' → '__icon') =================
+   Ô trống = không hiện biểu tượng; ↺ Gốc = dùng lại biểu tượng ban đầu. */
+const ICON_DS = [['mod_ns','Ô Nhân sự (trang chủ đơn vị)','📋'],['mod_mmtb','Ô MMTB (trang chủ đơn vị)','🚜'],['mod_bantin','Ô Bản tin (trang chủ đơn vị)','📰'],['mod_danhba','Ô Danh bạ (trang chủ đơn vị)','📞']];
+async function moBieuTuong(){
+  const r = await sb.rpc('admin_lay_ten_mau', { p_pass: currentAdminPass, p_pham_vi: '__chung' });
+  if(r.error){ alert(/admin_lay_ten_mau|PGRST202|Could not find/i.test(r.error.message||'')?'Chưa cài: chạy sql/quan-ly-khoi-2.sql và sql/quan-ly-khoi-3.sql trong Supabase.':(r.error.message||'Không đọc được')); return; }
+  const cfg = JSON.parse(JSON.stringify(r.data||{})), bo = cfg.__icon || {};
+  const nen = document.createElement('div');
+  nen.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;';
+  nen.innerHTML = `<div class="modal" style="max-width:520px;width:100%;">
+    <h3>🖼 Biểu tượng</h3>
+    <p class="sub" style="margin-top:-6px;">Gõ / dán biểu tượng (emoji) mới. <b>Để trống = không có biểu tượng.</b> ↺ Gốc = dùng lại biểu tượng ban đầu. Áp dụng cho mọi khối, mọi đơn vị.</p>
+    ${ICON_DS.map(d=>{ const v = Object.prototype.hasOwnProperty.call(bo,d[0]) ? (bo[d[0]]||'') : d[2];
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;font-size:13px;">${escapeHtml(d[1])}</div>
+        <input data-ico="${d[0]}" value="${escapeHtml(v)}" maxlength="8" placeholder="(không)" style="width:72px;text-align:center;font-size:22px;padding:4px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);">
+        <button type="button" class="icon-btn" data-goc="${d[0]}" data-v="${escapeHtml(d[2])}">↺ Gốc</button>
+        <button type="button" class="icon-btn reject" data-bo="${d[0]}">Xoá</button></div>`; }).join('')}
+    <div class="modal-actions"><button class="btn secondary" data-dong>Huỷ</button><button class="btn" data-luu>💾 Lưu</button></div></div>`;
+  document.body.appendChild(nen);
+  nen.querySelectorAll('[data-goc]').forEach(b=>{ b.onclick = ()=>{ nen.querySelector(`[data-ico="${b.dataset.goc}"]`).value = b.dataset.v; }; });
+  nen.querySelectorAll('[data-bo]').forEach(b=>{ b.onclick = ()=>{ nen.querySelector(`[data-ico="${b.dataset.bo}"]`).value = ''; }; });
+  nen.querySelector('[data-dong]').onclick = ()=> nen.remove();
+  nen.querySelector('[data-luu]').onclick = async ()=>{
+    const moi = {}; nen.querySelectorAll('[data-ico]').forEach(i=>{ moi[i.dataset.ico] = i.value.trim(); });
+    cfg.__icon = moi;
+    const x = await sb.rpc('admin_luu_ten_mau', { p_pass: currentAdminPass, p_pham_vi: '__chung', p_cau_hinh: cfg });
+    if(x.error){ alert(/PHAM_VI/i.test(x.error.message||'')?'Chưa cài: chạy file sql/quan-ly-khoi-3.sql trong Supabase.':('Không lưu được: '+(x.error.message||''))); return; }
+    nen.remove(); showToast('✓ Đã lưu biểu tượng — mở lại app (Ctrl+F5) để thấy');
+  };
+}
 /* ================= KHỞI ĐỘNG ================= */
 loadModules();
 autoCheckSaved();
