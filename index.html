@@ -703,6 +703,15 @@ td.s1{left:62px;min-width:44px;font-weight:600;background:#fff;font-size:11px;}
     </div>
     <div style="overflow-x:auto;border:1px solid #d7dee6;border-radius:10px"><table id="dbm-tbl"></table></div>
   </div>
+  <div class="dbm-card">
+    <h2>🚦 Trạng thái MMTB của đơn vị</h2>
+    <p class="dbm-sub">Đổi tên / màu các trạng thái, thêm trạng thái mới và chọn <b>cách tính</b> (cộng vào Hoạt động, Hư hỏng hay Không hoạt động khi tính % hoạt động, LXLM/SL.MMTB, hư hỏng). <b>Ẩn</b> = không còn cột nhập, số đã nhập vẫn giữ và vẫn được tính.</p>
+    <div class="dbm-tool">
+      <button class="btn btn-sm btn-or" onclick="dbmTtThem()">+ Thêm trạng thái</button>
+      <button class="btn btn-sm btn-gr" onclick="dbmTtLuu()">💾 Lưu trạng thái</button>
+    </div>
+    <div style="overflow-x:auto"><table id="dbm-tt" style="width:100%;border-collapse:collapse;font-size:13px"></table></div>
+  </div>
 </div>
 
 <!-- ============ MỤC II MMTB: TÌNH TRẠNG HƯ HỎNG, SỬA CHỮA ============ -->
@@ -1062,7 +1071,6 @@ async function tmMo(){
   if(TM.chuaCai){ alert('Chưa cài tính năng: cần chạy file sql/ten-mau-bao-cao.sql trong Supabase.'); return; }
   TM.pass=p; TM.phamVi='chung';
   TM.sua={chung:JSON.parse(JSON.stringify(TM.chung)), rieng:JSON.parse(JSON.stringify(TM.rieng))};
-  TM.sua.chung.__mmtb_tt=mmtbTtDoc().map(function(x){ return {ma:x.ma,ten:x.ten,nhom:x.nhom,mau:x.mau||'',nen:x.nen||'',an:!!x.an}; });
   tmVeHop();
 }
 function tmVeHop(){
@@ -1089,24 +1097,6 @@ function tmVeHop(){
       +'<td style="padding:6px 0 6px 4px"><button data-tmxoa="'+k+'" title="Về mặc định" style="border:1px solid #c3cee6;background:#fff;border-radius:6px;padding:4px 7px;cursor:pointer">↺</button></td></tr>';
   });
   h+='</table>';
-  // Trạng thái MMTB (dùng chung cả khối)
-  h+='<div style="padding:12px 0 4px;font-weight:800;color:#e65100;border-bottom:1px solid #eceff3">Trạng thái MMTB <span style="font-weight:600;color:#5d6478;font-size:11.5px">(dùng chung cả khối)</span></div>';
-  if(TM.phamVi!=='chung'){
-    h+='<div style="padding:8px 0;font-size:12px;color:#5d6478">Chọn "Chung cả khối" ở trên để sửa trạng thái MMTB.</div>';
-  }else{
-    var dsTT=TM.sua.chung.__mmtb_tt;
-    h+='<div style="font-size:11.5px;color:#5d6478;padding:6px 0">Cách tính: trạng thái thêm mới được cộng vào nhóm đã chọn khi tính % hoạt động, LXLM/SL.MMTB, hư hỏng. Xoá = ẩn, số cũ vẫn giữ.</div><table style="width:100%;border-collapse:collapse">';
-    dsTT.forEach(function(x,i){
-      var goc=['hoatdong','huhong','luukho'].indexOf(x.ma)>=0, oM=function(f,nhan,mac){ return '<label style="display:flex;align-items:center;gap:4px;font-size:11.5px;white-space:nowrap"><input type="checkbox" data-tti="'+i+'" data-ttf="'+f+'c"'+(x[f]?' checked':'')+'>'+nhan+' <input type="color" data-tti="'+i+'" data-ttf="'+f+'" value="'+(x[f]||mac)+'" style="width:34px;height:26px;padding:0;border:1px solid #c3cee6;border-radius:4px"></label>'; };
-      h+='<tr style="border-bottom:1px solid #f0f2f5'+(x.an?';opacity:.5':'')+'"><td style="padding:6px 6px 6px 0"><input data-tti="'+i+'" data-ttf="ten" value="'+E(x.ten)+'" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #c3cee6;border-radius:6px;font-family:inherit"></td>'
-        +'<td style="padding:6px 4px"><select data-tti="'+i+'" data-ttf="nhom"'+(goc?' disabled':'')+' style="padding:5px;border:1px solid #c3cee6;border-radius:6px;font-family:inherit;font-size:12px">'
-          +[['hd','Tính như Hoạt động'],['hh','Tính như Hư hỏng'],['lk','Không hoạt động (như Lưu kho)']].map(function(o){ return '<option value="'+o[0]+'"'+(x.nhom===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></td>'
-        +'<td style="padding:6px 4px">'+oM('mau','Chữ','#1a1a1a')+'</td><td style="padding:6px 4px">'+oM('nen','Nền','#e3e9f5')+'</td>'
-        +'<td style="padding:6px 0 6px 4px;white-space:nowrap">'+(x.ma==='hoatdong'||x.ma==='huhong'?'<span style="font-size:11px;color:#9aa3ae">luôn hiện</span>'
-          :'<label style="font-size:11.5px"><input type="checkbox" data-tti="'+i+'" data-ttf="an"'+(x.an?' checked':'')+'> Ẩn</label>')+'</td></tr>';
-    });
-    h+='</table><button id="tm-them-tt" style="margin-top:8px;border:1px dashed #1565c0;color:#1565c0;background:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit">+ Thêm trạng thái</button>';
-  }
   h+='</div><div style="padding:10px 16px;border-top:1px solid #e3e8ef;display:flex;justify-content:flex-end;gap:8px">'
     +'<button id="tm-huy" style="border:1px solid #c3cee6;background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-family:inherit">Huỷ</button>'
     +'<button id="tm-luu" style="border:none;background:#2e7d32;color:#fff;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:700;font-family:inherit">💾 Lưu</button></div></div>';
@@ -1119,22 +1109,11 @@ function tmVeHop(){
       else if(f==='mau'||f==='nen'){ var c=nen.querySelector('[data-tmk="'+k+'"][data-tmf="'+f+'c"]'); if(c&&c.checked) b[k][f]=el.value; else delete b[k][f]; }
       if(!Object.keys(b[k]).length) delete b[k];
     });
-    var ds=TM.sua.chung.__mmtb_tt; // trạng thái MMTB (chỉ hiện khi đang ở "Chung cả khối")
-    nen.querySelectorAll('[data-tti]').forEach(function(el){
-      var x=ds[+el.dataset.tti], f=el.dataset.ttf; if(!x) return;
-      if(f==='ten'){ var s=el.value.trim(); if(s) x.ten=s; }
-      else if(f==='nhom'){ if(!el.disabled) x.nhom=el.value; }
-      else if(f==='an') x.an=el.checked;
-      else if(f==='mau'||f==='nen'){ var c=nen.querySelector('[data-tti="'+el.dataset.tti+'"][data-ttf="'+f+'c"]'); x[f]=(c&&c.checked)?el.value:''; }
-    });
   };
   nen.querySelector('#tm-pv').onchange=function(){ docVao(); TM.phamVi=this.value; tmVeHop(); };
   nen.querySelectorAll('input[type=color]').forEach(function(el){ el.oninput=function(){ var c=nen.querySelector('[data-tmk="'+el.dataset.tmk+'"][data-tmf="'+el.dataset.tmf+'c"]'); if(c) c.checked=true; }; });
   nen.querySelectorAll('[data-tmxoa]').forEach(function(b){ b.onclick=function(){ docVao(); delete TM.sua[TM.phamVi][b.dataset.tmxoa]; tmVeHop(); }; });
-  nen.querySelectorAll('input[type=color][data-tti]').forEach(function(el){ el.oninput=function(){ var c=nen.querySelector('[data-tti="'+el.dataset.tti+'"][data-ttf="'+el.dataset.ttf+'c"]'); if(c) c.checked=true; }; });
-  var nutTT=nen.querySelector('#tm-them-tt');
-  if(nutTT) nutTT.onclick=function(){ docVao(); var ten=prompt('Tên trạng thái mới (VD: Bảo dưỡng, Chờ điều chuyển):'); if(!ten||!ten.trim()) return;
-    TM.sua.chung.__mmtb_tt.push({ma:'tt_'+Date.now().toString(36),ten:ten.trim(),nhom:'lk',mau:'',nen:'#f3e5f5',an:false}); tmVeHop(); };
+
   nen.querySelector('#tm-huy').onclick=function(){ nen.remove(); TM.sua=null; };
   nen.querySelector('#tm-luu').onclick=async function(){
     docVao();
@@ -1170,7 +1149,7 @@ function nhapMatKhau(loiNhac){
     document.body.appendChild(nen); setTimeout(function(){ o.focus(); },30);
   });
 }
-/* ---------- TRẠNG THÁI MMTB tự cấu hình (lưu chung cả khối trong bc_ten_mau, khoá '__mmtb_tt') ----------
+/* ---------- TRẠNG THÁI MMTB tự cấu hình — riêng từng đơn vị (Định biên MMTB → 🚦; lưu bc_ten_mau, khoá '__mmtb_tt') ----------
    3 trạng thái gốc giữ nguyên mã dữ liệu (hoatdong / huhong / luukho) — chỉ đổi tên, màu.
    Trạng thái thêm mới có "cách tính": hd = như Hoạt động, hh = như Hư hỏng, lk = như Lưu kho (không hoạt động).
    Xoá = ẩn: không hiện cột nhập, số cũ vẫn giữ và vẫn cộng vào nhóm của nó. */
@@ -1181,8 +1160,9 @@ var MMTB_TT_GOC=[
 ];
 var MMTB_TT=MMTB_TT_GOC.map(function(x){return Object.assign({},x);});
 var MMTB_NHOM_KEY={hd:'hoatdong',hh:'huhong',lk:'luukho'};
-function mmtbTtDoc(){ // danh sách trạng thái đang dùng (gốc luôn có, đúng thứ tự gốc trước)
-  var luu=(TM.chung&&Array.isArray(TM.chung.__mmtb_tt))?TM.chung.__mmtb_tt:[];
+function mmtbTtDoc(nguon){ // danh sách trạng thái của đơn vị (gốc luôn có, đúng thứ tự gốc trước)
+  nguon=nguon||TM;
+  var luu=(nguon.rieng&&Array.isArray(nguon.rieng.__mmtb_tt))?nguon.rieng.__mmtb_tt:((nguon.chung&&Array.isArray(nguon.chung.__mmtb_tt))?nguon.chung.__mmtb_tt:[]);
   var ds=MMTB_TT_GOC.map(function(g){ var x=luu.find(function(y){return y&&y.ma===g.ma;})||{};
     return {ma:g.ma,ten:x.ten||g.ten,nhom:g.nhom,mau:x.mau!==undefined?x.mau:g.mau,nen:x.nen!==undefined?x.nen:g.nen,an:g.ma==='luukho'?!!x.an:false,goc:true}; });
   luu.forEach(function(x){ if(!x||!x.ma||MMTB_TT_GOC.some(function(g){return g.ma===x.ma;})) return;
@@ -1198,9 +1178,9 @@ function mmtbApTrangThai(){
 function mmtbTtHien(){ return MMTB_TT.filter(function(x){return !x.an;}); }
 function mmtbTtTen(nhom){ var g=MMTB_TT.find(function(x){return x.ma===MMTB_NHOM_KEY[nhom];}); return g?g.ten:nhom; }
 // Dữ liệu 1 ngày đã GỘP trạng thái thêm mới vào 3 nhóm gốc → mọi chỗ tính % HĐ, hư hỏng, LXLM/MMTB, khối vẫn đúng
-function mmtbGop(dt){
+function mmtbGop(dt,dsTT){ // dsTT: danh sách trạng thái của đơn vị khác (báo cáo khối); mặc định đơn vị đang mở
   if(!dt||typeof dt!=='object') return dt;
-  var phu=MMTB_TT.filter(function(x){return !x.goc;});
+  var phu=(dsTT||MMTB_TT).filter(function(x){return !x.goc;});
   if(!phu.length) return dt;
   var out={};
   Object.keys(dt).forEach(function(p){
@@ -1830,8 +1810,9 @@ async function exportTongHop4DonVi(){
       var mapNs={}, mapMm={};
       try{ var r1=await sc.from('nhansu').select('ngay,data').eq('don_vi_id',u.id).gte('ngay',days7[0]).lte('ngay',tk);
         (r1.data||[]).forEach(function(x){ mapNs[String(x.ngay).slice(0,10)]=x.data; }); }catch(e){}
+      var ttDv=null; try{ var rtt=await sc.rpc('bc_lay_ten_mau',{p_don_vi_id:u.id}); if(!rtt.error&&rtt.data) ttDv=mmtbTtDoc({chung:rtt.data.chung||{},rieng:rtt.data.rieng||{}}); }catch(e){}
       try{ var r2=await sc.from('mmtb').select('ngay,data').eq('don_vi_id',u.id).gte('ngay',days7[0]).lte('ngay',tk);
-        (r2.data||[]).forEach(function(x){ var pl=x.data; mapMm[String(x.ngay).slice(0,10)]=(pl&&pl.data)?Object.assign({},pl,{data:mmtbGop(pl.data)}):pl; }); /* trạng thái thêm mới gộp vào HĐ/HH/LK */ }catch(e){}
+        (r2.data||[]).forEach(function(x){ var pl=x.data; mapMm[String(x.ngay).slice(0,10)]=(pl&&pl.data)?Object.assign({},pl,{data:mmtbGop(pl.data,ttDv)}):pl; }); /* trạng thái thêm mới của đơn vị gộp vào HĐ/HH/LK */ }catch(e){}
       o.coNs=!!mapNs[tk]; o.coMm=!!mapMm[tk]; o.ok=o.coNs||o.coMm;
       o.ns7=days7.map(function(dk){ return mapNs[dk]?sumNsPayload(mapNs[dk],cfg):null; });
       o.mt7=days7.map(function(dk){ return mapNs[dk]&&mapMm[dk]?sumMmtbPayload(mapMm[dk],cfg):null; });
@@ -7719,6 +7700,62 @@ async function dbmMo(){
   for(var y=now-1;y<=now+2;y++){var o=document.createElement('option');o.value=y;o.textContent='Năm '+y;if(y===dbmNam)o.selected=true;sel.appendChild(o);}
   showScreen('dbm');
   await dbmTai();
+  dbmTtMo();
+}
+/* ---------- Trạng thái MMTB của đơn vị (lưu riêng đơn vị trong bc_ten_mau, khoá '__mmtb_tt') ---------- */
+var DBM_TT=null;
+async function dbmTtMo(){
+  await tmTai();
+  var el=document.getElementById('dbm-tt'); if(!el) return;
+  if(TM.chuaCai){ el.innerHTML='<tr><td style="color:#c62828;padding:8px">Chưa cài: cần chạy file sql/ten-mau-bao-cao.sql trong Supabase.</td></tr>'; DBM_TT=null; return; }
+  DBM_TT=mmtbTtDoc().map(function(x){ return {ma:x.ma,ten:x.ten,nhom:x.nhom,mau:x.mau||'',nen:x.nen||'',an:!!x.an}; });
+  dbmTtVe();
+}
+function dbmTtVe(){
+  var el=document.getElementById('dbm-tt'); if(!el||!DBM_TT) return;
+  var E=escHtmlHub, th='padding:6px;border-bottom:2px solid #d7dee6;text-align:left;font-size:12px;color:#0F2A5C';
+  var h='<tr><th style="'+th+'">Tên trạng thái</th><th style="'+th+'">Cách tính</th><th style="'+th+'">Màu chữ</th><th style="'+th+'">Màu nền</th><th style="'+th+'">Ẩn</th></tr>';
+  DBM_TT.forEach(function(x,i){
+    var goc=['hoatdong','huhong','luukho'].indexOf(x.ma)>=0;
+    var oM=function(f,mac){ return '<label style="display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" data-tti="'+i+'" data-ttf="'+f+'c"'+(x[f]?' checked':'')+'> <input type="color" data-tti="'+i+'" data-ttf="'+f+'" value="'+(x[f]||mac)+'" style="width:36px;height:28px;padding:0;border:1px solid #c3cee6;border-radius:4px"></label>'; };
+    h+='<tr style="border-bottom:1px solid #eef1f5'+(x.an?';opacity:.5':'')+'">'
+      +'<td style="padding:6px 6px 6px 0;min-width:170px"><input data-tti="'+i+'" data-ttf="ten" value="'+E(x.ten)+'" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #c3cee6;border-radius:6px;font-family:inherit">'
+        +'<div style="margin-top:3px"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:11px;font-weight:700;background:'+(x.nen||'#e3e9f5')+';color:'+(x.mau||'#1a1a1a')+'">'+E(x.ten)+'</span>'+(goc?' <span style="font-size:10.5px;color:#9aa3ae">gốc</span>':'')+'</div></td>'
+      +'<td style="padding:6px"><select data-tti="'+i+'" data-ttf="nhom"'+(goc?' disabled':'')+' style="padding:5px;border:1px solid #c3cee6;border-radius:6px;font-family:inherit;font-size:12px">'
+        +[['hd','Tính như Hoạt động'],['hh','Tính như Hư hỏng'],['lk','Không hoạt động (như Lưu kho)']].map(function(o){ return '<option value="'+o[0]+'"'+(x.nhom===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></td>'
+      +'<td style="padding:6px">'+oM('mau','#1a1a1a')+'</td><td style="padding:6px">'+oM('nen','#e3e9f5')+'</td>'
+      +'<td style="padding:6px;white-space:nowrap">'+(x.ma==='hoatdong'||x.ma==='huhong'?'<span style="font-size:11px;color:#9aa3ae">luôn hiện</span>'
+        :'<label><input type="checkbox" data-tti="'+i+'" data-ttf="an"'+(x.an?' checked':'')+'> Ẩn</label>')+'</td></tr>';
+  });
+  el.innerHTML=h;
+  el.querySelectorAll('input[type=color]').forEach(function(c){ c.oninput=function(){ var k=el.querySelector('[data-tti="'+c.dataset.tti+'"][data-ttf="'+c.dataset.ttf+'c"]'); if(k) k.checked=true; }; });
+  el.querySelectorAll('[data-ttf="an"]').forEach(function(c){ c.onchange=function(){ dbmTtDoc(); dbmTtVe(); }; });
+}
+function dbmTtDoc(){ // đọc ô nhập vào DBM_TT
+  var el=document.getElementById('dbm-tt'); if(!el||!DBM_TT) return;
+  el.querySelectorAll('[data-tti]').forEach(function(o){
+    var x=DBM_TT[+o.dataset.tti], f=o.dataset.ttf; if(!x) return;
+    if(f==='ten'){ var s=o.value.trim(); if(s) x.ten=s; }
+    else if(f==='nhom'){ if(!o.disabled) x.nhom=o.value; }
+    else if(f==='an') x.an=o.checked;
+    else if(f==='mau'||f==='nen'){ var c=el.querySelector('[data-tti="'+o.dataset.tti+'"][data-ttf="'+f+'c"]'); x[f]=(c&&c.checked)?o.value:''; }
+  });
+}
+function dbmTtThem(){
+  if(!DBM_TT){ alert('Chưa tải được trạng thái MMTB.'); return; }
+  dbmTtDoc();
+  var ten=prompt('Tên trạng thái mới (VD: Bảo dưỡng, Chờ điều chuyển):'); if(!ten||!ten.trim()) return;
+  DBM_TT.push({ma:'tt_'+Date.now().toString(36),ten:ten.trim(),nhom:'lk',mau:'',nen:'#f3e5f5',an:false});
+  dbmTtVe();
+}
+async function dbmTtLuu(){
+  if(!DBM_TT||!dbmPass) return;
+  dbmTtDoc();
+  var r=JSON.parse(JSON.stringify(TM.rieng||{})); r.__mmtb_tt=DBM_TT;
+  var x=await sc.rpc('bc_luu_ten_mau',{p_pass:dbmPass,p_don_vi_id:getDonViId()||'khanh_hoa',p_pham_vi:'rieng',p_cau_hinh:r});
+  if(x.error){ alert('Không lưu được: '+(x.error.message||'')); return; }
+  TM.rieng=r; mmtbApTrangThai(); dbmTtVe();
+  toast('✓ Đã lưu trạng thái MMTB của đơn vị');
 }
 async function dbmVe(){
   dbmPass='';
