@@ -301,7 +301,7 @@
     <div class="admin-actions">
       <button class="linkbtn" id="btnBackAdminUnits" style="display:none;">← Đơn vị</button>
       <button class="linkbtn" id="btnThongBao">🔔 Quản lý Thông báo</button>
-      <button class="linkbtn" id="btnDonVi">🏢 Khối &amp; đơn vị</button>
+      <button class="linkbtn" id="btnDonVi" style="display:none;">🏢 Khối &amp; đơn vị</button>
       <button class="linkbtn" id="btnCauHinhNS" style="display:none;">Cấu hình Nhân sự</button>
       <button class="linkbtn" id="btnAddModule" style="display:none;">+ Thêm quyền</button>
       <button class="linkbtn" id="btnAddEmp" style="display:none;">+ Thêm nhân viên</button>
@@ -316,7 +316,7 @@
 
   <!-- Bước 1: chọn đơn vị -->
   <div id="adminUnitPick">
-    <p class="sub" style="margin:0 0 12px;">Đơn vị được xếp theo khối. Chạm vào đơn vị để vào quản lý. Thêm khối / đơn vị ngay tại đây hoặc ở 🏢 Khối &amp; đơn vị.</p>
+    <p class="sub" style="margin:0 0 12px;">Mọi việc về khối &amp; đơn vị làm ngay tại đây: bấm tên để sửa, ↑↓ đổi thứ tự, 🎨 chỉnh tên &amp; màu tiêu đề báo cáo, 📋 chép cấu hình, <b>Vào quản lý →</b> để quản lý nhân viên &amp; quyền.</p>
     <div id="adminUnitGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
   </div>
 
@@ -2226,51 +2226,79 @@ async function renderAdminUnitGrid(){
     grid.innerHTML = '<div style="color:var(--muted);">Chưa có đơn vị. Mở «Đơn vị» để tạo.</div>';
     return;
   }
-  // Admin (mật khẩu quản lý) mở được tất cả đơn vị. Xếp theo khối; khối mới thêm hiện ngay ở đây.
+  // Admin (mật khẩu quản lý) mở được tất cả đơn vị. Xếp theo khối; mọi chỉnh sửa khối / đơn vị làm ngay tại đây.
   try{ await loadKhoi(); }catch(e){}
-  const the = function(d){
-    const n = counts[d.id]||0;
-    return '<button type="button" class="admin-unit-card" data-id="'+escapeHtml(d.id)+'">'
-      +'<div class="lbl">Đơn vị</div>'
-      +'<div class="name">'+escapeHtml(d.ten||d.id)+'</div>'
-      +'<div class="meta">'+(n? (n+' nhân viên') : 'Chưa có danh sách — trống')+'</div>'
-      +'</button>';
-  };
-  const nutThem = 'border:1.5px dashed rgba(249,168,37,.6);background:transparent;color:#ffb74d;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer;font-family:inherit;';
-  const khoiHien = (khoiCache||[]).filter(function(k){ return !k.an; });
-  if(!khoiHien.length){
+  const tatCa = (donViCache||[]);
+  const o = 'padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;';
+  const nut = 'border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:8px;padding:6px 9px;cursor:pointer;font-family:inherit;font-size:12.5px;';
+  const nutCam = 'border:none;background:var(--accent);color:#1a140a;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:800;font-family:inherit;white-space:nowrap;';
+  const tenSua = function(attr, ten, co){ return '<span '+attr+' title="Bấm để sửa tên" style="cursor:text;border-bottom:1px dashed rgba(249,168,37,.6);'+(co||'')+'">'+escapeHtml(ten)+'</span>'; };
+  if(!khoiCache.length){
     grid.style.display = 'grid';
-    grid.innerHTML = list.map(the).join('');
+    grid.innerHTML = list.map(function(d){ const n = counts[d.id]||0;
+      return '<button type="button" class="admin-unit-card" data-id="'+escapeHtml(d.id)+'"><div class="lbl">Đơn vị</div><div class="name">'+escapeHtml(d.ten||d.id)+'</div><div class="meta">'+(n?(n+' nhân viên'):'Chưa có danh sách — trống')+'</div></button>'; }).join('')
+      + '<div style="grid-column:1/-1;color:var(--muted);font-size:12.5px;">Muốn quản lý theo khối: chạy file sql/nhieu-khoi.sql trong Supabase.</div>';
   }else{
     grid.style.display = 'block';
-    grid.innerHTML = khoiHien.map(function(k){
-      const ds = list.filter(function(d){ return (d.khoi_id||'khoi_03')===k.id; });
-      return '<div style="margin-bottom:18px">'
-        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
-        +'<div style="font-size:16px;font-weight:900;color:#f9a825;flex:1;min-width:0">🏗️ '+escapeHtml(k.ten)+' <span style="font-size:12px;color:var(--muted);font-weight:600">· '+ds.length+' đơn vị</span></div>'
-        +'<button type="button" class="icon-btn" data-k-ten="'+escapeHtml(k.id)+'">Sửa tên khối</button>'
-        +'<button type="button" style="'+nutThem+'" data-k-them-dv="'+escapeHtml(k.id)+'">+ Thêm đơn vị</button></div>'
-        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">'
-        +(ds.length ? ds.map(the).join('') : '<div style="color:var(--muted);font-size:13px;">Khối chưa có đơn vị.</div>')
-        +'</div></div>';
-    }).join('')
-    +'<button type="button" style="'+nutThem+'" id="btnGridThemKhoi">+ Thêm khối mới</button>';
-    grid.querySelectorAll('[data-k-ten]').forEach(function(b){ b.onclick = async function(){
-      const k = khoiCache.find(function(x){ return x.id===b.getAttribute('data-k-ten'); }); const ten = prompt('Tên khối:', k?k.ten:''); if(ten===null||!ten.trim()) return;
-      const r = await sb.rpc('admin_luu_khoi', { p_pass: currentAdminPass, p_id: k.id, p_ten: ten.trim(), p_an: false });
-      if(r.error){ alert(r.error.message||'Không lưu được'); return; } renderAdminUnitGrid(); }; });
-    grid.querySelectorAll('[data-k-them-dv]').forEach(function(b){ b.onclick = async function(){
-      const ten = prompt('Tên đơn vị mới:'); if(ten===null||!ten.trim()) return;
-      const r = await sb.rpc('admin_them_don_vi', { p_pass: currentAdminPass, p_ten: ten.trim(), p_khoi_id: b.getAttribute('data-k-them-dv') });
-      if(r.error){ alert(r.error.message||'Không thêm được'); return; }
-      await loadDonVi(); showToast('✓ Đã thêm đơn vị');
-      if(r.data && r.data.id && confirm('Đã thêm "'+ten.trim()+'".\nSao chép cấu hình (dự án, loại ca, loại máy, định biên, hư hỏng...) từ đơn vị có sẵn để khỏi nhập lại?')) moSaoChepCauHinh(r.data.id);
-      renderAdminUnitGrid(); }; });
-    const nk = document.getElementById('btnGridThemKhoi');
-    if(nk) nk.onclick = async function(){
-      const ten = prompt('Tên khối mới (VD: KHỐI SL - XDHT 05):'); if(ten===null||!ten.trim()) return;
-      const r = await sb.rpc('admin_luu_khoi', { p_pass: currentAdminPass, p_id: null, p_ten: ten.trim(), p_an: false });
-      if(r.error){ alert(r.error.message||'Không thêm được'); return; } showToast('✓ Đã thêm khối'); renderAdminUnitGrid(); };
+    let h = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"><input id="gKhoiMoi" placeholder="Tên khối mới (VD: KHỐI SL - XDHT 05)" style="flex:1;min-width:200px;'+o+'"><button type="button" data-g-them-khoi style="'+nutCam+'">+ Thêm khối</button></div>';
+    khoiCache.forEach(function(k, ki){
+      const ds = tatCa.filter(function(d){ return (d.khoi_id||'khoi_03')===k.id; });
+      h += '<div style="border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:14px;'+(k.an?'opacity:.55;':'')+'">'
+        +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'
+        +'<div style="font-size:16px;font-weight:900;color:#f9a825;flex:1;min-width:160px;">🏗️ '+tenSua('data-g-ten-khoi="'+escapeHtml(k.id)+'"', k.ten)+' <span style="font-size:12px;color:var(--muted);font-weight:600">· '+ds.length+' đơn vị'+(k.an?' · đang ẩn':'')+'</span></div>'
+        +'<button type="button" style="'+nut+'" data-g-khoi-len="'+escapeHtml(k.id)+'" '+(ki===0?'disabled':'')+' title="Lên">↑</button>'
+        +'<button type="button" style="'+nut+'" data-g-khoi-xuong="'+escapeHtml(k.id)+'" '+(ki===khoiCache.length-1?'disabled':'')+' title="Xuống">↓</button>'
+        +'<button type="button" style="'+nut+'" data-g-tm="__k:'+escapeHtml(k.id)+'" title="Tên & màu tiêu đề áp dụng cho mọi đơn vị trong khối">🎨 Tên & màu khối</button>'
+        +'<button type="button" style="'+nut+'color:#ef5350;" data-g-khoi-an="'+escapeHtml(k.id)+'">'+(k.an?'Hiện':'Ẩn')+'</button></div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><input data-g-dv-moi="'+escapeHtml(k.id)+'" placeholder="Tên đơn vị mới trong khối này" style="flex:1;min-width:180px;'+o+'"><button type="button" data-g-them-dv="'+escapeHtml(k.id)+'" style="'+nutCam+'">+ Thêm đơn vị</button></div>';
+      if(!ds.length) h += '<div style="color:var(--muted);font-size:13px;padding:4px 2px;">Khối chưa có đơn vị.</div>';
+      ds.forEach(function(d, di){
+        const n = counts[d.id]||0;
+        h += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:9px 10px;border-radius:10px;background:var(--panel2,rgba(255,255,255,.03));margin-bottom:6px;'+(d.an?'opacity:.55;':'')+'">'
+          +'<div style="flex:1;min-width:170px;"><div style="font-weight:800;font-size:14px;">📁 '+tenSua('data-g-ten-dv="'+escapeHtml(d.id)+'"', d.ten||d.id)+(d.an?' <span style="color:var(--muted);font-size:11px;">(đang ẩn)</span>':'')+'</div>'
+          +'<div style="font-size:11.5px;color:var(--muted);margin-top:2px;">'+(n?(n+' nhân viên'):'chưa có nhân viên')+' · mã: '+escapeHtml(d.id)+'</div></div>'
+          +'<button type="button" style="'+nut+'" data-g-dv-len="'+escapeHtml(d.id)+'" '+(di===0?'disabled':'')+' title="Lên">↑</button>'
+          +'<button type="button" style="'+nut+'" data-g-dv-xuong="'+escapeHtml(d.id)+'" '+(di===ds.length-1?'disabled':'')+' title="Xuống">↓</button>'
+          +(khoiCache.length>1?'<select data-g-dv-khoi="'+escapeHtml(d.id)+'" title="Chuyển sang khối khác" style="'+nut+'max-width:150px;">'+khoiCache.map(function(x){ return '<option value="'+escapeHtml(x.id)+'"'+(x.id===k.id?' selected':'')+'>'+escapeHtml(x.ten)+'</option>'; }).join('')+'</select>':'')
+          +'<button type="button" style="'+nut+'" data-g-chep="'+escapeHtml(d.id)+'" title="Sao chép cấu hình từ đơn vị khác">📋 Chép</button>'
+          +'<button type="button" style="'+nut+'" data-g-tm="'+escapeHtml(d.id)+'" title="Tên & màu tiêu đề riêng đơn vị này">🎨 Tên & màu</button>'
+          +'<button type="button" style="'+nut+'color:#ef5350;" data-g-dv-an="'+escapeHtml(d.id)+'">'+(d.an?'Hiện':'Ẩn')+'</button>'
+          +'<button type="button" class="admin-unit-card" data-id="'+escapeHtml(d.id)+'" style="'+nutCam+'min-height:0;padding:7px 12px;">Vào quản lý →</button></div>';
+      });
+      h += '</div>';
+    });
+    grid.innerHTML = h;
+    const ve = async function(msg){ await loadDonVi(); await renderAdminUnitGrid(); if(msg) showToast(msg); };
+    const goi = async function(ham, ts, msg){ const r = await sb.rpc(ham, Object.assign({ p_pass: currentAdminPass }, ts)); if(r.error){ alert(r.error.message||'Không thực hiện được'); return null; } await ve(msg); return r; };
+    // sửa tên ngay tại chỗ: bấm tên → ô nhập, Enter / bấm ra ngoài để lưu, Esc để huỷ
+    const suaTen = function(el, luu){
+      el.onclick = function(ev){ ev.stopPropagation(); const cu = el.textContent; const inp = document.createElement('input'); inp.value = cu; inp.style.cssText = o+'font-weight:800;font-size:14px;min-width:200px;';
+        el.replaceWith(inp); inp.focus(); inp.select(); let xong = false;
+        const ket = async function(ok){ if(xong) return; xong = true; const v = inp.value.trim(); if(ok && v && v!==cu) await luu(v); else inp.replaceWith(el); };
+        inp.onkeydown = function(e){ if(e.key==='Enter') ket(true); if(e.key==='Escape') ket(false); }; inp.onblur = function(){ ket(true); }; };
+    };
+    grid.querySelectorAll('[data-g-ten-khoi]').forEach(function(el){ const k = khoiCache.find(function(x){ return x.id===el.dataset.gTenKhoi; });
+      suaTen(el, function(v){ return goi('admin_luu_khoi', { p_id: k.id, p_ten: v, p_an: !!k.an }, '✓ Đã đổi tên khối'); }); });
+    grid.querySelectorAll('[data-g-ten-dv]').forEach(function(el){
+      suaTen(el, function(v){ return goi('admin_doi_ten_don_vi', { p_id: el.dataset.gTenDv, p_ten: v }, '✓ Đã đổi tên đơn vị'); }); });
+    grid.querySelectorAll('[data-g-khoi-len],[data-g-khoi-xuong]').forEach(function(b){ b.onclick = function(){
+      goi('admin_doi_thu_tu_khoi', { p_id: b.dataset.gKhoiLen||b.dataset.gKhoiXuong, p_huong: b.dataset.gKhoiLen?'up':'down' }); }; });
+    grid.querySelectorAll('[data-g-dv-len],[data-g-dv-xuong]').forEach(function(b){ b.onclick = function(){
+      goi('admin_doi_thu_tu_dv_khoi', { p_id: b.dataset.gDvLen||b.dataset.gDvXuong, p_huong: b.dataset.gDvLen?'up':'down' }); }; });
+    grid.querySelectorAll('[data-g-khoi-an]').forEach(function(b){ b.onclick = function(){ const k = khoiCache.find(function(x){ return x.id===b.dataset.gKhoiAn; });
+      if(!k.an && !confirm('Ẩn khối "'+k.ten+'"? (Đơn vị trong khối vẫn giữ nguyên)')) return;
+      goi('admin_luu_khoi', { p_id: k.id, p_ten: k.ten, p_an: !k.an }); }; });
+    grid.querySelectorAll('[data-g-dv-an]').forEach(function(b){ b.onclick = function(){ goi('admin_an_hien_don_vi', { p_id: b.dataset.gDvAn }); }; });
+    grid.querySelectorAll('[data-g-dv-khoi]').forEach(function(s){ s.onchange = function(){ goi('admin_gan_khoi', { p_don_vi_id: s.dataset.gDvKhoi, p_khoi_id: s.value }, '✓ Đã chuyển khối'); }; });
+    grid.querySelectorAll('[data-g-chep]').forEach(function(b){ b.onclick = function(){ moSaoChepCauHinh(b.dataset.gChep); }; });
+    grid.querySelectorAll('[data-g-tm]').forEach(function(b){ b.onclick = function(){ moTenMauAdmin(b.dataset.gTm); }; });
+    const tk = grid.querySelector('[data-g-them-khoi]');
+    tk.onclick = async function(){ const v = document.getElementById('gKhoiMoi').value.trim(); if(!v){ alert('Nhập tên khối'); return; } goi('admin_luu_khoi', { p_id: null, p_ten: v, p_an: false }, '✓ Đã thêm khối'); };
+    grid.querySelectorAll('[data-g-them-dv]').forEach(function(b){ b.onclick = async function(){
+      const v = grid.querySelector('[data-g-dv-moi="'+b.dataset.gThemDv+'"]').value.trim(); if(!v){ alert('Nhập tên đơn vị'); return; }
+      const r = await goi('admin_them_don_vi', { p_ten: v, p_khoi_id: b.dataset.gThemDv }, '✓ Đã thêm đơn vị');
+      if(r && r.data && r.data.id && confirm('Đã thêm "'+v+'".\nSao chép cấu hình (dự án, loại ca, loại máy, định biên, hư hỏng...) từ đơn vị có sẵn để khỏi nhập lại?')) moSaoChepCauHinh(r.data.id);
+    }; });
   }
   grid.querySelectorAll('.admin-unit-card').forEach(function(btn){
     btn.onclick = function(){ enterAdminUnit(btn.getAttribute('data-id')); };
@@ -2504,6 +2532,68 @@ function moSaoChepCauHinh(denId){
     if(error){ kqEl.textContent = '❌ '+(/admin_sao_chep|PGRST202|Could not find/i.test(error.message||'')?'Chưa cài: chạy file sql/nhieu-khoi.sql trong Supabase.':(error.message||'Lỗi')); return; }
     kqEl.textContent = MUC.filter(m=>data && data[m[0]]).map(m=>'• '+m[1].split(' (')[0]+': '+data[m[0]]).join('\n') || 'Không có gì để chép.';
     showToast('✓ Đã sao chép cấu hình');
+  };
+}
+
+/* ================= 🎨 TÊN & MÀU TIÊU ĐỀ BÁO CÁO (sql/quan-ly-khoi-2.sql) =================
+   phamVi = mã đơn vị (riêng đơn vị) hoặc '__k:<mã khối>' (chung mọi đơn vị trong khối). Riêng đơn vị đè lên chung khối. */
+const TM_DS_ADMIN = [
+  ['khoi_ten','Khối','Tên khối (chỉ chỉnh màu — tên sửa ở dòng khối)'],
+  ['khoi_bc','Khối','BÁO CÁO TỔNG HỢP KHỐI · NHÂN SỰ & MMTB'],
+  ['bc_tieu_de','Đầu báo cáo đơn vị','BÁO CÁO NHÂN SỰ, MÁY MÓC THIẾT BỊ'],
+  ['mmtb_tieu_de','MMTB','🚜 Báo cáo MMTB:'],
+  ['mmtb_th','MMTB','Báo cáo tổng hợp MMTB'],
+  ['mmtb_ngay','MMTB','Tổng hợp MMTB trong ngày'],
+  ['ns_tieu_de','Nhân sự','📋 Báo cáo nhân sự:'],
+  ['ns_th','Nhân sự','Báo cáo tổng hợp'],
+  ['cnch','Nhân sự','Chi tiết số lượng CNCH, LXLM và TBMM (không gồm thiết bị hỗ trợ)'],
+  ['xu_huong','Nhân sự','📈 Xu hướng Nhân sự & MMTB (7 ngày)'],
+  ['tong_bch','Nhân sự','TỔNG BCH'],
+  ['hh_tieu_de','Hư hỏng MMTB','MMTB HƯ HỎNG VÀ TÌNH TRẠNG SỬA CHỮA'],
+  ['hh_ct','Hư hỏng MMTB','Bảng chi tiết hư hỏng'],
+  ['hh_tom','Hư hỏng MMTB','TỔNG HỢP HƯ HỎNG MMTB'],
+  ['hh_bd','Hư hỏng MMTB','BIỂU ĐỒ THIẾT BỊ HƯ HỎNG VÀ TÌNH TRẠNG SỬA CHỮA (7 NGÀY GẦN NHẤT)'],
+  ['tt_tb','Hư hỏng MMTB','TÌNH TRẠNG HOẠT ĐỘNG THIẾT BỊ (7 NGÀY)']
+];
+async function moTenMauAdmin(phamVi){
+  const laKhoi = phamVi.indexOf('__k:')===0;
+  const ten = laKhoi ? ((khoiCache.find(k=>'__k:'+k.id===phamVi)||{}).ten||phamVi) : ((donViCache.find(d=>d.id===phamVi)||{}).ten||phamVi);
+  const r = await sb.rpc('admin_lay_ten_mau', { p_pass: currentAdminPass, p_pham_vi: phamVi });
+  if(r.error){ alert(/admin_lay_ten_mau|PGRST202|Could not find/i.test(r.error.message||'')?'Chưa cài: chạy file sql/quan-ly-khoi-2.sql trong Supabase.':(r.error.message||'Không đọc được')); return; }
+  const cfg = JSON.parse(JSON.stringify(r.data||{})); // giữ nguyên các khoá khác (trạng thái MMTB, vị trí thời tiết...)
+  const nen = document.createElement('div');
+  nen.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;';
+  let nhom = '', h = '';
+  TM_DS_ADMIN.forEach(d=>{
+    const k = d[0], v = cfg[k]||{};
+    if(laKhoi===false && k==='khoi_ten') return;
+    if(d[1]!==nhom){ nhom = d[1]; h += `<div style="font-weight:800;color:var(--accent);margin:12px 0 4px;">${escapeHtml(nhom)}</div>`; }
+    const mau = (f,nhan,mac)=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;"><input type="checkbox" data-k="${k}" data-f="${f}c"${v[f]?' checked':''}>${nhan} <input type="color" data-k="${k}" data-f="${f}" value="${v[f]||mac}" style="width:34px;height:26px;padding:0;border:1px solid var(--border);border-radius:4px;background:none;"></label>`;
+    h += `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:5px 0;border-bottom:1px solid var(--border);">
+      ${k==='khoi_ten'?`<div style="flex:1;min-width:200px;font-size:12.5px;color:var(--muted);">${escapeHtml(d[2])}</div>`
+        :`<textarea data-k="${k}" data-f="t" rows="1" placeholder="${escapeHtml(d[2])}" style="flex:1;min-width:200px;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;font-size:12.5px;resize:vertical;">${escapeHtml(v.t||'')}</textarea>`}
+      ${mau('mau','Chữ','#0F2A5C')}${mau('nen','Nền','#FCF3D9')}
+      <button type="button" data-xoa="${k}" title="Về mặc định" class="icon-btn">↺</button></div>`;
+  });
+  nen.innerHTML = `<div class="modal" style="max-width:760px;width:100%;max-height:92vh;display:flex;flex-direction:column;">
+    <h3>🎨 Tên &amp; màu tiêu đề — ${escapeHtml(ten)}</h3>
+    <p class="sub" style="margin-top:-6px;">${laKhoi?'Áp dụng cho <b>mọi đơn vị trong khối</b> (đơn vị nào chỉnh riêng thì dùng bản riêng).':'Chỉ áp dụng cho <b>đơn vị này</b>, đè lên bản chung của khối.'} Để trống chữ = dùng chữ mặc định. Tick ô màu để dùng màu đó.</p>
+    <div style="overflow:auto;flex:1;">${h}</div>
+    <div class="modal-actions"><button class="btn secondary" data-dong>Huỷ</button><button class="btn" data-luu>💾 Lưu</button></div></div>`;
+  document.body.appendChild(nen);
+  nen.querySelectorAll('input[type=color]').forEach(c=>{ c.oninput = ()=>{ const b = nen.querySelector(`[data-k="${c.dataset.k}"][data-f="${c.dataset.f}c"]`); if(b) b.checked = true; }; });
+  nen.querySelectorAll('[data-xoa]').forEach(b=>{ b.onclick = ()=>{ const k = b.dataset.xoa;
+    nen.querySelectorAll(`[data-k="${k}"]`).forEach(el=>{ if(el.dataset.f==='t') el.value=''; if(el.type==='checkbox') el.checked=false; }); }; });
+  nen.querySelector('[data-dong]').onclick = ()=> nen.remove();
+  nen.querySelector('[data-luu]').onclick = async ()=>{
+    TM_DS_ADMIN.forEach(d=>{ const k = d[0]; const o = Object.assign({}, cfg[k]||{});
+      const t = nen.querySelector(`[data-k="${k}"][data-f="t"]`); if(t){ const s = t.value.replace(/\s+$/,''); if(s) o.t = s; else delete o.t; }
+      ['mau','nen'].forEach(f=>{ const c = nen.querySelector(`[data-k="${k}"][data-f="${f}c"]`), v = nen.querySelector(`[data-k="${k}"][data-f="${f}"]`);
+        if(c && c.checked && v) o[f] = v.value; else if(c) delete o[f]; });
+      if(Object.keys(o).length) cfg[k] = o; else delete cfg[k]; });
+    const x = await sb.rpc('admin_luu_ten_mau', { p_pass: currentAdminPass, p_pham_vi: phamVi, p_cau_hinh: cfg });
+    if(x.error){ alert('Không lưu được: '+(x.error.message||'')); return; }
+    nen.remove(); showToast('✓ Đã lưu tên & màu — mở lại app (Ctrl+F5) để thấy');
   };
 }
 
