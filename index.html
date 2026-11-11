@@ -16,14 +16,14 @@
         var html = await response.text();
         var app = new DOMParser().parseFromString(html, 'text/html');
 
-        // Remove only the two requested notices visually; keep the timed-lock state itself unchanged.
+        // Ẩn hai thông báo theo yêu cầu, không thay đổi trạng thái khóa theo thời gian.
         var style = app.createElement('style');
         style.textContent = '.rotate-banner,#lock-banner,#mmtb-lock-banner{display:none!important}';
         app.head.appendChild(style);
 
-        // Since disabled inputs may not dispatch click events, route taps on locked table cells to an alert.
+        // Chỉ báo khóa khi chạm vào ô nhập liệu; không chặn kéo bảng hoặc zoom cảm ứng.
         var lockHandler = app.createElement('script');
-        lockHandler.textContent = "(function(){var lastNotice=0;function lockedTableCell(target){var cell=target&&target.closest&&target.closest('#mt td,#mmtb-mt td');if(!cell)return null;var screen=cell.closest('#screen-ns,#screen-mmtb');if(!screen)return null;var banner=document.getElementById(screen.id==='screen-ns'?'lock-banner':'mmtb-lock-banner');return banner&&banner.style.display==='flex'?cell:null;}function notify(e){if(!lockedTableCell(e.target))return;e.preventDefault();e.stopImmediatePropagation();var now=Date.now();if(e.type==='pointerdown'||now-lastNotice>700){alert('Báo cáo đã khóa, không thể chỉnh sửa.');lastNotice=now;}}document.addEventListener('pointerdown',notify,true);document.addEventListener('click',notify,true);})();";
+        lockHandler.textContent = "(function(){function lockedEditableCell(target){var cell=target&&target.closest&&target.closest('#mt td,#mmtb-mt td');if(!cell||!cell.querySelector('input,select,textarea'))return null;var screen=cell.closest('#screen-ns,#screen-mmtb');if(!screen)return null;var banner=document.getElementById(screen.id==='screen-ns'?'lock-banner':'mmtb-lock-banner');return banner&&banner.style.display==='flex'?cell:null;}document.addEventListener('click',function(e){if(!lockedEditableCell(e.target))return;e.preventDefault();e.stopImmediatePropagation();alert('Báo cáo đã khóa, không thể chỉnh sửa.');},true);})();";
         app.body.appendChild(lockHandler);
 
         document.open();
