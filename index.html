@@ -16,7 +16,7 @@
         var html = await response.text();
         var app = new DOMParser().parseFromString(html, 'text/html');
 
-        // Ẩn hai thông báo theo yêu cầu, không thay đổi trạng thái khóa theo thời gian.
+        // Giữ thay đổi việc 1: ẩn hai thông báo nhưng không thay đổi trạng thái khóa.
         var style = app.createElement('style');
         style.textContent = '.rotate-banner,#lock-banner,#mmtb-lock-banner{display:none!important}';
         app.head.appendChild(style);
@@ -25,6 +25,61 @@
         var lockHandler = app.createElement('script');
         lockHandler.textContent = "(function(){function lockedEditableCell(target){var cell=target&&target.closest&&target.closest('#mt td,#mmtb-mt td');if(!cell||!cell.querySelector('input,select,textarea'))return null;var screen=cell.closest('#screen-ns,#screen-mmtb');if(!screen)return null;var banner=document.getElementById(screen.id==='screen-ns'?'lock-banner':'mmtb-lock-banner');return banner&&banner.style.display==='flex'?cell:null;}document.addEventListener('click',function(e){if(!lockedEditableCell(e.target))return;e.preventDefault();e.stopImmediatePropagation();alert('Báo cáo đã khóa, không thể chỉnh sửa.');},true);})();";
         app.body.appendChild(lockHandler);
+
+        // Việc 2: chuyển nút định biên, so sánh, xuất so sánh và hư hỏng
+        // vào mục Quản lý của từng báo cáo.
+        var managementScript = app.createElement('script');
+        managementScript.textContent = `(function(){
+          function moveTopActions(screenId, adminBarId){
+            var screen = document.getElementById(screenId);
+            var adminBar = document.getElementById(adminBarId);
+            var topBar = screen && screen.querySelector('.back-bar');
+            if(!screen || !adminBar || !topBar) return;
+
+            // Nút đầu tiên là nút Quay lại, giữ lại trên thanh trên cùng.
+            var backButton = topBar.querySelector('.back-btn');
+            Array.prototype.slice.call(topBar.querySelectorAll('button')).forEach(function(button){
+              if(button === backButton) return;
+              button.style.marginLeft = '';
+              adminBar.appendChild(button);
+            });
+          }
+
+          moveTopActions('screen-ns', 'ns-admin-bar');
+          moveTopActions('screen-mmtb', 'mmtb-admin-bar');
+
+          // Ghi nhớ mật khẩu vận hành trong bộ nhớ trang, không lưu vào localStorage.
+          // Các lần hỏi mật khẩu vận hành sau đó trong cùng phiên sẽ dùng lại mật khẩu này.
+          var oldPrompt = window.prompt;
+          var cachedPass = {ns:null, mmtb:null};
+
+          function activeReport(){
+            if(document.querySelector('#screen-ns.active')) return 'ns';
+            if(document.querySelector('#screen-mmtb.active')) return 'mmtb';
+            return null;
+          }
+
+          window.prompt = function(message){
+            var key = activeReport();
+            var isPasswordPrompt = /mật khẩu|password/i.test(String(message || ''));
+            if(key && isPasswordPrompt && cachedPass[key]) return cachedPass[key];
+
+            var result = oldPrompt.apply(window, arguments);
+            if(key && isPasswordPrompt && result !== null && String(result).trim()){
+              cachedPass[key] = String(result);
+            }
+            return result;
+          };
+
+          // Khi quay khỏi báo cáo, xóa mật khẩu đã ghi nhớ.
+          document.addEventListener('click', function(event){
+            var button = event.target && event.target.closest && event.target.closest('#screen-ns .back-bar .back-btn,#screen-mmtb .back-bar .back-btn');
+            if(!button) return;
+            var screen = button.closest('#screen-ns,#screen-mmtb');
+            if(screen) cachedPass[screen.id === 'screen-ns' ? 'ns' : 'mmtb'] = null;
+          }, true);
+        })();`;
+        app.body.appendChild(managementScript);
 
         document.open();
         document.write('<!DOCTYPE html>\n' + app.documentElement.outerHTML);
