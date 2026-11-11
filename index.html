@@ -3,38 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Đang khôi phục ứng dụng…</title>
+  <title>Đang tải ứng dụng…</title>
 </head>
 <body>
-  <p>Đang khôi phục ứng dụng, vui lòng đợi…</p>
+  <p>Đang tải ứng dụng…</p>
   <script>
     (async function () {
       var source = 'https://raw.githubusercontent.com/truongvanban0205-hash/Nhan-su-BCH/bfc75492930c3cf3e51dd24cbfbd50041dd77a72/index.html';
       try {
         var response = await fetch(source, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Không tải được bản khôi phục (' + response.status + ').');
+        if (!response.ok) throw new Error('Không tải được ứng dụng (' + response.status + ').');
         var html = await response.text();
-        var restored = new DOMParser().parseFromString(html, 'text/html');
-        function moveToManagement(screenId, selectors, barId) {
-          var screen = restored.getElementById(screenId);
-          var bar = restored.getElementById(barId);
-          if (!screen || !bar) return;
-          selectors.forEach(function (selector) {
-            var button = screen.querySelector(selector);
-            if (button) bar.appendChild(button);
-          });
-        }
-        moveToManagement('screen-ns', [
-          '#dbn-ss-btn', '.back-bar button[onclick*="xuatSoSanhDB(\'ns\')"]', '.back-bar button[onclick*="dbnMo()"]'
-        ], 'ns-admin-bar');
-        moveToManagement('screen-mmtb', [
-          '#dbm-ss-btn', '.back-bar button[onclick*="xuatSoSanhDB(\'mmtb\')"]', '.back-bar button[onclick*="dbmMo()"]', '.back-bar button[onclick*="hhMoCauHinh()"]'
-        ], 'mmtb-admin-bar');
+        var app = new DOMParser().parseFromString(html, 'text/html');
+
+        // Remove only the two requested notices visually; keep the timed-lock state itself unchanged.
+        var style = app.createElement('style');
+        style.textContent = '.rotate-banner,#lock-banner,#mmtb-lock-banner{display:none!important}';
+        app.head.appendChild(style);
+
+        // Since disabled inputs may not dispatch click events, route taps on locked table cells to an alert.
+        var lockHandler = app.createElement('script');
+        lockHandler.textContent = "(function(){var lastNotice=0;function lockedTableCell(target){var cell=target&&target.closest&&target.closest('#mt td,#mmtb-mt td');if(!cell)return null;var screen=cell.closest('#screen-ns,#screen-mmtb');if(!screen)return null;var banner=document.getElementById(screen.id==='screen-ns'?'lock-banner':'mmtb-lock-banner');return banner&&banner.style.display==='flex'?cell:null;}function notify(e){if(!lockedTableCell(e.target))return;e.preventDefault();e.stopImmediatePropagation();var now=Date.now();if(e.type==='pointerdown'||now-lastNotice>700){alert('Báo cáo đã khóa, không thể chỉnh sửa.');lastNotice=now;}}document.addEventListener('pointerdown',notify,true);document.addEventListener('click',notify,true);})();";
+        app.body.appendChild(lockHandler);
+
         document.open();
-        document.write('<!DOCTYPE html>\n' + restored.documentElement.outerHTML);
+        document.write('<!DOCTYPE html>\n' + app.documentElement.outerHTML);
         document.close();
       } catch (error) {
-        document.body.innerHTML = '<p style="font:16px sans-serif;color:#b00020;padding:20px">Không thể tải ứng dụng. Vui lòng thử tải lại trang. Chi tiết: ' + String(error.message || error) + '</p>';
+        document.body.innerHTML = '<p style="font:16px sans-serif;color:#b00020;padding:20px">Không thể tải ứng dụng. Vui lòng tải lại trang. Chi tiết: ' + String(error.message || error) + '</p>';
       }
     })();
   </script>
