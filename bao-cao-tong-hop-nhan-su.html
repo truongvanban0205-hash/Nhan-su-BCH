@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo cáo tổng hợp nhân sự</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    :root{
+      --bg:#f3f4f6;
+      --panel:#ffffff;
+      --line:#d8dfe8;
+      --text:#111827;
+      --muted:#6b7280;
+      --accent:#111827;
+      --light:#f8fafc;
+      --green:#d9f3d9;
+      --red:#f9d7d7;
+      --yellow:#fff4bf;
+      --blue:#eaf1ff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .wrap{
+      max-width:1200px;
+      margin:20px auto;
+      padding:16px;
+    }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+      box-shadow:0 1px 4px rgba(0,0,0,.04);
+    }
+    .header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--line);
+      background:#fff;
+    }
+    .title{
+      font-weight:800;
+      font-size:22px;
+      margin:0;
+    }
+    .controls{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    select, button{
+      font:inherit;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--text);
+      cursor:pointer;
+    }
+    button.primary{
+      background:#111827;
+      color:#fff;
+      border-color:#111827;
+      font-weight:700;
+    }
+    .table-wrap{
+      overflow:auto;
+      padding:0;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:900px;
+    }
+    th, td{
+      border:1px solid var(--line);
+      padding:12px 14px;
+      text-align:left;
+      vertical-align:top;
+      font-size:15px;
+    }
+    thead th{
+      background:#eef2f7;
+      font-weight:800;
+      color:#0f172a;
+      font-size:15px;
+    }
+    tbody tr:nth-child(even){
+      background:#fafbfd;
+    }
+    .big{
+      font-size:18px;
+      font-weight:800;
+    }
+    .kq{
+      font-weight:800;
+    }
+    .note{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.6;
+    }
+    .muted{
+      color:var(--muted);
+    }
+    .status{
+      display:inline-block;
+      background:#eef6ff;
+      border:1px solid #cfe0ff;
+      color:#214987;
+      border-radius:999px;
+      padding:4px 8px;
+      font-size:12px;
+      font-weight:700;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="header">
+        <h1 class="title">Báo cáo tổng hợp nhân sự</h1>
+        <div class="controls">
+          <label class="muted" for="selDate">Ngày</label>
+          <input id="selDate" type="date" />
+          <button id="loadBtn" class="primary">Tải lại</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div id="reportRoot"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================
+    // CẤU HÌNH KẾT NỐI SUPABASE
+    // =========================
+    const SUPABASE_URL = 'https://jqwjzvucwvlwbcgxhath.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Dữ liệu mẫu mặc định nếu không đọc được dữ liệu thật.
+    // Bạn có thể thay khi app thật đã có dữ liệu.
+    const FALLBACK = {
+      total: 294,
+      totalLxlm: 202,
+      taiDuAn: {
+        tong: 193,
+        lxlm: 118,
+        note: "Chung: Đi làm 173, Off 20"
+      },
+      hoTroOlympic: {
+        tong: 62,
+        lxlm: 51,
+        note: "Điều động hỗ trợ"
+      },
+      hoTroLangVan: {
+        tong: 39,
+        lxlm: 33,
+        note: "Điều động hỗ trợ"
+      },
+      tongCong: {
+        tong: 294,
+        lxlm: 202
+      }
+    };
+
+    function todayISO() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    }
+
+    function renderReport(data) {
+      const root = document.getElementById('reportRoot');
+
+      const rows = [
+        {
+          label: 'Tại dự án',
+          tong: data.taiDuAn.tong,
+          lxlm: data.taiDuAn.lxlm,
+          note: data.taiDuAn.note
+        },
+        {
+          label: 'Hỗ trợ dự án Olympic',
+          tong: data.hoTroOlympic.tong,
+          lxlm: data.hoTroOlympic.lxlm,
+          note: data.hoTroOlympic.note
+        },
+        {
+          label: 'Hỗ trợ dự án Làng Vân',
+          tong: data.hoTroLangVan.tong,
+          lxlm: data.hoTroLangVan.lxlm,
+          note: data.hoTroLangVan.note
+        },
+        {
+          label: 'TỔNG CỘNG',
+          tong: data.tongCong.tong,
+          lxlm: data.tongCong.lxlm,
+          note: 'Tổng số CBNV và NV LXLM toàn báo cáo'
+        }
+      ];
+
+      const html = `
+        <table>
+          <thead>
+            <tr>
+              <th style="width:34%;">Phân loại / Khu vực</th>
+              <th style="width:18%;">Tổng nhân sự</th>
+              <th style="width:18%;">Nhân sự</th>
+              <th style="width:30%;">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td class="big">${r.label}</td>
+                <td class="big">${r.tong}</td>
+                <td class="big">${r.lxlm}</td>
+                <td>
+                  <div class="note">${r.note}</div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      root.innerHTML = html;
+    }
+
+    // =========================
+    // HÀM NẠP DỮ LIỆU THỰC TẾ
+    // =========================
+    async function loadDataFromApp() {
+      try {
+        // 1) Nếu app đang chạy và set sẵn một biến toàn cục, dùng nó
+        if (window.__BCH_REPORT_DATA__) {
+          return window.__BCH_REPORT_DATA__;
+        }
+
+        // 2) Nếu có dữ liệu trong localStorage do app sinh ra
+        const raw = localStorage.getItem('bch_report_summary_data');
+        if (raw) {
+          try {
+            return JSON.parse(raw);
+          } catch (e) {}
+        }
+
+        // 3) Nạp dữ liệu thật từ Supabase.
+        // Mẫu truy vấn: lấy dữ liệu báo cáo của đơn vị / ngày đang chọn.
+        const date = document.getElementById('selDate').value || todayISO();
+        const saved = JSON.parse(localStorage.getItem('bch_nv_login_v2') || '{}');
+        const donVi = saved?.don_vi_id || 'khanh_hoa';
+
+        // Truy vấn bảng nhansu nếu tồn tại.
+        // Dữ liệu thực tế thường là:
+        // nhansu(id, don_vi_id, ngay, data jsonb)
+        const { data, error } = await sb
+          .from('nhansu')
+          .select('*')
+          .eq('don_vi_id', donVi)
+          .eq('ngay', date)
+          .order('id', { ascending: false })
+          .limit(1);
+
+        if (error || !data || !data.length) {
+          return null;
+        }
+
+        const row = data[0];
+        const payload = row.data || row.json || row.report || row.value || {};
+        // Chuyển payload sang định dạng báo cáo.
+        // Bạn có thể tùy biến ở đây theo JSON thật của app.
+        return normalizePayload(payload);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function normalizePayload(payload) {
+      // Đây là nơi quy đổi dữ liệu thật của app sang cấu trúc báo cáo.
+      // Nếu JSON không khớp, function này sẽ trả về FALLBACK.
+      // Tùy dữ liệu thật, bạn sẽ mở rộng ở đây.
+      try {
+        const summary = {
+          taiDuAn: {
+            tong: Number(payload.taiDuAn?.tong ?? payload['tại dự án']?.tong ?? FALLBACK.taiDuAn.tong),
+            lxlm: Number(payload.taiDuAn?.lxlm ?? payload['tại dự án']?.lxlm ?? FALLBACK.taiDuAn.lxlm),
+            note: payload.taiDuAn?.note || payload['tại dự án']?.note || FALLBACK.taiDuAn.note
+          },
+          hoTroOlympic: {
+            tong: Number(payload.hoTroOlympic?.tong ?? payload.olympic?.tong ?? FALLBACK.hoTroOlympic.tong),
+            lxlm: Number(payload.hoTroOlympic?.lxlm ?? payload.olympic?.lxlm ?? FALLBACK.hoTroOlympic.lxlm),
+            note: payload.hoTroOlympic?.note || payload.olympic?.note || FALLBACK.hoTroOlympic.note
+          },
+          hoTroLangVan: {
+            tong: Number(payload.hoTroLangVan?.tong ?? payload.langVan?.tong ?? FALLBACK.hoTroLangVan.tong),
+            lxlm: Number(payload.hoTroLangVan?.lxlm ?? payload.langVan?.lxlm ?? FALLBACK.hoTroLangVan.lxlm),
+            note: payload.hoTroLangVan?.note || payload.langVan?.note || FALLBACK.hoTroLangVan.note
+          },
+          tongCong: {
+            tong: Number(payload.tongCong?.tong ?? FALLBACK.tongCong.tong),
+            lxlm: Number(payload.tongCong?.lxlm ?? FALLBACK.tongCong.lxlm)
+          }
+        };
+
+        return summary;
+      } catch (e) {
+        return FALLBACK;
+      }
+    }
+
+    async function reload() {
+      const raw = await loadDataFromApp();
+      renderReport(raw || FALLBACK);
+    }
+
+    document.getElementById('selDate').value = todayISO();
+    document.getElementById('loadBtn').addEventListener('click', reload);
+    reload();
+  </script>
+</body>
+</html>
