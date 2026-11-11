@@ -1,4 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
 <head>
-...
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đang khôi phục ứng dụng…</title>
+</head>
+<body>
+  <p>Đang khôi phục ứng dụng, vui lòng đợi…</p>
+  <script>
+    (async function () {
+      var source = 'https://raw.githubusercontent.com/truongvanban0205-hash/Nhan-su-BCH/bfc75492930c3cf3e51dd24cbfbd50041dd77a72/index.html';
+      try {
+        var response = await fetch(source, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Không tải được bản khôi phục (' + response.status + ').');
+        var html = await response.text();
+        var restored = new DOMParser().parseFromString(html, 'text/html');
+        function moveToManagement(screenId, selectors, barId) {
+          var screen = restored.getElementById(screenId);
+          var bar = restored.getElementById(barId);
+          if (!screen || !bar) return;
+          selectors.forEach(function (selector) {
+            var button = screen.querySelector(selector);
+            if (button) bar.appendChild(button);
+          });
+        }
+        moveToManagement('screen-ns', [
+          '#dbn-ss-btn', '.back-bar button[onclick*="xuatSoSanhDB(\'ns\')"]', '.back-bar button[onclick*="dbnMo()"]'
+        ], 'ns-admin-bar');
+        moveToManagement('screen-mmtb', [
+          '#dbm-ss-btn', '.back-bar button[onclick*="xuatSoSanhDB(\'mmtb\')"]', '.back-bar button[onclick*="dbmMo()"]', '.back-bar button[onclick*="hhMoCauHinh()"]'
+        ], 'mmtb-admin-bar');
+        document.open();
+        document.write('<!DOCTYPE html>\n' + restored.documentElement.outerHTML);
+        document.close();
+      } catch (error) {
+        document.body.innerHTML = '<p style="font:16px sans-serif;color:#b00020;padding:20px">Không thể tải ứng dụng. Vui lòng thử tải lại trang. Chi tiết: ' + String(error.message || error) + '</p>';
+      }
+    })();
+  </script>
+</body>
+</html>
