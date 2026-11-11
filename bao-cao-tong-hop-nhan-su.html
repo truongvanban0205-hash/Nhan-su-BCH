@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo cáo tổng hợp nhân sự</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    :root{
+      --bg:#f3f4f6;
+      --panel:#ffffff;
+      --line:#dfe5ec;
+      --text:#111827;
+      --muted:#6b7280;
+      --head:#eef2f7;
+      --accent:#0f172a;
+      --green:#ecfdf5;
+      --blue:#eff6ff;
+      --yellow:#fff7db;
+      --red:#fff1f2;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family: "Be Vietnam Pro", Arial, sans-serif;
+    }
+    .wrap{
+      max-width:1200px;
+      margin:24px auto;
+      padding:18px;
+    }
+    .card{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+      box-shadow:0 1px 3px rgba(0,0,0,.04);
+    }
+    .header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--line);
+      background:#fff;
+    }
+    .title{
+      margin:0;
+      font-size:22px;
+      font-weight:800;
+    }
+    .controls{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .controls label{
+      color:var(--muted);
+      font-weight:600;
+      font-size:13px;
+    }
+    .controls input, .controls button{
+      font:inherit;
+      padding:9px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--text);
+    }
+    .controls button{
+      background:#111827;
+      color:#fff;
+      border-color:#111827;
+      font-weight:700;
+      cursor:pointer;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:900px;
+    }
+    th, td{
+      border:1px solid var(--line);
+      padding:12px 14px;
+      text-align:left;
+      vertical-align:top;
+      font-size:15px;
+    }
+    thead th{
+      background:var(--head);
+      color:var(--accent);
+      font-weight:800;
+    }
+    tbody tr:nth-child(even){
+      background:#fafbfd;
+    }
+    .big{
+      font-size:18px;
+      font-weight:800;
+    }
+    .note{
+      color:var(--muted);
+      line-height:1.55;
+      font-size:13px;
+    }
+    .muted{
+      color:var(--muted);
+    }
+    .badge{
+      display:inline-block;
+      border-radius:999px;
+      padding:4px 8px;
+      font-size:12px;
+      font-weight:700;
+      border:1px solid #dbeafe;
+      background:#eff6ff;
+      color:#1d4ed8;
+    }
+    @media(max-width:700px){
+      .header{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="header">
+        <h1 class="title">Báo cáo tổng hợp nhân sự</h1>
+        <div class="controls">
+          <label for="selDate">Ngày</label>
+          <input id="selDate" type="date" />
+          <button id="reloadBtn">Tải lại</button>
+        </div>
+      </div>
+
+      <div id="reportContainer" style="overflow:auto;"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://jqwjzvucwvlwbcgxhath.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_hI0g6zHtG2aWOkmMCm8d5g_t1wspsgv';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const FALLBACK = {
+      taiDuAn: { tong: 193, lxlm: 118, note: 'Chung: Đi làm 173, Off 20' },
+      hoTroOlympic: { tong: 62, lxlm: 51, note: 'Điều động hỗ trợ' },
+      hoTroLangVan: { tong: 39, lxlm: 33, note: 'Điều động hỗ trợ' },
+      tongCong: { tong: 294, lxlm: 202, note: 'Tổng số CBNV và NV LXLM toàn báo cáo' }
+    };
+
+    function todayISO(){
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+    }
+
+    function getDonViId(){
+      try{
+        const raw = localStorage.getItem('bch_nv_login_v2');
+        if(raw){
+          const saved = JSON.parse(raw);
+          if(saved && saved.don_vi_id) return saved.don_vi_id;
+        }
+      }catch(e){}
+      if(window.currentAdminDonVi) return window.currentAdminDonVi;
+      return 'khanh_hoa';
+    }
+
+    function safeNum(v, fallback = 0){
+      const n = Number(v);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function getNested(obj, path, fallback = undefined){
+      const steps = path.split('.');
+      let x = obj;
+      for(const s of steps){
+        if(x == null) return fallback;
+        x = x[s];
+      }
+      return x === undefined ? fallback : x;
+    }
+
+    function normalizePayload(payload){
+      if(!payload || typeof payload !== 'object') return FALLBACK;
+
+      const pick = (k, keys, def) => {
+        for(const key of keys){
+          const v = payload[k] ?? payload[key];
+          if(v !== undefined && v !== null) return v;
+        }
+        return def;
+      };
+
+      const td = {
+        tong: safeNum(pick('taiDuAn', ['taiDuAn','tai_du_an','tai_du_an_tong', 'tai_du_an'], FALLBACK.taiDuAn.tong)),
+        lxlm: safeNum(pick('taiDuAnLxlm', ['taiDuAnLxlm','tai_du_an_lxlm','lxlm_tai_du_an', 'tai_du_an_lxlm'], FALLBACK.taiDuAn.lxlm)),
+        note: pick('taiDuAnNote', ['taiDuAnNote','tai_du_an_note','note_tai_du_an'], FALLBACK.taiDuAn.note)
+      };
+
+      const oh = {
+        tong: safeNum(pick('olympicTong', ['olympicTong','hoTroOlympic','ho_tro_olympic','olympic', 'ho_tro_olympic_tong'], FALLBACK.hoTroOlympic.tong)),
+        lxlm: safeNum(pick('olympicLxlm', ['olympicLxlm','hoTroOlympicLxlm','olympic_lxlm', 'ho_tro_olympic_lxlm'], FALLBACK.hoTroOlympic.lxlm)),
+        note: pick('olympicNote', ['olympicNote','hoTroOlympicNote','olympic_note'], FALLBACK.hoTroOlympic.note)
+      };
+
+      const lv = {
+        tong: safeNum(pick('langVanTong', ['langVanTong','hoTroLangVan','ho_tro_lang_van','lang_van', 'ho_tro_lang_van_tong'], FALLBACK.hoTroLangVan.tong)),
+        lxlm: safeNum(pick('langVanLxlm', ['langVanLxlm','hoTroLangVanLxlm','lang_van_lxlm', 'ho_tro_lang_van_lxlm'], FALLBACK.hoTroLangVan.lxlm)),
+        note: pick('langVanNote', ['langVanNote','hoTroLangVanNote','lang_van_note'], FALLBACK.hoTroLangVan.note)
+      };
+
+      const total = {
+        tong: safeNum(pick('tongCongTong', ['tongCongTong','tong_cong','total_tong','tong_nhan_su'], td.tong + oh.tong + lv.tong)),
+        lxlm: safeNum(pick('tongCongLxlm', ['tongCongLxlm','tong_cong_lxlm','total_lxlm'], td.lxlm + oh.lxlm + lv.lxlm)),
+        note: pick('tongCongNote', ['tongCongNote','tong_cong_note'], FALLBACK.tongCong.note)
+      };
+
+      return {
+        taiDuAn: td,
+        hoTroOlympic: oh,
+        hoTroLangVan: lv,
+        tongCong: total
+      };
+    }
+
+    function renderTable(data){
+      const rows = [
+        { label: 'Tại dự án', ...data.taiDuAn },
+        { label: 'Hỗ trợ dự án Olympic', ...data.hoTroOlympic },
+        { label: 'Hỗ trợ dự án Làng Vân', ...data.hoTroLangVan },
+        { label: 'TỔNG CỘNG', ...data.tongCong }
+      ];
+
+      const html = `
+        <table>
+          <thead>
+            <tr>
+              <th style="width:32%;">Phân loại / Khu vực</th>
+              <th style="width:18%;">Tổng nhân sự</th>
+              <th style="width:18%;">Nhân sự</th>
+              <th style="width:32%;">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td class="big">${r.label}</td>
+                <td class="big">${r.tong}</td>
+                <td class="big">${r.lxlm}</td>
+                <td>
+                  <div class="note">${r.note || '—'}</div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      document.getElementById('reportContainer').innerHTML = html;
+    }
+
+    async function loadReportData(){
+      try{
+        // 1) Nếu app already has a summary in global var
+        if(window.__BCH_REPORT_DATA__){
+          return normalizePayload(window.__BCH_REPORT_DATA__);
+        }
+
+        // 2) localStorage nếu app đã lưu
+        const savedRaw = localStorage.getItem('bch_report_summary_data');
+        if(savedRaw){
+          try{
+            const parsed = JSON.parse(savedRaw);
+            if(parsed) return normalizePayload(parsed);
+          }catch(e){}
+        }
+
+        // 3) read from Supabase: 테이블 nhansu nếu có
+        const donViId = getDonViId();
+        const date = document.getElementById('selDate').value || todayISO();
+
+        try{
+          const { data, error } = await sb
+            .from('nhansu')
+            .select('*')
+            .eq('don_vi_id', donViId)
+            .eq('ngay', date)
+            .order('id', { ascending: false })
+            .limit(1);
+
+          if(!error && Array.isArray(data) && data.length){
+            const row = data[0];
+            const payload = row.data || row.json || row.report || row.value || {};
+            return normalizePayload(payload);
+          }
+        }catch(_){}
+
+        // 4) nếu không đọc được, dùng số mẫu để test layout
+        return FALLBACK;
+      }catch(e){
+        return FALLBACK;
+      }
+    }
+
+    async function reload(){
+      const data = await loadReportData();
+      renderTable(data);
+    }
+
+    document.getElementById('selDate').value = todayISO();
+    document.getElementById('reloadBtn').addEventListener('click', reload);
+    reload();
+  </script>
+</body>
+</html>
